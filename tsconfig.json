@@ -13,22 +13,10 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@goguma/ui": ["packages/ui/index.ts"],
+      "@goguma/ui/*": ["packages/ui/src/*"]
     }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
+  }
 }

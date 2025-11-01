@@ -3,27 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bunx --bun next dev",
-    "build": "bunx --bun next build",
-    "start": "bunx --bun next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.0.2-canary.3",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "24.9.2",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "9.39.0",
-    "eslint-config-next": "16.0.2-canary.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "dev": "bun run --cwd apps/web dev",
+    "build": "bun run --cwd apps/web build",
+    "start": "bun run --cwd apps/web start",
+    "lint": "bunx --bun eslint .",
+    "lint:web": "bunx --bun eslint apps/web",
+    "lint:native": "bunx --bun eslint apps/native",
+    "native:start": "bun run --cwd apps/native start",
+    "native:android": "bun run --cwd apps/native android",
+    "native:ios": "bun run --cwd apps/native ios",
+    "native:web": "bun run --cwd apps/native web"
   },
   "trustedDependencies": [
     "unrs-resolver"
-  ]
+  ],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "8.46.2",
+    "@typescript-eslint/parser": "8.46.2",
+    "eslint": "9.39.0",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-native": "5.0.0"
+  },
+  "packageManager": "bun@1.1.34"
 }

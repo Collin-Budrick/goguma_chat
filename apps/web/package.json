@@ -1,0 +1,27 @@
+{
+  "name": "@goguma/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bunx --bun next dev",
+    "build": "bunx --bun next build",
+    "start": "bunx --bun next start",
+    "lint": "bunx --bun eslint"
+  },
+  "dependencies": {
+    "next": "16.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.82.1",
+    "react-native-web": "0.21.2",
+    "@goguma/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.1.16",
+    "@types/node": "24.9.2",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "tailwindcss": "4.1.16",
+    "typescript": "5.9.3"
+  }
+}
