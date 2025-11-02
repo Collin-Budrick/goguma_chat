@@ -6,8 +6,8 @@
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
     "start": "bun run --cwd apps/web start",
-    "lint": "bunx --bun eslint .",
-    "lint:web": "bunx --bun eslint apps/web",
+    "lint": "bun run lint:web && bun run lint:native",
+    "lint:web": "bun run --cwd apps/web lint",
     "lint:native": "bunx --bun eslint apps/native",
     "native:start": "bun run --cwd apps/native start",
     "native:android": "bun run --cwd apps/native android",
@@ -22,6 +22,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@types/react": "19.2.2",
     "@typescript-eslint/eslint-plugin": "8.46.2",
     "@typescript-eslint/parser": "8.46.2",
     "eslint": "9.39.0",

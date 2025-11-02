@@ -1,15 +1,9 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "strict": true,
-    "paths": {
-      "@goguma/ui": [
-        "../../packages/ui/index.ts"
-      ],
-      "@goguma/ui/*": [
-        "../../packages/ui/src/*"
-      ]
-    }
+    "jsx": "react-native",
+    "moduleDetection": "force",
+    "customConditions": ["react-native"]
   },
   "include": [
     "**/*.ts",
