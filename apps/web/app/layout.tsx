@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SiteDock from "../components/site-dock";
 import SiteFooter from "../components/site-footer";
+import TransitionViewport from "../components/transition-viewport";
+import { TransitionProvider } from "../components/transition-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,13 +36,17 @@ export default function RootLayout({ children }: PropsWithChildren) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-black font-sans text-white antialiased`}
       >
-        <div className="flex min-h-screen flex-col">
-          <div className="flex-1 bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
-            {children}
+        <TransitionProvider>
+          <div className="flex min-h-screen flex-col">
+            <TransitionViewport>
+              <div className="min-h-full bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
+                {children}
+              </div>
+            </TransitionViewport>
+            <SiteFooter />
           </div>
-          <SiteFooter />
-        </div>
-        <SiteDock />
+          <SiteDock />
+        </TransitionProvider>
       </body>
     </html>
   );
