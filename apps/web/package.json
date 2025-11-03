@@ -6,7 +6,7 @@
     "dev": "bunx --bun next dev",
     "build": "bunx --bun next build",
     "start": "bunx --bun next start",
-    "lint": "bunx --bun eslint"
+    "lint": "bunx --bun eslint ."
   },
   "dependencies": {
     "next": "16.0.1",
@@ -25,3 +25,4 @@
     "typescript": "5.9.3"
   }
 }
+
