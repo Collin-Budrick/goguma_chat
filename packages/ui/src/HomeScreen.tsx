@@ -9,7 +9,6 @@ import {
   Text,
   View,
   ViewStyle,
-  useColorScheme,
 } from "react-native";
 
 type LinkTarget = {
@@ -21,40 +20,56 @@ type LinkTarget = {
 
 const ACTIONS: LinkTarget[] = [
   {
-    title: "Browse Templates",
-    href: "https://vercel.com/templates?framework=next.js&utm_source=goguma-chat",
+    title: "Get Started",
+    href: "https://goguma.chat/start",
     variant: "primary",
   },
   {
-    title: "Read the Docs",
-    href: "https://nextjs.org/docs",
+    title: "See Features",
+    href: "https://goguma.chat/features",
     variant: "secondary",
   },
 ];
 
 const RESOURCES: LinkTarget[] = [
   {
-    title: "Learn Next.js",
+    title: "Why Goguma Chat",
     description:
-      "Deep dive into App Router fundamentals, data fetching, and performance best practices.",
-    href: "https://nextjs.org/learn",
+      "Discover how our sweet-potato-simple workflows keep every conversation warm and productive.",
+    href: "https://goguma.chat/benefits",
   },
   {
-    title: "Expo + Next.js Guide",
+    title: "Integrations",
     description:
-      "Understand how Expo and React Native Web fit together for truly cross-platform UIs.",
-    href: "https://docs.expo.dev/guides/using-nextjs/",
+      "Connect your favorite tools and automate hand-offs with rich CRM, calendar, and AI partners.",
+    href: "https://goguma.chat/integrations",
   },
   {
-    title: "Hermes V1 Overview",
+    title: "Security & Trust",
     description:
-      "Track the latest updates to Hermes and how it improves mobile runtime performance.",
-    href: "https://reactnative.dev/docs/hermes",
+      "Review the safeguards that keep customer data protected across every team and device.",
+    href: "https://goguma.chat/security",
   },
 ];
 
-const HERO_IMAGE =
-  "https://raw.githubusercontent.com/vercel/next.js/canary/packages/create-next-app/templates/app-tw/public/next.svg";
+const HERO_SVG = `<svg width="320" height="160" viewBox="0 0 320 160" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gogumaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5b21b6" />
+      <stop offset="100%" stop-color="#fb923c" />
+    </linearGradient>
+  </defs>
+  <rect x="12" y="16" width="296" height="128" rx="28" fill="url(#gogumaGradient)" />
+  <g fill="#ffffff" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif">
+    <text x="160" y="80" font-size="44" font-weight="700" text-anchor="middle">Goguma</text>
+    <text x="160" y="116" font-size="28" font-weight="500" opacity="0.92" text-anchor="middle">Chat</text>
+  </g>
+  <circle cx="62" cy="64" r="18" fill="#fef9c3" opacity="0.92" />
+  <circle cx="258" cy="108" r="12" fill="#fef3c7" opacity="0.85" />
+  <circle cx="240" cy="52" r="8" fill="#ede9fe" opacity="0.8" />
+</svg>`;
+
+const HERO_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(HERO_SVG)}`;
 
 async function openLink(target: LinkTarget) {
   try {
@@ -113,41 +128,20 @@ function ResourceCard({
       accessibilityRole="link"
       onPress={() => openLink(target)}
       style={({ pressed }) => [
-        [
-          styles.resourceCard,
-          {
-            backgroundColor: "rgba(24,24,27,0.05)",
-            borderColor: "#e4e4e7",
-          },
-        ],
+        styles.resourceCard,
         style,
         pressed && styles.resourceCardPressed,
       ]}
     >
-      <Text
-        style={[
-          styles.resourceTitle,
-          { color: "#111111" },
-        ]}
-      >
+      <Text style={styles.resourceTitle}>
         {target.title}
       </Text>
       {!!target.description && (
-        <Text
-          style={[
-            styles.resourceDescription,
-            { color: "#52525b" },
-          ]}
-        >
+        <Text style={styles.resourceDescription}>
           {target.description}
         </Text>
       )}
-      <Text
-        style={[
-          styles.resourceHint,
-          { color: "#2563eb" },
-        ]}
-      >
+      <Text style={styles.resourceHint}>
         Tap to learn more →
       </Text>
     </Pressable>
@@ -160,7 +154,7 @@ export function HomeScreen() {
     <SafeAreaView
       style={[
         styles.safeArea,
-        { backgroundColor: "#ffffff" },
+        { backgroundColor: "#f3f0ff" },
       ]}
     >
       <ScrollView
@@ -171,8 +165,8 @@ export function HomeScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: "#ffffff",
-              borderColor: "#e4e4e7",
+              backgroundColor: "#f8f5ff",
+              borderColor: "#e0d7ff",
             },
           ]}
         >
@@ -184,19 +178,17 @@ export function HomeScreen() {
             />
           </View>
           <View style={styles.header}>
-            <Text
-              style={[styles.title, { color: "#111111" }]}
-            >
-              Build once, ship everywhere.
+            <Text style={[styles.title, { color: "#1f1a3d" }]}>
+              Conversations that feel hand-crafted.
             </Text>
             <Text
               style={[
                 styles.subtitle,
-                { color: "#3f3f46" },
+                { color: "#3c366b" },
               ]}
             >
-              Edit the shared UI package to update both the Next.js web app and
-              the Expo mobile app instantly.
+              Goguma Chat blends delightful design with AI-guided workflows so
+              teams can respond faster, stay human, and grow every relationship.
             </Text>
           </View>
 
@@ -217,16 +209,22 @@ export function HomeScreen() {
           <View style={styles.section}>
             <Text
               style={[
-                styles.sectionTitle
+                styles.sectionTitle,
+                { color: "#1f1a3d" },
               ]}
             >
-              Continue exploring
+              Keep exploring
             </Text>
             <View style={styles.resources}>
-              {RESOURCES.map((resource) => (
+              {RESOURCES.map((resource, index) => (
                 <ResourceCard
                   key={resource.href}
                   target={resource}
+                  style={
+                    index === RESOURCES.length - 1
+                      ? undefined
+                      : styles.resourceSpacing
+                  }
                 />
               ))}
             </View>
@@ -246,111 +244,119 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 36,
+    backgroundColor: "#f3f0ff",
   },
   card: {
-    borderRadius: 24,
-    padding: 32,
+    borderRadius: 28,
+    paddingVertical: 40,
+    paddingHorizontal: 36,
     alignSelf: "center",
     width: "100%",
-    maxWidth: 640,
+    maxWidth: 680,
     alignItems: "stretch",
     borderWidth: 1,
-    boxShadow: "0px 18px 20px rgba(0, 0, 0, 0.15)",
-    elevation: 6,
+    boxShadow: "0px 20px 24px rgba(31, 26, 61, 0.18)",
+    elevation: 8,
   },
   heroImageWrapper: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 28,
+    marginBottom: 32,
   },
   heroImage: {
-    height: 32,
-    width: 160,
+    height: 120,
+    width: "90%",
+    maxWidth: 320,
   },
   header: {
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 26,
     textAlign: "center",
   },
   actions: {
-    marginBottom: 28,
+    marginBottom: 32,
   },
   actionButton: {
     borderRadius: 999,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 22,
     alignItems: "center",
+    justifyContent: "center",
   },
   actionButtonSpacing: {
     marginBottom: 12,
   },
   actionButtonPrimary: {
-    backgroundColor: "#111111",
+    backgroundColor: "#5b21b6",
   },
   actionButtonSecondary: {
-    borderWidth: 1,
-    borderColor: "#d4d4d8",
-    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "#7c3aed",
+    backgroundColor: "#f9f6ff",
   },
   actionButtonPressed: {
-    opacity: 0.85,
+    opacity: 0.9,
   },
   actionLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
   actionLabelPrimary: {
     color: "#ffffff",
   },
   actionLabelSecondary: {
-    color: "#111111",
+    color: "#5b21b6",
   },
   section: {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 14,
   },
   resources: {
     marginBottom: 4,
   },
-  resourceCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
   resourceSpacing: {
     marginBottom: 12,
   },
+  resourceCard: {
+    padding: 24,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: "#ffffff",
+    borderColor: "#d7cff9",
+  },
   resourceCardPressed: {
-    opacity: 0.9,
+    opacity: 0.96,
   },
   resourceTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#111111",
+    color: "#1f1a3d",
+    marginBottom: 4,
   },
   resourceDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#52525b",
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#3c366b",
+    marginBottom: 12,
   },
   resourceHint: {
     fontSize: 13,
-    color: "#2563eb",
+    color: "#5b21b6",
     fontWeight: "600",
   },
 });
