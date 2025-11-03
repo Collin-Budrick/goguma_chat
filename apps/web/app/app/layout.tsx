@@ -1,12 +1,20 @@
 import type { PropsWithChildren } from "react";
-import { UserButton } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import UserMenu from "@/components/user-menu";
 import WorkspaceNav from "../../components/workspace-nav";
 
 export const metadata = {
   title: "Workspace | Goguma Chat",
 };
 
-export default function AppLayout({ children }: PropsWithChildren) {
+export default async function AppLayout({ children }: PropsWithChildren) {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -20,14 +28,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         </div>
         <div className="flex items-center gap-4">
           <WorkspaceNav />
-          <UserButton
-            afterSignOutUrl="/"
-            appearance={{
-              elements: {
-                avatarBox: "h-10 w-10 border border-white/20",
-              },
-            }}
-          />
+          <UserMenu user={session.user} />
         </div>
       </header>
       <div className="flex-1">{children}</div>

@@ -1,9 +1,9 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import SimplePage from "../../components/simple-page";
 
 export const metadata = {
@@ -20,34 +20,39 @@ function formatDate(value?: Date) {
 }
 
 export default async function ProfilePage() {
-  const user = await currentUser();
+  const session = await auth();
 
-  if (!user) {
+  if (!session?.user?.id) {
     redirect("/login");
   }
+
+  const userId = session.user.id;
 
   const [record] = await db
     .select()
     .from(users)
-    .where(eq(users.id, user.id))
+    .where(eq(users.id, userId))
     .limit(1);
 
-  const displayName =
-    record?.firstName || record?.lastName
-      ? [record.firstName, record.lastName].filter(Boolean).join(" ")
-      : user.fullName ?? "—";
+  const firstName = record?.firstName ?? session.user.firstName ?? null;
+  const lastName = record?.lastName ?? session.user.lastName ?? null;
 
-  const email = record?.email ?? user.primaryEmailAddress?.emailAddress ?? "—";
-  const timezone = user.timezone ?? "UTC";
-  const role = (user.publicMetadata?.role as string | undefined) ?? "Operator";
+  const displayName =
+    firstName || lastName
+      ? [firstName, lastName].filter(Boolean).join(" ")
+      : session.user.name ?? session.user.email ?? "—";
+
+  const email = record?.email ?? session.user.email ?? "—";
+  const timezone = "UTC";
+  const role = "Operator";
 
   const fields = [
     { label: "Display name", value: displayName },
     { label: "Workspace role", value: role },
     { label: "Email", value: email },
     { label: "Time zone", value: timezone },
-    { label: "Account created", value: formatDate(record?.createdAt ?? user.createdAt) },
-    { label: "Last synced", value: formatDate(record?.updatedAt ?? user.updatedAt) },
+    { label: "Account created", value: formatDate(record?.createdAt) },
+    { label: "Last synced", value: formatDate(record?.updatedAt) },
   ];
 
   return (

@@ -1,6 +1,5 @@
-import { SignIn } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
 import Link from "next/link";
+import AuthForm from "@/components/auth-form";
 
 export const metadata = {
   title: "Log in | Goguma Chat",
@@ -21,34 +20,10 @@ export default function LoginPage() {
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
         <h1 className="text-2xl font-semibold tracking-tight">Log in</h1>
         <p className="mt-2 text-sm text-white/60">
-          Welcome back. Authenticate with Clerk to continue.
+          Welcome back. Sign in with your work email to continue.
         </p>
         <div className="mt-8">
-          <SignIn
-            routing="path"
-            appearance={{
-              baseTheme: dark,
-              variables: { colorPrimary: "#ffffff" },
-              elements: {
-                rootBox: "w-full",
-                card: "border border-white/10 bg-black/60 backdrop-blur",
-                headerTitle: "text-white",
-                headerSubtitle: "text-white/60",
-                socialButtonsBlockButton:
-                  "bg-white/10 text-white hover:bg-white/20",
-                formFieldLabel: "text-xs uppercase tracking-[0.2em] text-white/50",
-                formFieldInput:
-                  "rounded-xl border border-white/15 bg-black/80 text-white placeholder:text-white/40 focus:border-white/40",
-                dividerLine: "bg-white/10",
-                dividerText: "text-white/50",
-                formButtonPrimary:
-                  "rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90",
-                footer: "text-white/50",
-              },
-            }}
-            afterSignInUrl="/app/dashboard"
-            signUpUrl="/signup"
-          />
+          <AuthForm mode="login" />
         </div>
         <p className="mt-4 text-center text-xs text-white/50">
           Forgot your credentials?{" "}
