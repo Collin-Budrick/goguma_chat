@@ -1,3 +1,5 @@
+import { SignUp } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import Link from "next/link";
 
 export const metadata = {
@@ -23,89 +25,47 @@ export default function SignupPage() {
         <p className="mt-2 text-sm text-white/60">
           Create a workspace and invite your teammates. No credit card required.
         </p>
-        <form
-          className="mt-8 grid gap-6 md:grid-cols-2"
-          method="post"
-          action="/api/auth/signup"
-        >
-          <label className="block text-sm md:col-span-1">
-            <span className="text-white/70">First name</span>
-            <input
-              type="text"
-              name="firstName"
-              required
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm md:col-span-1">
-            <span className="text-white/70">Last name</span>
-            <input
-              type="text"
-              name="lastName"
-              required
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm md:col-span-2">
-            <span className="text-white/70">Work email</span>
-            <input
-              type="email"
-              name="email"
-              required
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm md:col-span-2">
-            <span className="text-white/70">Company name</span>
-            <input
-              type="text"
-              name="company"
-              required
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm md:col-span-2">
-            <span className="text-white/70">Password</span>
-            <input
-              type="password"
-              name="password"
-              minLength={8}
-              required
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="flex items-start gap-3 text-xs text-white/60 md:col-span-2">
-            <input
-              type="checkbox"
-              name="terms"
-              required
-              className="mt-1 rounded border border-white/25 bg-black"
-            />
-            <span>
-              I agree to the{" "}
-              <Link
-                href="/terms"
-                className="underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
-              >
-                Privacy Policy
-              </Link>
-              .
-            </span>
-          </label>
-          <button
-            type="submit"
-            className="md:col-span-2 inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
+        <div className="mt-8">
+          <SignUp
+            appearance={{
+              baseTheme: dark,
+              variables: { colorPrimary: "#ffffff" },
+              elements: {
+                rootBox: "w-full",
+                card: "border border-white/10 bg-black/60 backdrop-blur",
+                headerTitle: "text-white",
+                headerSubtitle: "text-white/60",
+                formFieldLabel: "text-xs uppercase tracking-[0.2em] text-white/50",
+                formFieldInput:
+                  "rounded-xl border border-white/15 bg-black/80 text-white placeholder:text-white/40 focus:border-white/40",
+                dividerLine: "bg-white/10",
+                dividerText: "text-white/50",
+                formButtonPrimary:
+                  "rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90",
+                footer: "text-white/50",
+              },
+            }}
+            afterSignUpUrl="/app/dashboard"
+            signInUrl="/login"
+          />
+        </div>
+        <p className="mt-4 text-center text-xs text-white/50">
+          By continuing you agree to the{" "}
+          <Link
+            href="/terms"
+            className="underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
           >
-            Create workspace
-          </button>
-        </form>
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/privacy"
+            className="underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
         <p className="mt-6 text-center text-xs text-white/50">
           Already using Goguma Chat?{" "}
           <Link

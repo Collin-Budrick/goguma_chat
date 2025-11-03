@@ -1,3 +1,5 @@
+import { SignIn } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import Link from "next/link";
 
 export const metadata = {
@@ -19,42 +21,35 @@ export default function LoginPage() {
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
         <h1 className="text-2xl font-semibold tracking-tight">Log in</h1>
         <p className="mt-2 text-sm text-white/60">
-          Welcome back. Enter your credentials to continue.
+          Welcome back. Authenticate with Clerk to continue.
         </p>
-        <form
-          className="mt-8 space-y-6"
-          method="post"
-          action="/api/auth/callback/credentials"
-        >
-          <label className="block text-sm">
-            <span className="text-white/70">Email</span>
-            <input
-              type="email"
-              name="email"
-              required
-              autoComplete="email"
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-white/70">Password</span>
-            <input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              autoComplete="current-password"
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-          </label>
-          <button
-            type="submit"
-            className="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
-          >
-            Sign in
-          </button>
-        </form>
-        <p className="mt-6 text-center text-xs text-white/50">
+        <div className="mt-8">
+          <SignIn
+            appearance={{
+              baseTheme: dark,
+              variables: { colorPrimary: "#ffffff" },
+              elements: {
+                rootBox: "w-full",
+                card: "border border-white/10 bg-black/60 backdrop-blur",
+                headerTitle: "text-white",
+                headerSubtitle: "text-white/60",
+                socialButtonsBlockButton:
+                  "bg-white/10 text-white hover:bg-white/20",
+                formFieldLabel: "text-xs uppercase tracking-[0.2em] text-white/50",
+                formFieldInput:
+                  "rounded-xl border border-white/15 bg-black/80 text-white placeholder:text-white/40 focus:border-white/40",
+                dividerLine: "bg-white/10",
+                dividerText: "text-white/50",
+                formButtonPrimary:
+                  "rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90",
+                footer: "text-white/50",
+              },
+            }}
+            afterSignInUrl="/app/dashboard"
+            signUpUrl="/signup"
+          />
+        </div>
+        <p className="mt-4 text-center text-xs text-white/50">
           Forgot your credentials?{" "}
           <Link
             href="/contact"
@@ -64,7 +59,7 @@ export default function LoginPage() {
           </Link>
           .
         </p>
-        <p className="mt-4 text-center text-xs text-white/50">
+        <p className="mt-6 text-center text-xs text-white/50">
           Need an account?{" "}
           <Link
             href="/signup"
