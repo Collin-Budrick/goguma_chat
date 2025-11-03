@@ -1,6 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+
+import { Link } from "@/i18n/navigation";
 
 import CountUp from "@/components/count-up";
 
@@ -98,6 +101,8 @@ const fadeIn = {
 };
 
 export default function Home() {
+  const t = useTranslations("Marketing");
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-6 py-24 pb-10 lg:gap-32">
       <motion.section
@@ -113,41 +118,39 @@ export default function Home() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60"
           >
-            Monochrome Messaging
+            {t("heroEyebrow")}
           </motion.div>
           <motion.h1
             variants={fadeIn}
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            Crisp conversations that feel curated, even at scale.
+            {t("heroTitle")}
           </motion.h1>
           <motion.p
             variants={fadeIn}
             transition={{ delay: 0.3, duration: 0.6 }}
             className="max-w-2xl text-lg leading-relaxed text-white/70"
           >
-            Goguma Chat is the OLED-native workspace where your team orchestrates
-            every customer moment. Sharp contrast, real context, and AI assistance
-            help your replies land with warmth.
+            {t("heroDescription")}
           </motion.p>
           <motion.div
             variants={fadeIn}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="flex flex-col gap-3 sm:flex-row sm:items-center"
           >
-            <a
+            <Link
               href="/signup"
               className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
             >
-              Launch the demo
-            </a>
-            <a
+              {t("heroPrimaryCta")}
+            </Link>
+            <Link
               href="/capture"
               className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm text-white transition hover:border-white hover:text-white"
             >
-              Explore the toolkit
-            </a>
+              {t("heroSecondaryCta")}
+            </Link>
           </motion.div>
         </div>
         <motion.aside
@@ -319,30 +322,28 @@ export default function Home() {
         <div className="grid gap-8 px-8 py-12 lg:grid-cols-[1.2fr,1fr] lg:items-center">
           <div className="space-y-4">
             <div className="text-xs uppercase tracking-[0.35em] text-black/60">
-              Ready to glow
+              {t("ctaEyebrow")}
             </div>
             <h2 className="text-3xl font-semibold tracking-tight">
-              Bring your team into the OLED era of customer care.
+              {t("ctaTitle")}
             </h2>
             <p className="text-base leading-relaxed text-black/70">
-              Spin up shared inboxes, connect your tools, and invite your first
-              teammates in minutes. Our concierge crew will help you migrate history
-              so you ship responses with confidence from day one.
+              {t("ctaDescription")}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <a
+            <Link
               href="/signup"
               className="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-black/80"
             >
-              Start for free
-            </a>
-            <a
+              {t("ctaPrimary")}
+            </Link>
+            <Link
               href="/contact"
               className="inline-flex items-center justify-center rounded-full border border-black/20 px-6 py-3 text-sm text-black transition hover:border-black/60"
             >
-              Talk to sales
-            </a>
+              {t("ctaSecondary")}
+            </Link>
           </div>
         </div>
       </motion.section>

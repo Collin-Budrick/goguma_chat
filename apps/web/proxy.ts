@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import createMiddleware from "next-intl/middleware";
+
+import { routing, type Locale } from "./i18n/routing";
 
 const PUBLIC_ROUTE_PATTERNS = [
   /^\/$/,
@@ -19,29 +22,76 @@ const PUBLIC_ROUTE_PATTERNS = [
 
 const AUTH_ROUTE_PATTERNS = [/^\/login(\/.*)?$/, /^\/signup(\/.*)?$/];
 
+const intlMiddleware = createMiddleware(routing);
+
+function getLocaleFromPathname(pathname: string): { locale: Locale; pathname: string } {
+  const segments = pathname.split("/").filter(Boolean);
+  const potentialLocale = segments[0] as Locale | undefined;
+
+  if (potentialLocale && routing.locales.includes(potentialLocale)) {
+    const remainder = segments.slice(1).join("/");
+    return {
+      locale: potentialLocale,
+      pathname: remainder ? `/${remainder}` : "/",
+    };
+  }
+
+  return { locale: routing.defaultLocale, pathname };
+}
+
+function localizePath(locale: Locale, pathname: string) {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (routing.localePrefix === "as-needed" && locale === routing.defaultLocale) {
+    return normalizedPath;
+  }
+  return `/${locale}${normalizedPath}`;
+}
+
+function mergeIntlResponse(base: NextResponse, intlResponse: NextResponse) {
+  intlResponse.headers.forEach((value, key) => {
+    if (key === "set-cookie") {
+      base.headers.append(key, value);
+      return;
+    }
+
+    if (key.startsWith("x-next-intl") || key === "vary") {
+      base.headers.set(key, value);
+    }
+  });
+
+  return base;
+}
+
 function isMatch(pathname: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(pathname));
 }
 
 export default async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const intlResponse = intlMiddleware(req);
+
+  if (!intlResponse.headers.get("x-middleware-next")) {
+    return intlResponse;
+  }
+
+  const { locale, pathname } = getLocaleFromPathname(req.nextUrl.pathname);
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = Boolean(token);
 
   if (isMatch(pathname, PUBLIC_ROUTE_PATTERNS)) {
     if (isAuthenticated && isMatch(pathname, AUTH_ROUTE_PATTERNS)) {
-      return NextResponse.redirect(new URL("/app/dashboard", req.nextUrl.origin));
+      const target = new URL(localizePath(locale, "/app/dashboard"), req.nextUrl.origin);
+      return mergeIntlResponse(NextResponse.redirect(target), intlResponse);
     }
-    return NextResponse.next();
+    return intlResponse;
   }
 
   if (!isAuthenticated) {
-    const signInUrl = new URL("/login", req.nextUrl.origin);
+    const signInUrl = new URL(localizePath(locale, "/login"), req.nextUrl.origin);
     signInUrl.searchParams.set("callbackUrl", req.nextUrl.href);
-    return NextResponse.redirect(signInUrl);
+    return mergeIntlResponse(NextResponse.redirect(signInUrl), intlResponse);
   }
 
-  return NextResponse.next();
+  return intlResponse;
 }
 
 export const config = {
