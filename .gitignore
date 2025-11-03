@@ -52,3 +52,6 @@ next-env.d.ts
 # lock files
 package-lock.json
 bun.lock
+
+
+placeholder_chat
