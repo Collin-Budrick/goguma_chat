@@ -1,6 +1,7 @@
 import {
   Image,
   Linking,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -50,6 +51,21 @@ const RESOURCES: LinkTarget[] = [
     description:
       "Track the latest updates to Hermes and how it improves mobile runtime performance.",
     href: "https://reactnative.dev/docs/hermes",
+  },
+];
+
+const BOTTOM_NAV_LINKS: LinkTarget[] = [
+  {
+    title: "Home",
+    href: "/",
+  },
+  {
+    title: "Login",
+    href: "/login",
+  },
+  {
+    title: "Sign Up",
+    href: "/signup",
   },
 ];
 
@@ -155,12 +171,27 @@ function ResourceCard({
 }
 
 export function HomeScreen() {
+  const colorScheme = useColorScheme();
+
+  const safeAreaColor = colorScheme === "dark" ? "#18181b" : "#ffffff";
+  const cardBackgroundColor = "#ffffff";
+  const cardBorderColor =
+    colorScheme === "dark" ? "rgba(63,63,70,0.6)" : "#e4e4e7";
+  const titleColor = "#111111";
+  const subtitleColor = "#3f3f46";
+  const navBackground =
+    colorScheme === "dark" ? "rgba(24,24,27,0.75)" : "rgba(255,255,255,0.85)";
+  const navBorderColor =
+    colorScheme === "dark" ? "rgba(82,82,91,0.4)" : "rgba(228,228,231,0.7)";
+  const navTextColor = colorScheme === "dark" ? "#fafafa" : "#111111";
+  const navPressColor =
+    colorScheme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)";
 
   return (
     <SafeAreaView
       style={[
         styles.safeArea,
-        { backgroundColor: "#ffffff" },
+        { backgroundColor: safeAreaColor },
       ]}
     >
       <ScrollView
@@ -171,8 +202,8 @@ export function HomeScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: "#ffffff",
-              borderColor: "#e4e4e7",
+              backgroundColor: cardBackgroundColor,
+              borderColor: cardBorderColor,
             },
           ]}
         >
@@ -185,14 +216,14 @@ export function HomeScreen() {
           </View>
           <View style={styles.header}>
             <Text
-              style={[styles.title, { color: "#111111" }]}
+              style={[styles.title, { color: titleColor }]}
             >
               Build once, ship everywhere.
             </Text>
             <Text
               style={[
                 styles.subtitle,
-                { color: "#3f3f46" },
+                { color: subtitleColor },
               ]}
             >
               Edit the shared UI package to update both the Next.js web app and
@@ -233,6 +264,33 @@ export function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+      <View style={styles.bottomNavWrapper} pointerEvents="box-none">
+        <View
+          style={[
+            styles.bottomNav,
+            {
+              backgroundColor: navBackground,
+              borderColor: navBorderColor,
+            },
+          ]}
+        >
+          {BOTTOM_NAV_LINKS.map((link) => (
+            <Pressable
+              key={link.href}
+              accessibilityRole="link"
+              onPress={() => openLink(link)}
+              style={({ pressed }) => [
+                styles.bottomNavItem,
+                pressed && { backgroundColor: navPressColor },
+              ]}
+            >
+              <Text style={[styles.bottomNavLabel, { color: navTextColor }]}>
+                {link.title}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -246,6 +304,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 36,
+    paddingBottom: 140,
   },
   card: {
     borderRadius: 24,
@@ -351,6 +410,45 @@ const styles = StyleSheet.create({
   resourceHint: {
     fontSize: 13,
     color: "#2563eb",
+    fontWeight: "600",
+  },
+  bottomNavWrapper: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 24,
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  bottomNav: {
+    width: "100%",
+    maxWidth: 480,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    ...(Platform.OS === "web"
+      ? ({ backdropFilter: "blur(12px)" } as ViewStyle)
+      : {}),
+  } as ViewStyle,
+  bottomNavItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginHorizontal: 6,
+  },
+  bottomNavLabel: {
+    fontSize: 15,
     fontWeight: "600",
   },
 });
