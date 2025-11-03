@@ -2,10 +2,30 @@
 
 import { motion } from "framer-motion";
 
+import CountUp from "@/components/count-up";
+
 const STATS = [
-  { label: "Active teams", value: "480+", subtext: "Scaling support daily" },
-  { label: "CSAT", value: "98.4%", subtext: "Rolling 30-day average" },
-  { label: "Response time", value: "47s", subtext: "Median across channels" },
+  {
+    label: "Active teams",
+    value: 480,
+    suffix: "+",
+    duration: 1.2,
+    subtext: "Scaling support daily",
+  },
+  {
+    label: "CSAT",
+    value: 98.4,
+    suffix: "%",
+    duration: 1.4,
+    subtext: "Rolling 30-day average",
+  },
+  {
+    label: "Response time",
+    value: 47,
+    suffix: "s",
+    duration: 1,
+    subtext: "Median across channels",
+  },
 ];
 
 const FEATURES = [
@@ -190,7 +210,11 @@ export default function Home() {
               {stat.label}
             </div>
             <div className="mt-4 text-3xl font-semibold text-white">
-              {stat.value}
+              <CountUp
+                to={stat.value}
+                suffix={stat.suffix}
+                duration={stat.duration}
+              />
             </div>
             <div className="mt-2 text-sm text-white/60">{stat.subtext}</div>
           </motion.div>
