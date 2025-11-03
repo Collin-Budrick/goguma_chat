@@ -167,7 +167,8 @@ export default function SiteDock() {
   const { setDirection } = useTransitionDirection();
 
   useEffect(() => {
-    setMounted(true);
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {

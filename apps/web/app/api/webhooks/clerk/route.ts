@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   }
 
   const payload = await req.text();
-  const headerList = headers();
+  const headerList = await headers();
 
   const svixId = headerList.get("svix-id");
   const svixTimestamp = headerList.get("svix-timestamp");
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
       "svix-signature": svixSignature,
     }) as WebhookEvent;
   } catch (error) {
+    console.error("Clerk webhook signature verification failed", error);
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
   }
 
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
       await db.delete(users).where(eq(users.id, userId));
     }
   } catch (error) {
+    console.error("Clerk webhook handler failed", error);
     return NextResponse.json(
       { error: "Failed to process webhook" },
       { status: 500 },

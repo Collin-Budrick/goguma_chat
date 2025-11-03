@@ -1,4 +1,4 @@
-import { FlatCompat } from "@eslint/compat";
+import { FlatCompat } from "@eslint/eslintrc";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,8 +10,22 @@ const compat = new FlatCompat({
 });
 
 export default [
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.expo/**",
+      "**/android/**",
+      "**/ios/**",
+      "**/*.config.js",
+      "**/*.config.cjs",
+      "**/*.config.mjs",
+      "**/*.config.ts",
+    ],
+  },
   ...compat.config({
-    name: "goguma/root",
     root: true,
     ignorePatterns: [
       "**/node_modules/**",

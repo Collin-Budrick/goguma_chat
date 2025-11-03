@@ -1,20 +1,39 @@
-import { FlatCompat } from "@eslint/compat";
+import { FlatCompat } from "@eslint/eslintrc";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
+const baseConfig = require("@goguma/config/eslint/react-native");
+
 export default [
-  ...compat.config({
-    extends: ["@goguma/config/eslint/react-native"],
-    parserOptions: {
-      project: ["./tsconfig.json"],
-      tsconfigRootDir: __dirname,
+  {
+    ignores: [
+      "**/.expo/**",
+      "**/node_modules/**",
+      "**/android/**",
+      "**/ios/**",
+      "**/*.config.js",
+      "**/*.config.cjs",
+      "**/*.config.mjs",
+      "**/*.config.ts",
+    ],
+  },
+  ...compat.config(baseConfig),
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        project: ["./tsconfig.json"],
+        tsconfigRootDir: __dirname,
+      },
     },
-  }),
+  },
 ];
