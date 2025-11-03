@@ -9,6 +9,11 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "@/db";
 import { authAdapterTables, users } from "@/db/schema";
 
+type AdapterSchema = Extract<
+  NonNullable<Parameters<typeof DrizzleAdapter>[1]>,
+  { usersTable: typeof users }
+>;
+
 function toNullable(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -49,7 +54,7 @@ type CreateAuthResult = {
 export const authConfig = {
   adapter: DrizzleAdapter(
     db,
-    authAdapterTables as any, // Custom auth tables don't match DefaultPostgresSchema signature
+    authAdapterTables as AdapterSchema, // Custom auth tables don't match DefaultPostgresSchema signature
   ),
   session: {
     strategy: "jwt",
