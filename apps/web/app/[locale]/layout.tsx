@@ -26,9 +26,9 @@ const geistMono = Geist_Mono({
 export async function generateMetadata({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
-  const { locale } = params;
+  const { locale } = await params;
 
   if (!routing.locales.includes(locale as Locale)) {
     notFound();
@@ -56,14 +56,14 @@ export function generateStaticParams() {
 export default async function LocaleLayout({
   children,
   params,
-}: PropsWithChildren<{ params: { locale: string } }>) {
-  const { locale } = params;
+}: PropsWithChildren<{ params: Promise<{ locale: string }> }>) {
+  const { locale } = await params;
 
   if (!routing.locales.includes(locale as Locale)) {
     notFound();
   }
 
-  const messages = await getMessages();
+  const messages = await getMessages({ locale });
 
   return (
     <html lang={locale}>
