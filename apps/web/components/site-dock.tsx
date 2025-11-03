@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -25,38 +25,64 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useTransitionDirection } from "./transition-context";
 
-type DockNavItem = {
+type DockLinkItem = {
+  type: "link";
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
   match?: (path: string) => boolean;
 };
 
+type DockActionItem = {
+  type: "action";
+  id: "preferences";
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+};
+
+type DockNavItem = DockLinkItem | DockActionItem;
+
+function isLinkItem(item: DockNavItem): item is DockLinkItem {
+  return item.type === "link";
+}
+
 const marketingDock: DockNavItem[] = [
-  { href: "/", label: "Home", icon: Home, match: (path) => path === "/" },
-  { href: "/capture", label: "Capture", icon: Palette },
-  { href: "/integrations", label: "Integrations", icon: Layers },
-  { href: "/about", label: "About", icon: Info },
-  { href: "/contact", label: "Contact", icon: Mail },
+  { type: "link", href: "/", label: "Home", icon: Home, match: (path) => path === "/" },
+  { type: "link", href: "/capture", label: "Capture", icon: Palette },
+  { type: "link", href: "/integrations", label: "Integrations", icon: Layers },
+  { type: "link", href: "/about", label: "About", icon: Info },
+  { type: "link", href: "/contact", label: "Contact", icon: Mail },
   {
+    type: "link",
     href: "/login",
     label: "Account",
     icon: CircleUserRound,
     match: (path) => path.startsWith("/login") || path.startsWith("/signup"),
   },
+  {
+    type: "action",
+    id: "preferences",
+    label: "Display",
+    icon: Settings2,
+  },
 ];
 
 const appDock: DockNavItem[] = [
-  { href: "/app/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/app/chat", label: "Chats", icon: MessageSquare },
-  { href: "/app/settings", label: "Settings", icon: Settings2 },
-  { href: "/profile", label: "Profile", icon: CircleUserRound },
+  { type: "link", href: "/app/dashboard", label: "Overview", icon: LayoutDashboard },
+  { type: "link", href: "/app/chat", label: "Chats", icon: MessageSquare },
+  {
+    type: "action",
+    id: "preferences",
+    label: "Display",
+    icon: Settings2,
+  },
+  { type: "link", href: "/profile", label: "Profile", icon: CircleUserRound },
 ];
 
 const adminDock: DockNavItem[] = [
-  { href: "/admin", label: "Console", icon: LayoutDashboard },
-  { href: "/admin/push", label: "Broadcasts", icon: Megaphone },
-  { href: "/admin/users", label: "Roster", icon: Layers },
+  { type: "link", href: "/admin", label: "Console", icon: LayoutDashboard },
+  { type: "link", href: "/admin/push", label: "Broadcasts", icon: Megaphone },
+  { type: "link", href: "/admin/users", label: "Roster", icon: Layers },
 ];
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
@@ -128,11 +154,10 @@ function DockItem({
       onFocus={() => hover.set(1)}
       onBlur={() => hover.set(0)}
       onClick={() => onSelect(item.href)}
-      className={`relative isolate flex items-center justify-center rounded-2xl border text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
-        active
+      className={`relative isolate flex items-center justify-center rounded-2xl border text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${active
           ? "border-white/40 bg-white/25"
           : "border-white/15 bg-white/10 hover:border-white/30 hover:bg-white/18"
-      }`}
+        }`}
       type="button"
       aria-label={item.label}
       aria-current={active ? "page" : undefined}
@@ -148,7 +173,7 @@ function DockItem({
             animate={{ opacity: 1, y: -12 }}
             exit={{ opacity: 0, y: 0 }}
             transition={{ duration: 0.18 }}
-            className="pointer-events-none absolute -top-3 left-1/2 z-20 -translate-x-1/2 rounded-md border border-white/20 bg-black/80 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
+            className="-top-3 left-1/2 z-20 absolute bg-black/80 shadow-[0_12px_24px_rgba(0,0,0,0.5)] px-2 py-1 border border-white/20 rounded-md font-medium text-[10px] text-white uppercase tracking-[0.2em] -translate-x-1/2 pointer-events-none"
             role="tooltip"
           >
             {item.label}
@@ -243,11 +268,11 @@ export default function SiteDock() {
           }}
           exit={{ opacity: 0, y: 48, scale: 0.9 }}
           transition={{ type: "spring", stiffness: 220, damping: 26 }}
-          className="pointer-events-none fixed inset-x-0 bottom-6 z-[80] flex justify-center px-4"
+          className="bottom-6 z-[80] fixed inset-x-0 flex justify-center px-4 pointer-events-none"
         >
           <motion.div
             style={{ height }}
-            className="pointer-events-auto flex w-full max-w-3xl items-end justify-center"
+            className="flex justify-center items-end w-full max-w-3xl pointer-events-auto"
           >
             <motion.div
               onMouseMove={(event) => {
@@ -259,7 +284,7 @@ export default function SiteDock() {
                 mouseX.set(Infinity);
               }}
               onMouseEnter={() => hover.set(1)}
-              className="relative flex items-end gap-4 rounded-[32px] border border-white/15 bg-white/12 px-4 py-4 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl before:pointer-events-none before:absolute before:inset-px before:rounded-[30px] before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 before:content-['']"
+              className="before:absolute relative before:inset-px flex items-end gap-4 bg-white/12 before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl px-4 py-4 border border-white/15 rounded-[32px] before:rounded-[30px] before:content-[''] before:pointer-events-none"
               style={{ height: panelHeight }}
               role="toolbar"
               aria-label="Application dock"
