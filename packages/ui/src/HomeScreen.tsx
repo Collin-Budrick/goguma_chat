@@ -255,7 +255,10 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignItems: "stretch",
     borderWidth: 1,
-    boxShadow: "0px 18px 20px rgba(0, 0, 0, 0.15)",
+    shadowColor: "#000000",
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 18 },
     elevation: 6,
   },
   heroImageWrapper: {
