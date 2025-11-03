@@ -1,20 +1,56 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import type { NextAuthConfig } from "next-auth";
 import NextAuth from "next-auth";
+import type { Session } from "next-auth";
+import type { NextRequest } from "next/server";
 import Credentials from "next-auth/providers/credentials";
 
 import { db } from "@/db";
-import { authSchema, users } from "@/db/schema";
+import { authAdapterTables, users } from "@/db/schema";
 
 function toNullable(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
 
-export const authConfig: NextAuthConfig = {
-  adapter: DrizzleAdapter(db, authSchema),
+type CredentialsUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type MutableToken = {
+  [key: string]: unknown;
+  id?: string;
+  email?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+type AuthRouteHandler = (
+  request: NextRequest,
+  context: { params: Promise<{ nextauth: string[] }> },
+) => Promise<Response> | Response;
+
+type CreateAuthResult = {
+  handlers: {
+    GET: AuthRouteHandler;
+    POST: AuthRouteHandler;
+  };
+  auth: () => Promise<Session | null>;
+  signIn: (...args: unknown[]) => Promise<unknown>;
+  signOut: (...args: unknown[]) => Promise<unknown>;
+};
+
+export const authConfig = {
+  adapter: DrizzleAdapter(
+    db,
+    authAdapterTables as any, // Custom auth tables don't match DefaultPostgresSchema signature
+  ),
   session: {
     strategy: "jwt",
   },
@@ -31,14 +67,23 @@ export const authConfig: NextAuthConfig = {
         lastName: { label: "Last name", type: "text" },
       },
       async authorize(credentials) {
-        const email = toNullable(credentials?.email?.toLowerCase());
+        const email =
+          typeof credentials?.email === "string"
+            ? toNullable(credentials.email.toLowerCase())
+            : null;
 
         if (!email) {
           return null;
         }
 
-        const requestedFirstName = toNullable(credentials?.firstName);
-        const requestedLastName = toNullable(credentials?.lastName);
+        const requestedFirstName =
+          typeof credentials?.firstName === "string"
+            ? toNullable(credentials.firstName)
+            : null;
+        const requestedLastName =
+          typeof credentials?.lastName === "string"
+            ? toNullable(credentials.lastName)
+            : null;
 
         const [existing] = await db
           .select()
@@ -103,7 +148,13 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({
+      token,
+      user,
+    }: {
+      token: MutableToken;
+      user?: CredentialsUser | null;
+    }) {
       if (user) {
         token.id = user.id;
         if (user.email) {
@@ -112,18 +163,36 @@ export const authConfig: NextAuthConfig = {
         if (user.name) {
           token.name = user.name;
         }
-        token.firstName = "firstName" in user ? user.firstName : undefined;
-        token.lastName = "lastName" in user ? user.lastName : undefined;
+        token.firstName =
+          "firstName" in user && typeof user.firstName === "string"
+            ? user.firstName
+            : undefined;
+        token.lastName =
+          "lastName" in user && typeof user.lastName === "string"
+            ? user.lastName
+            : undefined;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({
+      session,
+      token,
+    }: {
+      session: Session & {
+        user?: {
+          id?: string;
+          firstName?: string;
+          lastName?: string;
+        };
+      };
+      token?: MutableToken;
+    }) {
       if (session.user && token) {
         session.user.id = typeof token.id === "string" ? token.id : undefined;
         session.user.firstName =
-          typeof token.firstName === "string" ? token.firstName : undefined;
+          typeof token?.firstName === "string" ? token.firstName : undefined;
         session.user.lastName =
-          typeof token.lastName === "string" ? token.lastName : undefined;
+          typeof token?.lastName === "string" ? token.lastName : undefined;
       }
       return session;
     },
@@ -131,4 +200,6 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+const createAuth = NextAuth as unknown as (config: typeof authConfig) => CreateAuthResult;
+
+export const { handlers, auth, signIn, signOut } = createAuth(authConfig);

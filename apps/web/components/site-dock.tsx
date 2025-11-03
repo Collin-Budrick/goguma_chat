@@ -8,6 +8,7 @@ import {
   useMotionValue,
   useSpring,
   useTransform,
+  type MotionValue,
 } from "framer-motion";
 import {
   CircleUserRound,
@@ -80,7 +81,7 @@ function DockItem({
 }: {
   item: DockNavItem;
   onSelect: (href: string) => void;
-  mouseX: ReturnType<typeof useMotionValue>;
+  mouseX: MotionValue<number>;
   spring: typeof springConfig;
   baseSize: number;
   magnifiedSize: number;
@@ -88,7 +89,7 @@ function DockItem({
   active: boolean;
 }) {
   const ref = useRef<HTMLButtonElement | null>(null);
-  const hover = useMotionValue(0);
+  const hover = useMotionValue<number>(0);
   const [showLabel, setShowLabel] = useState(false);
 
   useEffect(() => {
@@ -98,7 +99,7 @@ function DockItem({
     return () => unsubscribe();
   }, [hover]);
 
-  const distance = useTransform(mouseX, (value) => {
+  const distance = useTransform(mouseX, (value: number) => {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return Infinity;
     return value - rect.left - rect.width / 2;
@@ -178,8 +179,8 @@ export default function SiteDock() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const mouseX = useMotionValue(Infinity);
-  const hover = useMotionValue(0);
+  const mouseX = useMotionValue<number>(Infinity);
+  const hover = useMotionValue<number>(0);
 
   const baseSize = 52;
   const magnifiedSize = 78;

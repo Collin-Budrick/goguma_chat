@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import SimplePage from "../../components/simple-page";
+import SimplePage from "@/components/simple-page";
 
 export const metadata = {
   title: "Profile | Goguma Chat",
@@ -19,7 +20,17 @@ function formatDate(value?: Date) {
   }).format(value);
 }
 
-export default async function ProfilePage() {
+export const dynamic = "force-static";
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<ProfilePageSkeleton />}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+async function ProfileContent() {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -67,6 +78,27 @@ export default async function ProfilePage() {
               {field.label}
             </dt>
             <dd className="mt-2 text-white">{field.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </SimplePage>
+  );
+}
+
+function ProfilePageSkeleton() {
+  return (
+    <SimplePage
+      title="Your profile"
+      description="Control how your teammates see you across conversations."
+    >
+      <dl className="grid gap-4 text-sm">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div
+            key={index}
+            className="space-y-2 rounded-2xl border border-white/10 p-4"
+          >
+            <div className="h-3 w-24 rounded-full bg-white/10" />
+            <div className="h-4 w-48 rounded-full bg-white/10" />
           </div>
         ))}
       </dl>

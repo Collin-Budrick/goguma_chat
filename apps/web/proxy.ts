@@ -23,7 +23,7 @@ function isMatch(pathname: string, patterns: RegExp[]) {
   return patterns.some((pattern) => pattern.test(pathname));
 }
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = Boolean(token);

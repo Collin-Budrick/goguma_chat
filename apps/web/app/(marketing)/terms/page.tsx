@@ -1,4 +1,4 @@
-import SimplePage from "../../components/simple-page";
+import SimplePage from "@/components/simple-page";
 
 export const metadata = {
   title: "Terms of Service | Goguma Chat",

@@ -1,4 +1,4 @@
-import SimplePage from "../../components/simple-page";
+import SimplePage from "@/components/simple-page";
 
 const paragraphs = [
   "Goguma Chat exists to make every customer interaction feel hand-crafted. We believe teams deserve a workspace that amplifies clarity instead of clutter, so we designed an OLED-first interface where contrast serves the conversation.",

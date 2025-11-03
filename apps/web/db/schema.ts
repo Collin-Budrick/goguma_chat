@@ -108,3 +108,11 @@ export const authSchema = {
   verificationTokens,
   authenticators,
 };
+
+export const authAdapterTables = {
+  usersTable: users,
+  accountsTable: accounts,
+  sessionsTable: sessions,
+  verificationTokensTable: verificationTokens,
+  authenticatorsTable: authenticators,
+};

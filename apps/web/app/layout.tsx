@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import type { PropsWithChildren } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import SiteDock from "../components/site-dock";
-import SiteFooter from "../components/site-footer";
-import TransitionViewport from "../components/transition-viewport";
-import { TransitionProvider } from "../components/transition-context";
+import SiteDock from "@/components/site-dock";
+import SiteFooter from "@/components/site-footer";
+import TransitionViewport from "@/components/transition-viewport";
+import { TransitionProvider } from "@/components/transition-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
