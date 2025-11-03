@@ -3,6 +3,8 @@ import "server-only";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+import { authSchema } from "./schema";
+
 const globalForPool = globalThis as unknown as {
   __drizzlePool?: Pool;
 };
@@ -29,6 +31,6 @@ if (process.env.NODE_ENV !== "production") {
   globalForPool.__drizzlePool = pool;
 }
 
-export const db = drizzle(pool);
+export const db = drizzle(pool, { schema: authSchema });
 
 export type Database = typeof db;

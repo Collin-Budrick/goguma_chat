@@ -4,7 +4,19 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, configure your environment variables by copying `.env.example` to `.env` and updating the values. At minimum you will need a `DATABASE_URL` that points to a PostgreSQL instance and a `NEXTAUTH_SECRET`.
+
+With your database available you can manage migrations with Drizzle:
+
+```bash
+# Generate migrations after editing apps/web/db/schema.ts
+bun run db:generate
+
+# Apply the latest migrations to the target database
+bun run db:push
+```
+
+Then run the development server:
 
 ```bash
 npm run dev

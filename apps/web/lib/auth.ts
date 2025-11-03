@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import type { NextAuthConfig } from "next-auth";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { authSchema, users } from "@/db/schema";
 
 function toNullable(value?: string | null) {
   const trimmed = value?.trim();
@@ -13,6 +14,7 @@ function toNullable(value?: string | null) {
 }
 
 export const authConfig: NextAuthConfig = {
+  adapter: DrizzleAdapter(db, authSchema),
   session: {
     strategy: "jwt",
   },
@@ -51,6 +53,7 @@ export const authConfig: NextAuthConfig = {
           const newUser = {
             id,
             email,
+            emailVerified: now,
             firstName: requestedFirstName,
             lastName: requestedLastName,
             createdAt: now,
