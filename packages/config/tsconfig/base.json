@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "baseUrl": ".",
+    "baseUrl": "..\/..\/..",
     "paths": {
       "@goguma/ui": ["packages/ui/index.ts"],
       "@goguma/ui/*": ["packages/ui/src/*"]

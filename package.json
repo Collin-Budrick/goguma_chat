@@ -6,9 +6,10 @@
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
     "start": "bun run --cwd apps/web start",
-    "lint": "bun run lint:web && bun run lint:native",
+    "lint": "bun run lint:web && bun run lint:native && bun run lint:ui",
     "lint:web": "bun run --cwd apps/web lint",
     "lint:native": "bunx --bun eslint apps/native",
+    "lint:ui": "bunx --bun eslint packages/ui",
     "native:start": "bun run --cwd apps/native start",
     "native:android": "bun run --cwd apps/native android",
     "native:ios": "bun run --cwd apps/native ios",
@@ -25,9 +26,11 @@
     "@types/react": "19.2.2",
     "@typescript-eslint/eslint-plugin": "8.46.2",
     "@typescript-eslint/parser": "8.46.2",
+    "@eslint/compat": "1.2.4",
     "eslint": "9.39.0",
     "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-react-native": "5.0.0"
+    "eslint-plugin-react-native": "5.0.0",
+    "prettier": "3.4.2"
   },
   "packageManager": "bun@1.1.34"
 }

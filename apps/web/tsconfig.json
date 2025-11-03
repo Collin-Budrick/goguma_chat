@@ -1,6 +1,7 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@goguma/config/tsconfig/base",
   "compilerOptions": {
+    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
@@ -9,7 +10,7 @@
     "paths": {
       "@/*": ["./*"],
       "@goguma/ui": ["../../packages/ui/index.ts"],
-      "@goguma/ui/*": ["../../packages/ui/src/*"],
+      "@goguma/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": [

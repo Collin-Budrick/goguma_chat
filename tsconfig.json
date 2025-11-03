@@ -1,5 +1,5 @@
 {
-  "extends": "./tsconfig.base.json",
+  "extends": "@goguma/config/tsconfig/base",
   "files": [],
   "references": [
     { "path": "./apps/native" },

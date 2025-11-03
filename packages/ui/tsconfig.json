@@ -1,6 +1,7 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@goguma/config/tsconfig/base",
   "compilerOptions": {
+    "baseUrl": ".",
     "jsx": "react-jsx",
     "noEmit": true
   },
