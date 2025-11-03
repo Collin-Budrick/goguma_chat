@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { UserButton } from "@clerk/nextjs";
 import WorkspaceNav from "../../components/workspace-nav";
 
 export const metadata = {
@@ -17,7 +18,17 @@ export default function AppLayout({ children }: PropsWithChildren) {
             Sweet Systems CX
           </h1>
         </div>
-        <WorkspaceNav />
+        <div className="flex items-center gap-4">
+          <WorkspaceNav />
+          <UserButton
+            afterSignOutUrl="/"
+            appearance={{
+              elements: {
+                avatarBox: "h-10 w-10 border border-white/20",
+              },
+            }}
+          />
+        </div>
       </header>
       <div className="flex-1">{children}</div>
     </div>
