@@ -14,6 +14,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/app/dashboard";
   const t = useTranslations("Auth.form");
+  const isLogin = mode === "login";
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,24 +22,41 @@ export default function AuthForm({ mode }: AuthFormProps) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = (formData.get("email") as string | null)?.trim();
-    const firstName = (formData.get("firstName") as string | null)?.trim();
-    const lastName = (formData.get("lastName") as string | null)?.trim();
+    const password = isLogin
+      ? (formData.get("password") as string | null)?.trim()
+      : null;
+    const firstName = !isLogin
+      ? (formData.get("firstName") as string | null)?.trim()
+      : null;
+    const lastName = !isLogin
+      ? (formData.get("lastName") as string | null)?.trim()
+      : null;
 
     if (!email) {
       setError(t("errors.emailRequired"));
+      return;
+    }
+    if (isLogin && !password) {
+      setError(t("errors.passwordRequired"));
       return;
     }
 
     setError(null);
     setIsSubmitting(true);
 
-    const result = await signIn("credentials", {
+    const signInPayload: Record<string, string | undefined> = {
       email,
-      firstName: firstName ?? undefined,
-      lastName: lastName ?? undefined,
       redirect: false,
       callbackUrl,
-    });
+    };
+    if (isLogin) {
+      signInPayload.password = password ?? undefined;
+    } else {
+      signInPayload.firstName = firstName ?? undefined;
+      signInPayload.lastName = lastName ?? undefined;
+    }
+
+    const result = await signIn("credentials", signInPayload);
 
     setIsSubmitting(false);
 
@@ -51,14 +69,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
     router.refresh();
   }
 
-  const heading =
-    mode === "login" ? t("headings.login") : t("headings.signup");
+  const heading = isLogin ? t("headings.login") : t("headings.signup");
   const firstNameLabel =
-    mode === "signup"
+    !isLogin
       ? t("fields.firstName.required")
       : t("fields.firstName.optional");
   const lastNameLabel =
-    mode === "signup"
+    !isLogin
       ? t("fields.lastName.required")
       : t("fields.lastName.optional");
 
@@ -81,42 +98,62 @@ export default function AuthForm({ mode }: AuthFormProps) {
           placeholder={t("fields.email.placeholder")}
         />
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      {isLogin ? (
         <div>
           <label
-            htmlFor="firstName"
+            htmlFor="password"
             className="text-xs uppercase tracking-[0.25em] text-white/50"
           >
-            {firstNameLabel}
+            {t("fields.password.label")}
           </label>
           <input
-            id="firstName"
-            name="firstName"
-            type="text"
-            autoComplete="given-name"
-            required={mode === "signup"}
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-            placeholder={t("fields.firstName.placeholder")}
+            placeholder={t("fields.password.placeholder")}
           />
         </div>
-        <div>
-          <label
-            htmlFor="lastName"
-            className="text-xs uppercase tracking-[0.25em] text-white/50"
-          >
-            {lastNameLabel}
-          </label>
-          <input
-            id="lastName"
-            name="lastName"
-            type="text"
-            autoComplete="family-name"
-            required={mode === "signup"}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-            placeholder={t("fields.lastName.placeholder")}
-          />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label
+              htmlFor="firstName"
+              className="text-xs uppercase tracking-[0.25em] text-white/50"
+            >
+              {firstNameLabel}
+            </label>
+            <input
+              id="firstName"
+              name="firstName"
+              type="text"
+              autoComplete="given-name"
+              required={!isLogin}
+              className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              placeholder={t("fields.firstName.placeholder")}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="lastName"
+              className="text-xs uppercase tracking-[0.25em] text-white/50"
+            >
+              {lastNameLabel}
+            </label>
+            <input
+              id="lastName"
+              name="lastName"
+              type="text"
+              autoComplete="family-name"
+              required={!isLogin}
+              className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              placeholder={t("fields.lastName.placeholder")}
+            />
+          </div>
         </div>
-      </div>
+      )}
       {error ? (
         <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-100">
           {error}

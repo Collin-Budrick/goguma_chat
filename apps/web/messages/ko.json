@@ -139,6 +139,10 @@
           "label": "업무용 이메일",
           "placeholder": "you@example.com"
         },
+        "password": {
+          "label": "비밀번호",
+          "placeholder": "••••••••"
+        },
         "firstName": {
           "placeholder": "Jane",
           "required": "이름 *",
@@ -152,6 +156,7 @@
       },
       "errors": {
         "emailRequired": "계속하려면 이메일을 입력하세요.",
+        "passwordRequired": "계속하려면 비밀번호를 입력하세요.",
         "signInFailed": "입력하신 정보로 로그인할 수 없습니다. 다시 시도해 주세요."
       },
       "buttons": {

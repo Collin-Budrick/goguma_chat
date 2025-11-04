@@ -139,6 +139,10 @@
           "label": "Work email",
           "placeholder": "you@example.com"
         },
+        "password": {
+          "label": "Password",
+          "placeholder": "••••••••"
+        },
         "firstName": {
           "placeholder": "Jane",
           "required": "First name *",
@@ -152,6 +156,7 @@
       },
       "errors": {
         "emailRequired": "Enter your work email to continue.",
+        "passwordRequired": "Enter your password to continue.",
         "signInFailed": "We couldn't sign you in with those details. Try again."
       },
       "buttons": {

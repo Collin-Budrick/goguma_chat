@@ -68,6 +68,7 @@ export const authConfig = {
       name: "Workspace login",
       credentials: {
         email: { label: "Work email", type: "email" },
+        password: { label: "Password", type: "password" },
         firstName: { label: "First name", type: "text" },
         lastName: { label: "Last name", type: "text" },
       },
