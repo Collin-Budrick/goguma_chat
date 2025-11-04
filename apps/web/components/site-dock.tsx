@@ -20,6 +20,7 @@ import {
   Settings2,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
@@ -43,43 +44,89 @@ type DockActionItem = {
 
 type DockNavItem = DockLinkItem | DockActionItem;
 
+type DockLinkDefinition = Omit<DockLinkItem, "label"> & {
+  labelKey: string;
+};
+
+type DockActionDefinition = Omit<DockActionItem, "label"> & {
+  labelKey: string;
+};
+
+type DockNavDefinition = DockLinkDefinition | DockActionDefinition;
+
 function isLinkItem(item: DockNavItem): item is DockLinkItem {
   return item.type === "link";
 }
 
-const marketingDock: DockNavItem[] = [
-  { type: "link", href: "/", label: "Home", icon: Home, match: (path) => path === "/" },
+const marketingDock: DockNavDefinition[] = [
+  {
+    type: "link",
+    href: "/",
+    labelKey: "nav.marketing.home",
+    icon: Home,
+    match: (path) => path === "/",
+  },
   {
     type: "link",
     href: "/login",
-    label: "Account",
+    labelKey: "nav.marketing.account",
     icon: CircleUserRound,
     match: (path) => path.startsWith("/login") || path.startsWith("/signup"),
   },
   {
     type: "action",
     id: "preferences",
-    label: "Display",
+    labelKey: "nav.shared.display",
     icon: Settings2,
   },
 ];
 
-const appDock: DockNavItem[] = [
-  { type: "link", href: "/app/dashboard", label: "Overview", icon: LayoutDashboard },
-  { type: "link", href: "/app/chat", label: "Chats", icon: MessageSquare },
+const appDock: DockNavDefinition[] = [
+  {
+    type: "link",
+    href: "/app/dashboard",
+    labelKey: "nav.app.overview",
+    icon: LayoutDashboard,
+  },
+  {
+    type: "link",
+    href: "/app/chat",
+    labelKey: "nav.app.chats",
+    icon: MessageSquare,
+  },
   {
     type: "action",
     id: "preferences",
-    label: "Display",
+    labelKey: "nav.shared.display",
     icon: Settings2,
   },
-  { type: "link", href: "/profile", label: "Profile", icon: CircleUserRound },
+  {
+    type: "link",
+    href: "/profile",
+    labelKey: "nav.app.profile",
+    icon: CircleUserRound,
+  },
 ];
 
-const adminDock: DockNavItem[] = [
-  { type: "link", href: "/admin", label: "Console", icon: LayoutDashboard },
-  { type: "link", href: "/admin/push", label: "Broadcasts", icon: Megaphone },
-  { type: "link", href: "/admin/users", label: "Roster", icon: Layers },
+const adminDock: DockNavDefinition[] = [
+  {
+    type: "link",
+    href: "/admin",
+    labelKey: "nav.admin.console",
+    icon: LayoutDashboard,
+  },
+  {
+    type: "link",
+    href: "/admin/push",
+    labelKey: "nav.admin.broadcasts",
+    icon: Megaphone,
+  },
+  {
+    type: "link",
+    href: "/admin/users",
+    labelKey: "nav.admin.roster",
+    icon: Layers,
+  },
 ];
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
@@ -121,12 +168,20 @@ type DisplaySettings = {
   theme: "dark" | "light";
 };
 
-function resolveDock(pathname: string): DockNavItem[] {
-  if (pathname.startsWith("/admin")) return adminDock;
+function resolveDock(
+  pathname: string,
+  resolveLabel: (key: string) => string,
+): DockNavItem[] {
+  const hydrate = (items: DockNavDefinition[]) =>
+    items.map((item) => ({
+      ...item,
+      label: resolveLabel(item.labelKey),
+    }));
+  if (pathname.startsWith("/admin")) return hydrate(adminDock);
   if (pathname.startsWith("/app") || pathname.startsWith("/profile")) {
-    return appDock;
+    return hydrate(appDock);
   }
-  return marketingDock;
+  return hydrate(marketingDock);
 }
 
 function DockItem({
@@ -298,10 +353,12 @@ function LocaleFlipOverlay({
   words,
   theme,
   onComplete,
+  ariaLabel,
 }: {
   words: string[];
   theme: "dark" | "light";
   onComplete: () => void;
+  ariaLabel: string;
 }) {
   const isLight = theme === "light";
   const surfaceClasses = isLight
@@ -317,7 +374,7 @@ function LocaleFlipOverlay({
       transition={{ duration: 0.25 }}
       className={`fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-3xl ${surfaceClasses}`}
       aria-live="assertive"
-      aria-label="Switching language"
+      aria-label={ariaLabel}
     >
       <FlipWords
         words={words}
@@ -334,7 +391,11 @@ export default function SiteDock() {
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale() as Locale;
-  const dockItems = useMemo(() => resolveDock(pathname), [pathname]);
+  const dockT = useTranslations("Shell.dock");
+  const dockItems = useMemo(
+    () => resolveDock(pathname, (key) => dockT(key)),
+    [pathname, dockT],
+  );
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -363,6 +424,26 @@ export default function SiteDock() {
     }
   });
   const isLightTheme = displaySettings.theme === "light";
+  const panelTitle = dockT("panel.title");
+  const closeLabel = dockT("panel.close");
+  const preferenceCopy = {
+    magnify: {
+      label: dockT("preferences.magnify.label"),
+      description: dockT("preferences.magnify.description"),
+    },
+    labels: {
+      label: dockT("preferences.labels.label"),
+      description: dockT("preferences.labels.description"),
+    },
+    theme: {
+      label: dockT("preferences.lightMode.label"),
+      description: dockT("preferences.lightMode.description"),
+    },
+    language: {
+      label: dockT("preferences.language.label"),
+      description: dockT("preferences.language.description"),
+    },
+  };
   const popoverToneClasses = isLightTheme
     ? "border-slate-200 bg-white text-slate-900 shadow-[0_30px_70px_rgba(148,163,184,0.35)]"
     : "border-white/12 bg-black/85 text-white shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
@@ -562,6 +643,7 @@ export default function SiteDock() {
             words={localeTransitionWords}
             theme={displaySettings.theme}
             onComplete={handleLocaleTransitionComplete}
+            ariaLabel={dockT("aria.localeOverlay")}
           />
         )}
       </AnimatePresence>
@@ -595,7 +677,7 @@ export default function SiteDock() {
                 className="dock-panel before:absolute relative before:inset-px flex items-end gap-4 bg-white/12 before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl px-4 py-4 border border-white/15 rounded-[32px] before:rounded-[30px] before:content-[''] before:pointer-events-none"
                 style={{ height: panelHeight }}
                 role="toolbar"
-                aria-label="Application dock"
+                aria-label={dockT("aria.toolbar")}
               >
                 {dockItems.map((item) => {
                   const key = isLinkItem(item) ? item.href : `action-${item.id}`;
@@ -632,7 +714,7 @@ export default function SiteDock() {
                                 <span
                                   className={`text-[10px] font-semibold uppercase tracking-[0.32em] ${isLightTheme ? "text-slate-500" : "text-white/60"}`}
                                 >
-                                  Display
+                                  {panelTitle}
                                 </span>
                                 <button
                                   type="button"
@@ -641,15 +723,15 @@ export default function SiteDock() {
                                       ? "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900"
                                       : "border-white/10 bg-white/10 text-white/70 hover:border-white/25 hover:bg-white/20 hover:text-white"
                                     }`}
-                                  aria-label="Close display settings"
+                                  aria-label={closeLabel}
                                 >
                                   <X className="h-3 w-3" aria-hidden />
                                 </button>
                               </div>
                               <div className="flex flex-col gap-2">
                                 <PreferenceToggle
-                                  label="Dock magnification"
-                                  description="Enlarge icons near your cursor."
+                                  label={preferenceCopy.magnify.label}
+                                  description={preferenceCopy.magnify.description}
                                   value={displaySettings.magnify}
                                   theme={displaySettings.theme}
                                   onChange={(value) =>
@@ -657,8 +739,8 @@ export default function SiteDock() {
                                   }
                                 />
                                 <PreferenceToggle
-                                  label="Label tooltips"
-                                  description="Reveal item labels on hover."
+                                  label={preferenceCopy.labels.label}
+                                  description={preferenceCopy.labels.description}
                                   value={displaySettings.showLabels}
                                   theme={displaySettings.theme}
                                   onChange={(value) =>
@@ -666,8 +748,8 @@ export default function SiteDock() {
                                   }
                                 />
                                 <PreferenceToggle
-                                  label="Light mode"
-                                  description="Bright surfaces and dark text."
+                                  label={preferenceCopy.theme.label}
+                                  description={preferenceCopy.theme.description}
                                   value={displaySettings.theme === "light"}
                                   theme={displaySettings.theme}
                                   onChange={(enabled) =>
@@ -677,13 +759,13 @@ export default function SiteDock() {
                                     }))
                                   }
                                 />
-                              <PreferenceToggle
-                                label="Korean language"
-                                description="Switch interface text to 한국어."
-                                value={localeToggleValue}
-                                theme={displaySettings.theme}
-                                onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
-                              />
+                                <PreferenceToggle
+                                  label={preferenceCopy.language.label}
+                                  description={preferenceCopy.language.description}
+                                  value={localeToggleValue}
+                                  theme={displaySettings.theme}
+                                  onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
+                                />
                               </div>
                             </motion.div>
                           )}

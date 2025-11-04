@@ -69,5 +69,471 @@
     "ctaDescription": "Spin up shared inboxes, connect your tools, and invite your first teammates in minutes. Our concierge crew will help you migrate history so you ship responses with confidence from day one.",
     "ctaPrimary": "Start for free",
     "ctaSecondary": "Talk to sales"
+  },
+  "Shell": {
+    "footer": {
+      "copy": "© {year} Goguma Chat. All rights reserved.",
+      "links": {
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "status": "Status",
+        "support": "Support"
+      }
+    },
+    "dock": {
+      "nav": {
+        "marketing": {
+          "home": "Home",
+          "account": "Account"
+        },
+        "shared": {
+          "display": "Display"
+        },
+        "app": {
+          "overview": "Overview",
+          "chats": "Chats",
+          "profile": "Profile"
+        },
+        "admin": {
+          "console": "Console",
+          "broadcasts": "Broadcasts",
+          "roster": "Roster"
+        }
+      },
+      "panel": {
+        "title": "Display",
+        "close": "Close display settings"
+      },
+      "preferences": {
+        "magnify": {
+          "label": "Dock magnification",
+          "description": "Enlarge icons near your cursor."
+        },
+        "labels": {
+          "label": "Label tooltips",
+          "description": "Reveal item labels on hover."
+        },
+        "lightMode": {
+          "label": "Light mode",
+          "description": "Bright surfaces and dark text."
+        },
+        "language": {
+          "label": "Korean language",
+          "description": "Switch interface text to 한국어."
+        }
+      },
+      "aria": {
+        "toolbar": "Application dock",
+        "localeOverlay": "Switching language"
+      }
+    }
+  },
+  "Auth": {
+    "form": {
+      "headings": {
+        "login": "Log in",
+        "signup": "Start your free trial"
+      },
+      "fields": {
+        "email": {
+          "label": "Work email",
+          "placeholder": "you@example.com"
+        },
+        "firstName": {
+          "placeholder": "Jane",
+          "required": "First name *",
+          "optional": "First name (optional)"
+        },
+        "lastName": {
+          "placeholder": "Doe",
+          "required": "Last name *",
+          "optional": "Last name (optional)"
+        }
+      },
+      "errors": {
+        "emailRequired": "Enter your work email to continue.",
+        "signInFailed": "We couldn't sign you in with those details. Try again."
+      },
+      "buttons": {
+        "loading": "Signing in…"
+      }
+    }
+  },
+  "Login": {
+    "metadata": {
+      "title": "Log in | Goguma Chat",
+      "description": "Access your Goguma Chat operator console."
+    },
+    "backLink": "← Back to home",
+    "title": "Log in",
+    "subtitle": "Welcome back. Sign in with your work email to continue.",
+    "forgot": "Forgot your credentials? <link>Contact support</link>.",
+    "signupPrompt": "Need an account? <link>Start your trial</link>."
+  },
+  "Signup": {
+    "metadata": {
+      "title": "Create account | Goguma Chat",
+      "description": "Spin up your Goguma Chat workspace in minutes."
+    },
+    "backLink": "← Back to home",
+    "title": "Start your free trial",
+    "subtitle": "Create a workspace and invite your teammates. No credit card required.",
+    "terms": "By continuing you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+    "loginPrompt": "Already using Goguma Chat? <link>Log in instead</link>."
+  },
+  "About": {
+    "metadata": {
+      "title": "About Goguma Chat",
+      "description": "We build monochrome messaging tools that keep customer relationships bright."
+    },
+    "title": "About Goguma Chat",
+    "description": "We build monochrome messaging tools that keep customer relationships bright.",
+    "paragraphs": {
+      "craft": "Goguma Chat exists to make every customer interaction feel hand-crafted. We believe teams deserve a workspace that amplifies clarity instead of clutter, so we designed an OLED-first interface where contrast serves the conversation.",
+      "orchestration": "From rapid incident response to long-running success journeys, our tools help you orchestrate every exchange with context, AI recall, and a touch of hospitality.",
+      "mission": "We are a distributed crew of designers, engineers, and operators who have supported millions of conversations for global companies. The mission is simple: help your team stay human at scale."
+    }
+  },
+  "Capture": {
+    "metadata": {
+      "title": "Background Capture | Goguma Chat",
+      "description": "Minimal frosted surface for monochrome screen recordings."
+    },
+    "srText": "Frosted background capture surface for recordings."
+  },
+  "Contact": {
+    "metadata": {
+      "title": "Contact | Goguma Chat",
+      "description": "We are here around the clock for customers and curious teams."
+    },
+    "title": "Contact",
+    "description": "We are here around the clock for customers and curious teams.",
+    "intro": "Choose the channel that works best for your team. Our response desk is staffed 24/7 across time zones.",
+    "channels": {
+      "email": {
+        "label": "Email",
+        "value": "support@goguma.chat",
+        "description": "Standard response within 4 business hours."
+      },
+      "signal": {
+        "label": "Signal hotline",
+        "value": "+1 (415) 555-0195",
+        "description": "For priority incidents and enterprise on-call."
+      },
+      "community": {
+        "label": "Community",
+        "value": "community.goguma.chat",
+        "description": "Share feedback, vote on features, and meet other operators."
+      }
+    }
+  },
+  "Support": {
+    "metadata": {
+      "title": "Support | Goguma Chat",
+      "description": "Pick the care plan that fits your scale."
+    },
+    "title": "Support plans",
+    "description": "Choose the partnership tier that keeps your operators confident.",
+    "bundles": {
+      "starter": {
+        "title": "Starter",
+        "sla": "Email replies in under 8 business hours.",
+        "price": "Included"
+      },
+      "growth": {
+        "title": "Growth",
+        "sla": "24/7 chat with a dedicated success manager.",
+        "price": "$499 / month"
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "sla": "Shared Slack channel, quarterly reviews, on-call escalation.",
+        "price": "Custom"
+      }
+    }
+  },
+  "Terms": {
+    "metadata": {
+      "title": "Terms of Service | Goguma Chat",
+      "description": "The agreement that governs your use of Goguma Chat."
+    },
+    "title": "Terms of Service",
+    "description": "Plain-language commitments around availability, data ownership, and supported use.",
+    "body": {
+      "commitment": "By operating a Goguma Chat workspace you retain ownership of the content you upload. We provide 99.95% uptime backed by service credits and commit to 90-day advanced notice for changes to critical APIs.",
+      "customAgreements": "Custom agreements are available for enterprise plans. Reach out to"
+    }
+  },
+  "Privacy": {
+    "metadata": {
+      "title": "Privacy Policy | Goguma Chat",
+      "description": "Understand how Goguma Chat protects and processes your data."
+    },
+    "title": "Privacy Policy",
+    "description": "We encrypt, minimize, and guard the conversations entrusted to us.",
+    "body": {
+      "storage": "Goguma Chat stores customer messages in region-specific clusters with envelope encryption and strict access controls. Operators can request audit trails at any time, and personal data requests are honored within 72 hours.",
+      "contact": "Contact"
+    }
+  },
+  "Status": {
+    "metadata": {
+      "title": "Status | Goguma Chat",
+      "description": "Live view into Goguma Chat uptime and maintenance windows."
+    },
+    "title": "Service status",
+    "description": "Snapshots refresh every 60 seconds. Subscribe for webhooks or email updates.",
+    "services": {
+      "chatApi": {
+        "name": "Chat API",
+        "status": "Operational",
+        "note": "All clusters healthy."
+      },
+      "presence": {
+        "name": "Realtime presence",
+        "status": "Degraded",
+        "note": "Increased latency in EU West."
+      },
+      "automation": {
+        "name": "Automation engine",
+        "status": "Operational",
+        "note": "No incidents reported."
+      },
+      "exports": {
+        "name": "Exports",
+        "status": "Monitoring",
+        "note": "Queued jobs clearing after spike."
+      }
+    }
+  },
+  "Integrations": {
+    "metadata": {
+      "title": "Integrations | Goguma Chat",
+      "description": "Connect game engines, automations, media pipelines, and analytics to keep every conversation contextual."
+    },
+    "title": "Integrations",
+    "description": "A few highlights from the tools our teams wire into the Goguma Chat workspace.",
+    "items": {
+      "bevy": {
+        "description": "Monitor WebGPU scenes directly inside the chat workspace with low-latency streaming previews."
+      },
+      "motion": {
+        "description": "Trigger buttery-smooth animations that respond to customer activity and agent updates."
+      },
+      "faker": {
+        "description": "Generate realistic rosters for demos, QA, and onboarding runs without leaving your inbox."
+      },
+      "iconify": {
+        "description": "Access thousands of icons to brand notifications and macros on the fly."
+      },
+      "unpic": {
+        "description": "Ship lossless imagery with adaptive formats so every surface looks sharp on OLED screens."
+      }
+    }
+  },
+  "AdminHome": {
+    "metadata": {
+      "title": "Admin Console | Goguma Chat"
+    },
+    "title": "Admin console",
+    "description": "Choose a management area from the navigation to review system health, send announcements, or manage operator access."
+  },
+  "AdminPush": {
+    "metadata": {
+      "title": "Admin · Broadcasts | Goguma Chat"
+    },
+    "title": "Broadcast announcements",
+    "description": "Schedule monochrome system toasts or long-form status updates.",
+    "targetHeading": "Target audience",
+    "composeHeading": "Compose",
+    "placeholder": "Draft the message operators will receive…",
+    "audiences": {
+      "all": "All connected workspaces",
+      "enterprise": "Enterprise workspaces only",
+      "sandbox": "Sandbox and staging environments",
+      "custom": "Custom segment (CSV upload)"
+    },
+    "actions": {
+      "sendNow": "Send now",
+      "schedule": "Schedule"
+    }
+  },
+  "AdminUsers": {
+    "metadata": {
+      "title": "Admin · Users | Goguma Chat"
+    },
+    "title": "Operator roster",
+    "description": "Manage who can access Goguma Chat and adjust their permissions.",
+    "table": {
+      "name": "Name",
+      "role": "Role",
+      "status": "Status"
+    },
+    "roles": {
+      "admin": "Admin",
+      "supervisor": "Supervisor",
+      "agent": "Agent"
+    },
+    "statuses": {
+      "active": "Active",
+      "invited": "Invited",
+      "suspended": "Suspended"
+    }
+  },
+  "WorkspaceContacts": {
+    "metadata": {
+      "title": "Contacts | Goguma Chat"
+    },
+    "title": "Contacts live inside chat threads",
+    "description": "We merged profiles into the unified chat canvas so you never leave the context of a conversation.",
+    "body": "Head to the <link>chat workspace</link> to browse teammates, invite new operators, and manage customer linkage."
+  },
+  "Dashboard": {
+    "metrics": {
+      "title": "Live metrics",
+      "description": "Rolling updates refresh every 15 seconds.",
+      "items": {
+        "openConversations": {
+          "label": "Open conversations",
+          "value": "42",
+          "delta": "-18% vs last week"
+        },
+        "firstResponse": {
+          "label": "Avg first response",
+          "value": "47s",
+          "delta": "+6s vs goal"
+        },
+        "resolvedToday": {
+          "label": "Resolved today",
+          "value": "318",
+          "delta": "+12% vs yesterday"
+        }
+      }
+    },
+    "spotlight": {
+      "title": "Spotlight · Automation win",
+      "body": "AI auto-solved 63% of logistics questions this morning. Agents reclaimed 280 minutes and CSAT held steady at 98%."
+    },
+    "queues": {
+      "title": "Queues",
+      "description": "Drag to reprioritize for your team.",
+      "items": {
+        "priority": {
+          "name": "Priority",
+          "count": "8",
+          "status": "🟢 Stable"
+        },
+        "billing": {
+          "name": "Billing",
+          "count": "14",
+          "status": "🟡 Warming up"
+        },
+        "feedback": {
+          "name": "Product feedback",
+          "count": "2",
+          "status": "🟢 Clear"
+        },
+        "logistics": {
+          "name": "Logistics",
+          "count": "18",
+          "status": "🟠 Spike"
+        }
+      }
+    }
+  },
+  "Chat": {
+    "sidebar": {
+      "title": "Threads",
+      "new": "New"
+    },
+    "threads": {
+      "shipping": {
+        "preview": "Re: Shipment arrival window this week",
+        "time": "2m"
+      },
+      "webhook": {
+        "preview": "Need to re-enable webhook delivery",
+        "time": "7m"
+      },
+      "handoff": {
+        "preview": "Pager rotation handoff recap",
+        "time": "12m"
+      }
+    },
+    "activeThread": {
+      "participant": "Avery C.",
+      "topic": "Subscription add-on inquiry",
+      "badges": {
+        "transcript": "Transcript",
+        "macros": "Macros"
+      }
+    },
+    "messages": {
+      "customerGreeting": "Thanks again for the smooth onboarding. Any update on the delivery ETA?",
+      "agentUpdate": "Absolutely. The courier confirmed a 14:30 arrival and we pushed the updated window to your dashboard.",
+      "customerThanks": "Perfect. Appreciate the proactive heads up!"
+    },
+    "composer": {
+      "placeholder": "Compose a reply…",
+      "send": "Send"
+    }
+  },
+  "Settings": {
+    "appearance": {
+      "title": "Appearance",
+      "description": "Personalize your OLED workspace vibe.",
+      "modes": {
+        "dark": "Dark mode",
+        "light": "Light mode"
+      }
+    },
+    "motion": {
+      "title": "Motion",
+      "description": "Reduce motion for recording or accessibility needs.",
+      "on": "Motion on",
+      "off": "Motion off"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Choose the automations that keep you in flow.",
+      "items": {
+        "notifications": {
+          "label": "Push notifications",
+          "description": "Send alerts for mentions, escalations, and assignments."
+        },
+        "aiDrafts": {
+          "label": "AI drafting",
+          "description": "Suggest replies with context from previous customer threads."
+        },
+        "presence": {
+          "label": "Smart presence",
+          "description": "Auto-update my status when in focus mode or away."
+        }
+      },
+      "state": {
+        "on": "On",
+        "off": "Off"
+      }
+    }
+  },
+  "Profile": {
+    "metadata": {
+      "title": "Profile | Goguma Chat",
+      "description": "Review your identity and presence settings inside Goguma Chat."
+    },
+    "title": "Your profile",
+    "description": "Control how your teammates see you across conversations.",
+    "fields": {
+      "displayName": "Display name",
+      "role": "Workspace role",
+      "email": "Email",
+      "timezone": "Time zone",
+      "created": "Account created",
+      "updated": "Last synced"
+    },
+    "values": {
+      "role": "Operator",
+      "timezone": "UTC"
+    }
   }
 }

@@ -3,25 +3,13 @@ import type { PropsWithChildren } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
-import { Geist, Geist_Mono } from "next/font/google";
-
-import "../globals.css";
 
 import SiteDock from "@/components/site-dock";
 import SiteFooter from "@/components/site-footer";
 import TransitionViewport from "@/components/transition-viewport";
 import { TransitionProvider } from "@/components/transition-context";
+import HtmlLangSetter from "@/components/html-lang-setter";
 import { routing, type Locale } from "@/i18n/routing";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export async function generateMetadata({
   params,
@@ -66,24 +54,19 @@ export default async function LocaleLayout({
   const messages = await getMessages({ locale });
 
   return (
-    <html lang={locale}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen font-sans antialiased`}
-      >
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <TransitionProvider>
-            <div className="app-shell flex min-h-screen flex-col">
-              <TransitionViewport>
-                <div className="app-gradient min-h-full bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
-                  {children}
-                </div>
-              </TransitionViewport>
-              <SiteFooter />
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <HtmlLangSetter locale={locale} />
+      <TransitionProvider>
+        <div className="app-shell flex min-h-screen flex-col">
+          <TransitionViewport>
+            <div className="app-gradient min-h-full bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
+              {children}
             </div>
-            <SiteDock />
-          </TransitionProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+          </TransitionViewport>
+          <SiteFooter locale={locale} />
+        </div>
+        <SiteDock />
+      </TransitionProvider>
+    </NextIntlClientProvider>
   );
 }

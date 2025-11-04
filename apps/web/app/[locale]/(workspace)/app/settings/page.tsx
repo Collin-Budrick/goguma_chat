@@ -1,42 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
-const PREFERENCES = [
-  {
-    id: "notifications",
-    label: "Push notifications",
-    description: "Send alerts for mentions, escalations, and assignments.",
-  },
-  {
-    id: "ai-drafts",
-    label: "AI drafting",
-    description: "Suggest replies with context from previous customer threads.",
-  },
-  {
-    id: "presence",
-    label: "Smart presence",
-    description: "Auto-update my status when in focus mode or away.",
-  },
-];
+const PREFERENCE_IDS = ["notifications", "aiDrafts", "presence"] as const;
 
 export default function SettingsPage() {
+  const t = useTranslations("Settings");
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [motion, setMotion] = useState(true);
   const [prefs, setPrefs] = useState<Record<string, boolean>>({
     notifications: true,
-    "ai-drafts": true,
+    aiDrafts: true,
     presence: false,
   });
+  const preferenceCopy = PREFERENCE_IDS.map((id) => ({
+    id,
+    label: t(`preferences.items.${id}.label`),
+    description: t(`preferences.items.${id}.description`),
+  }));
 
   return (
     <div className="space-y-8">
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <header className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Appearance</h2>
-          <p className="text-sm text-white/60">
-            Personalize your OLED workspace vibe.
-          </p>
+          <h2 className="text-xl font-semibold text-white">{t("appearance.title")}</h2>
+          <p className="text-sm text-white/60">{t("appearance.description")}</p>
         </header>
         <div className="flex flex-wrap gap-3">
           {(["dark", "light"] as const).map((value) => (
@@ -50,7 +39,7 @@ export default function SettingsPage() {
                   : "border-white/20 text-white/60 hover:text-white"
               }`}
             >
-              {value} mode
+              {t(`appearance.modes.${value}`)}
             </button>
           ))}
         </div>
@@ -58,10 +47,8 @@ export default function SettingsPage() {
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <header className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Motion</h2>
-          <p className="text-sm text-white/60">
-            Reduce motion for recording or accessibility needs.
-          </p>
+          <h2 className="text-xl font-semibold text-white">{t("motion.title")}</h2>
+          <p className="text-sm text-white/60">{t("motion.description")}</p>
         </header>
         <button
           type="button"
@@ -70,19 +57,17 @@ export default function SettingsPage() {
             motion ? "bg-white text-black" : "border border-white/20 text-white/70"
           }`}
         >
-          {motion ? "Motion on" : "Motion off"}
+          {motion ? t("motion.on") : t("motion.off")}
         </button>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
         <header className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Preferences</h2>
-          <p className="text-sm text-white/60">
-            Choose the automations that keep you in flow.
-          </p>
+          <h2 className="text-xl font-semibold text-white">{t("preferences.title")}</h2>
+          <p className="text-sm text-white/60">{t("preferences.description")}</p>
         </header>
         <div className="space-y-4">
-          {PREFERENCES.map((item) => {
+          {preferenceCopy.map((item) => {
             const active = prefs[item.id] ?? false;
             return (
               <button
@@ -100,7 +85,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>{item.label}</span>
                   <span className="text-xs uppercase tracking-[0.3em]">
-                    {active ? "On" : "Off"}
+                    {active ? t("preferences.state.on") : t("preferences.state.off")}
                   </span>
                 </div>
                 <p

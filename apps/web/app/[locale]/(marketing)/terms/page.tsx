@@ -1,23 +1,32 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
 import SimplePage from "@/components/simple-page";
 
-export const metadata = {
-  title: "Terms of Service | Goguma Chat",
-  description: "The agreement that governs your use of Goguma Chat.",
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-export default function TermsPage() {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Terms" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function TermsPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Terms" });
+
   return (
-    <SimplePage
-      title="Terms of Service"
-      description="Plain-language commitments around availability, data ownership, and supported use."
-    >
+    <SimplePage title={t("title")} description={t("description")}>
+      <p>{t("body.commitment")}</p>
       <p>
-        By operating a Goguma Chat workspace you retain ownership of the content
-        you upload. We provide 99.95% uptime backed by service credits and
-        commit to 90-day advanced notice for changes to critical APIs.
-      </p>
-      <p>
-        Custom agreements are available for enterprise plans. Reach out to{" "}
+        {t("body.customAgreements")} {" "}
         <a
           className="underline decoration-white/40 underline-offset-4"
           href="mailto:legal@goguma.chat"

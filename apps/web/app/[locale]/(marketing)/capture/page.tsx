@@ -1,18 +1,32 @@
-export const metadata = {
-  title: "Background Capture | Goguma Chat",
-  description: "Minimal frosted surface for monochrome screen recordings.",
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-export default function CapturePage() {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Capture" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function CapturePage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Capture" });
+
   return (
     <div
       aria-hidden="true"
       className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-white/5 via-white/0 to-white/10"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0%,transparent_60%)]" />
-      <span className="sr-only">
-        Frosted background capture surface for recordings.
-      </span>
+      <span className="sr-only">{t("srText")}</span>
     </div>
   );
 }

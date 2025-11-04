@@ -1,40 +1,41 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
 import SimplePage from "@/components/simple-page";
 
-const supportChannels = [
-  {
-    label: "Email",
-    value: "support@goguma.chat",
-    description: "Standard response within 4 business hours.",
-  },
-  {
-    label: "Signal hotline",
-    value: "+1 (415) 555-0195",
-    description: "For priority incidents and enterprise on-call.",
-  },
-  {
-    label: "Community",
-    value: "community.goguma.chat",
-    description: "Share feedback, vote on features, and meet other operators.",
-  },
-];
+type PageProps = {
+  params: Promise<{ locale: string }>;
+};
 
-export default function ContactPage() {
+const channelKeys = ["email", "signal", "community"] as const;
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Contact" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function ContactPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Contact" });
+
   return (
-    <SimplePage
-      title="Contact"
-      description="We are here around the clock for customers and curious teams."
-    >
-      <p>
-        Choose the channel that works best for your team. Our response desk is
-        staffed 24/7 across time zones.
-      </p>
+    <SimplePage title={t("title")} description={t("description")}>
+      <p>{t("intro")}</p>
       <dl className="grid gap-6 text-sm">
-        {supportChannels.map((channel) => (
-          <div key={channel.label}>
-            <dt className="text-white">{channel.label}</dt>
+        {channelKeys.map((key) => (
+          <div key={key}>
+            <dt className="text-white">{t(`channels.${key}.label`)}</dt>
             <dd className="text-white/70">
-              <div>{channel.value}</div>
-              <div className="text-xs text-white/50">{channel.description}</div>
+              <div>{t(`channels.${key}.value`)}</div>
+              <div className="text-xs text-white/50">
+                {t(`channels.${key}.description`)}
+              </div>
             </dd>
           </div>
         ))}

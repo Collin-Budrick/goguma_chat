@@ -1,28 +1,41 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
 import SimplePage from "@/components/simple-page";
 
-export const metadata = {
-  title: "Admin · Users | Goguma Chat",
+const operators = [
+  { name: "Mina Park", roleKey: "admin", statusKey: "active" },
+  { name: "Leo Martinez", roleKey: "supervisor", statusKey: "active" },
+  { name: "Eli Choi", roleKey: "agent", statusKey: "invited" },
+  { name: "Addison Fox", roleKey: "agent", statusKey: "suspended" },
+] as const;
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-const operators = [
-  { name: "Mina Park", role: "Admin", status: "Active" },
-  { name: "Leo Martinez", role: "Supervisor", status: "Active" },
-  { name: "Eli Choi", role: "Agent", status: "Invited" },
-  { name: "Addison Fox", role: "Agent", status: "Suspended" },
-];
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "AdminUsers" });
+  return {
+    title: t("metadata.title"),
+  };
+}
 
-export default function AdminUsersPage() {
+export default async function AdminUsersPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "AdminUsers" });
+
   return (
-    <SimplePage
-      title="Operator roster"
-      description="Manage who can access Goguma Chat and adjust their permissions."
-    >
+    <SimplePage title={t("title")} description={t("description")}>
       <table className="w-full border-separate border-spacing-y-3 text-sm text-white/70">
         <thead>
           <tr className="text-left text-xs uppercase tracking-[0.3em] text-white/40">
-            <th className="px-3">Name</th>
-            <th className="px-3">Role</th>
-            <th className="px-3">Status</th>
+            <th className="px-3">{t("table.name")}</th>
+            <th className="px-3">{t("table.role")}</th>
+            <th className="px-3">{t("table.status")}</th>
           </tr>
         </thead>
         <tbody>
@@ -34,8 +47,12 @@ export default function AdminUsersPage() {
               <td className="rounded-l-2xl px-3 py-3 text-white">
                 {operator.name}
               </td>
-              <td className="px-3 py-3">{operator.role}</td>
-              <td className="rounded-r-2xl px-3 py-3">{operator.status}</td>
+              <td className="px-3 py-3">
+                {t(`roles.${operator.roleKey}`)}
+              </td>
+              <td className="rounded-r-2xl px-3 py-3">
+                {t(`statuses.${operator.statusKey}`)}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -1,49 +1,31 @@
+import { getTranslations } from "next-intl/server";
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
+};
+
 const THREADS = [
-  {
-    id: "4821",
-    customer: "Avery C.",
-    preview: "Re: Shipment arrival window this week",
-    time: "2m",
-  },
-  {
-    id: "4820",
-    customer: "Lucia R.",
-    preview: "Need to re-enable webhook delivery",
-    time: "7m",
-  },
-  {
-    id: "4819",
-    customer: "DevOps Channel",
-    preview: "Pager rotation handoff recap",
-    time: "12m",
-  },
-];
+  { id: "4821", customer: "Avery C.", key: "shipping" },
+  { id: "4820", customer: "Lucia R.", key: "webhook" },
+  { id: "4819", customer: "DevOps Channel", key: "handoff" },
+] as const;
 
 const ACTIVE_MESSAGES = [
-  {
-    from: "Avery",
-    role: "customer",
-    text: "Thanks again for the smooth onboarding. Any update on the delivery ETA?",
-  },
-  {
-    from: "Mina",
-    role: "agent",
-    text: "Absolutely. The courier confirmed a 14:30 arrival and we pushed the updated window to your dashboard.",
-  },
-  {
-    from: "Avery",
-    role: "customer",
-    text: "Perfect. Appreciate the proactive heads up!",
-  },
-];
+  { from: "Avery", role: "customer" as const, key: "customerGreeting" },
+  { from: "Mina", role: "agent" as const, key: "agentUpdate" },
+  { from: "Avery", role: "customer" as const, key: "customerThanks" },
+] as const;
 
-export default function ChatPage() {
+export default async function ChatPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Chat" });
+
   return (
     <div className="grid min-h-[540px] gap-6 lg:grid-cols-[280px,1fr]">
       <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 text-sm">
         <header className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/40">
-          <span>Threads</span>
-          <span>New</span>
+          <span>{t("sidebar.title")}</span>
+          <span>{t("sidebar.new")}</span>
         </header>
         <ul className="space-y-3">
           {THREADS.map((thread, index) => (
@@ -55,18 +37,14 @@ export default function ChatPage() {
             >
               <div className="flex items-center justify-between text-xs">
                 <span
-                  className={
-                    index === 0 ? "text-black/60" : "text-white/60"
-                  }
+                  className={index === 0 ? "text-black/60" : "text-white/60"}
                 >
                   {thread.id}
                 </span>
                 <span
-                  className={
-                    index === 0 ? "text-black/60" : "text-white/60"
-                  }
+                  className={index === 0 ? "text-black/60" : "text-white/60"}
                 >
-                  {thread.time}
+                  {t(`threads.${thread.key}.time`)}
                 </span>
               </div>
               <p className="mt-2 text-sm font-semibold">{thread.customer}</p>
@@ -75,7 +53,7 @@ export default function ChatPage() {
                   index === 0 ? "text-black/60" : "text-white/60"
                 }`}
               >
-                {thread.preview}
+                {t(`threads.${thread.key}.preview`)}
               </p>
             </li>
           ))}
@@ -85,16 +63,16 @@ export default function ChatPage() {
         <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-              Avery C.
+              {t("activeThread.participant")}
             </p>
-            <p className="text-sm text-white/70">Subscription add-on inquiry</p>
+            <p className="text-sm text-white/70">{t("activeThread.topic")}</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-white/50">
             <span className="rounded-full border border-white/20 px-3 py-1">
-              Transcript
+              {t("activeThread.badges.transcript")}
             </span>
             <span className="rounded-full border border-white/20 px-3 py-1">
-              Macros
+              {t("activeThread.badges.macros")}
             </span>
           </div>
         </header>
@@ -117,7 +95,7 @@ export default function ChatPage() {
                 >
                   {message.from}
                 </div>
-                <p>{message.text}</p>
+                <p>{t(`messages.${message.key}`)}</p>
               </div>
             );
           })}
@@ -126,14 +104,14 @@ export default function ChatPage() {
           <form className="flex items-center gap-3">
             <textarea
               rows={1}
-              placeholder="Compose a reply…"
+              placeholder={t("composer.placeholder")}
               className="flex-1 resize-none rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
             />
             <button
               type="submit"
               className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90"
             >
-              Send
+              {t("composer.send")}
             </button>
           </form>
         </footer>

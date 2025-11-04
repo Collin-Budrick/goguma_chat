@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -12,6 +13,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/app/dashboard";
+  const t = useTranslations("Auth.form");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -23,7 +25,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     const lastName = (formData.get("lastName") as string | null)?.trim();
 
     if (!email) {
-      setError("Enter your work email to continue.");
+      setError(t("errors.emailRequired"));
       return;
     }
 
@@ -41,7 +43,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(false);
 
     if (result?.error) {
-      setError("We couldn't sign you in with those details. Try again.");
+      setError(t("errors.signInFailed"));
       return;
     }
 
@@ -49,7 +51,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
     router.refresh();
   }
 
-  const heading = mode === "login" ? "Log in" : "Start your free trial";
+  const heading =
+    mode === "login" ? t("headings.login") : t("headings.signup");
+  const firstNameLabel =
+    mode === "signup"
+      ? t("fields.firstName.required")
+      : t("fields.firstName.optional");
+  const lastNameLabel =
+    mode === "signup"
+      ? t("fields.lastName.required")
+      : t("fields.lastName.optional");
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -58,7 +69,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           htmlFor="email"
           className="text-xs uppercase tracking-[0.25em] text-white/50"
         >
-          Work email
+          {t("fields.email.label")}
         </label>
         <input
           id="email"
@@ -67,7 +78,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           required
           autoComplete="email"
           className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-          placeholder="you@example.com"
+          placeholder={t("fields.email.placeholder")}
         />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -76,7 +87,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             htmlFor="firstName"
             className="text-xs uppercase tracking-[0.25em] text-white/50"
           >
-            First name{mode === "signup" ? " *" : " (optional)"}
+            {firstNameLabel}
           </label>
           <input
             id="firstName"
@@ -85,7 +96,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             autoComplete="given-name"
             required={mode === "signup"}
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-            placeholder="Jane"
+            placeholder={t("fields.firstName.placeholder")}
           />
         </div>
         <div>
@@ -93,7 +104,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             htmlFor="lastName"
             className="text-xs uppercase tracking-[0.25em] text-white/50"
           >
-            Last name{mode === "signup" ? " *" : " (optional)"}
+            {lastNameLabel}
           </label>
           <input
             id="lastName"
@@ -102,7 +113,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             autoComplete="family-name"
             required={mode === "signup"}
             className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-            placeholder="Doe"
+            placeholder={t("fields.lastName.placeholder")}
           />
         </div>
       </div>
@@ -116,7 +127,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         disabled={isSubmitting}
         className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-80"
       >
-        {isSubmitting ? "Signing in…" : heading}
+        {isSubmitting ? t("buttons.loading") : heading}
       </button>
     </form>
   );

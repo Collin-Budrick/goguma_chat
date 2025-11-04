@@ -1,56 +1,48 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
 import SimplePage from "@/components/simple-page";
 
 const integrations = [
-  {
-    name: "Bevy Console",
-    description:
-      "Monitor WebGPU scenes directly inside the chat workspace with low-latency streaming previews.",
-  },
-  {
-    name: "Motion One",
-    description:
-      "Trigger buttery-smooth animations that respond to customer activity and agent updates.",
-  },
-  {
-    name: "Faker roster",
-    description:
-      "Generate realistic rosters for demos, QA, and onboarding runs without leaving your inbox.",
-  },
-  {
-    name: "Iconify library",
-    description:
-      "Access thousands of icons to brand notifications and macros on the fly.",
-  },
-  {
-    name: "Unpic delivery",
-    description:
-      "Ship lossless imagery with adaptive formats so every surface looks sharp on OLED screens.",
-  },
-];
+  { id: "bevy", name: "Bevy Console" },
+  { id: "motion", name: "Motion One" },
+  { id: "faker", name: "Faker roster" },
+  { id: "iconify", name: "Iconify library" },
+  { id: "unpic", name: "Unpic delivery" },
+] as const;
 
-export const metadata = {
-  title: "Integrations | Goguma Chat",
-  description:
-    "Connect game engines, automations, media pipelines, and analytics to keep every conversation contextual.",
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-export default function IntegrationsPage() {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Integrations" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function IntegrationsPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Integrations" });
+
   return (
-    <SimplePage
-      title="Integrations"
-      description="A few highlights from the tools our teams wire into the Goguma Chat workspace."
-    >
+    <SimplePage title={t("title")} description={t("description")}>
       <div className="grid gap-6">
         {integrations.map((integration) => (
           <article
-            key={integration.name}
+            key={integration.id}
             className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
           >
             <h2 className="text-lg font-semibold text-white">
               {integration.name}
             </h2>
             <p className="mt-2 text-sm text-white/70">
-              {integration.description}
+              {t(`items.${integration.id}.description`)}
             </p>
           </article>
         ))}

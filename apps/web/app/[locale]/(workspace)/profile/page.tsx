@@ -1,20 +1,38 @@
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import SimplePage from "@/components/simple-page";
 
-export const metadata = {
-  title: "Profile | Goguma Chat",
-  description: "Review your identity and presence settings inside Goguma Chat.",
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-function formatDate(value?: Date) {
+type ProfileCopy = {
+  title: string;
+  description: string;
+  labels: {
+    displayName: string;
+    role: string;
+    email: string;
+    timezone: string;
+    created: string;
+    updated: string;
+  };
+  values: {
+    role: string;
+    timezone: string;
+  };
+};
+
+function formatDate(value: Date | undefined, locale: string) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "long",
     timeStyle: "short",
   }).format(value);
@@ -22,19 +40,55 @@ function formatDate(value?: Date) {
 
 export const dynamic = "force-static";
 
-export default function ProfilePage() {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Profile" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function ProfilePage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Profile" });
+  const copy: ProfileCopy = {
+    title: t("title"),
+    description: t("description"),
+    labels: {
+      displayName: t("fields.displayName"),
+      role: t("fields.role"),
+      email: t("fields.email"),
+      timezone: t("fields.timezone"),
+      created: t("fields.created"),
+      updated: t("fields.updated"),
+    },
+    values: {
+      role: t("values.role"),
+      timezone: t("values.timezone"),
+    },
+  };
+
   return (
-    <Suspense fallback={<ProfilePageSkeleton />}>
-      <ProfileContent />
+    <Suspense fallback={<ProfilePageSkeleton copy={copy} />}>
+      <ProfileContent locale={locale} copy={copy} />
     </Suspense>
   );
 }
 
-async function ProfileContent() {
+async function ProfileContent({
+  locale,
+  copy,
+}: {
+  locale: string;
+  copy: ProfileCopy;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   const userId = session.user.id;
@@ -55,22 +109,19 @@ async function ProfileContent() {
 
   const email = record?.email ?? session.user.email ?? "—";
   const timezone = "UTC";
-  const role = "Operator";
+  const role = copy.values.role;
 
   const fields = [
-    { label: "Display name", value: displayName },
-    { label: "Workspace role", value: role },
-    { label: "Email", value: email },
-    { label: "Time zone", value: timezone },
-    { label: "Account created", value: formatDate(record?.createdAt) },
-    { label: "Last synced", value: formatDate(record?.updatedAt) },
+    { label: copy.labels.displayName, value: displayName },
+    { label: copy.labels.role, value: role },
+    { label: copy.labels.email, value: email },
+    { label: copy.labels.timezone, value: copy.values.timezone ?? timezone },
+    { label: copy.labels.created, value: formatDate(record?.createdAt, locale) },
+    { label: copy.labels.updated, value: formatDate(record?.updatedAt, locale) },
   ];
 
   return (
-    <SimplePage
-      title="Your profile"
-      description="Control how your teammates see you across conversations."
-    >
+    <SimplePage title={copy.title} description={copy.description}>
       <dl className="grid gap-4 text-sm">
         {fields.map((field) => (
           <div key={field.label} className="rounded-2xl border border-white/10 p-4">
@@ -85,12 +136,9 @@ async function ProfileContent() {
   );
 }
 
-function ProfilePageSkeleton() {
+function ProfilePageSkeleton({ copy }: { copy: ProfileCopy }) {
   return (
-    <SimplePage
-      title="Your profile"
-      description="Control how your teammates see you across conversations."
-    >
+    <SimplePage title={copy.title} description={copy.description}>
       <dl className="grid gap-4 text-sm">
         {Array.from({ length: 6 }, (_, index) => (
           <div

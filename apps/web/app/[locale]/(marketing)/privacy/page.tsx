@@ -1,32 +1,39 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
 import SimplePage from "@/components/simple-page";
 
-export const metadata = {
-  title: "Privacy Policy | Goguma Chat",
-  description:
-    "Understand how Goguma Chat protects and processes your data.",
+type PageProps = {
+  params: Promise<{ locale: string }>;
 };
 
-export default function PrivacyPage() {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Privacy" });
+  return {
+    title: t("metadata.title"),
+    description: t("metadata.description"),
+  };
+}
+
+export default async function PrivacyPage({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Privacy" });
+
   return (
-    <SimplePage
-      title="Privacy Policy"
-      description="We encrypt, minimize, and guard the conversations entrusted to us."
-    >
+    <SimplePage title={t("title")} description={t("description")}>
+      <p>{t("body.storage")}</p>
       <p>
-        Goguma Chat stores customer messages in region-specific clusters with
-        envelope encryption and strict access controls. Operators can request
-        audit trails at any time, and personal data requests are honored within
-        72 hours.
-      </p>
-      <p>
-        Contact{" "}
+        {t("body.contact")} {" "}
         <a
           className="underline decoration-white/40 underline-offset-4"
           href="mailto:privacy@goguma.chat"
         >
           privacy@goguma.chat
-        </a>{" "}
-        for questions.
+        </a>
+        .
       </p>
     </SimplePage>
   );
