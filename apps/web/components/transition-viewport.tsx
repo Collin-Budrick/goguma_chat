@@ -1,70 +1,62 @@
 "use client";
 
-import {
-  AnimatePresence,
-  motion,
-  type Variants,
-} from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { usePathname } from "next/navigation";
-import type { PropsWithChildren } from "react";
+import { type PropsWithChildren, useMemo } from "react";
 import { useTransitionDirection } from "./transition-context";
 
-const resolveEnterOffset = (direction: 1 | -1 | 0) => {
-  if (direction === 0) return 0;
-  return direction === 1 ? -160 : 160;
+type SlideContext = {
+  direction: 1 | -1 | 0;
 };
 
-const resolveExitOffset = (direction: 1 | -1 | 0) => {
+const resolveEnterOffset = ({ direction }: SlideContext) => {
   if (direction === 0) return 0;
-  return direction === 1 ? 160 : -160;
+  return direction === 1 ? "100vw" : "-100vw";
 };
 
 const slideVariants: Variants = {
-  enter: (direction: 1 | -1 | 0) => ({
-    x: resolveEnterOffset(direction),
-    opacity: 1,
-    position: "absolute",
-    width: "100%",
-  }),
+  enter: (context?: SlideContext) => {
+    const ctx = context ?? { direction: 0 };
+    return {
+      x: resolveEnterOffset(ctx),
+      opacity: 1,
+      position: "relative",
+      width: "100%",
+    };
+  },
   center: {
     x: 0,
     opacity: 1,
     position: "relative",
     width: "100%",
   },
-  exit: (direction: 1 | -1 | 0) => ({
-    x: resolveExitOffset(direction),
-    opacity: 1,
-    position: "absolute",
-    width: "100%",
-  }),
 };
 
 export default function TransitionViewport({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { direction } = useTransitionDirection();
+  const transitionContext = useMemo<SlideContext>(
+    () => ({ direction }),
+    [direction],
+  );
 
   return (
     <div className="relative flex-1 overflow-hidden">
-      <AnimatePresence initial={false} custom={direction}>
-        <motion.div
-          key={pathname}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{
-            type: "spring",
-            stiffness: 220,
-            damping: 26,
-          }}
-          className="h-full"
-          style={{ height: "100%" }}
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <motion.div
+        key={pathname}
+        custom={transitionContext}
+        variants={slideVariants}
+        initial="enter"
+        animate="center"
+        transition={{
+          type: "spring",
+          stiffness: 220,
+          damping: 26,
+        }}
+        className="w-full"
+      >
+        {children}
+      </motion.div>
     </div>
   );
 }
