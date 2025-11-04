@@ -281,7 +281,7 @@ function DockItem({
             animate={{ opacity: 1, y: -12 }}
             exit={{ opacity: 0, y: 0 }}
             transition={{ duration: 0.18 }}
-            className={`dock-tooltip -top-3 left-1/2 z-20 absolute px-2 py-1 border rounded-md font-medium text-[10px] uppercase tracking-[0.2em] -translate-x-1/2 pointer-events-none ${isLightTheme
+            className={`dock-tooltip -top-3 left-1/2 z-20 absolute px-2 py-1 border rounded-md font-medium text-[10px] uppercase tracking-[0.2em] whitespace-nowrap -translate-x-1/2 pointer-events-none ${isLightTheme
                 ? "border-slate-200 bg-white text-slate-800 shadow-[0_12px_24px_rgba(148,163,184,0.32)]"
                 : "border-white/20 bg-black/80 text-white shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
               }`}
