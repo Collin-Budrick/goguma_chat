@@ -1,5 +1,7 @@
 import Link from "next/link";
+
 import AuthForm from "@/components/auth-form";
+import GradientText from "@/components/gradient-text";
 
 export const metadata = {
   title: "Create account | Goguma Chat",
@@ -19,7 +21,9 @@ export default function SignupPage() {
       </div>
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-10 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Start your free trial
+          <GradientText className="block">
+            Start your free trial
+          </GradientText>
         </h1>
         <p className="mt-2 text-sm text-white/60">
           Create a workspace and invite your teammates. No credit card required.

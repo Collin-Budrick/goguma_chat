@@ -1,5 +1,7 @@
 import Link from "next/link";
+
 import AuthForm from "@/components/auth-form";
+import GradientText from "@/components/gradient-text";
 
 export const metadata = {
   title: "Log in | Goguma Chat",
@@ -18,7 +20,9 @@ export default function LoginPage() {
         </Link>
       </div>
       <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
-        <h1 className="text-2xl font-semibold tracking-tight">Log in</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          <GradientText className="block">Log in</GradientText>
+        </h1>
         <p className="mt-2 text-sm text-white/60">
           Welcome back. Sign in with your work email to continue.
         </p>

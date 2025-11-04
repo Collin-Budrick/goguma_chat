@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import CountUp from "@/components/count-up";
+import GradientText from "@/components/gradient-text";
 
 const STATS = [
   { id: "activeTeams", value: 480, suffix: "+", duration: 1.2 },
@@ -70,7 +71,7 @@ export default function Home() {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            {t("heroTitle")}
+            <GradientText className="block">{t("heroTitle")}</GradientText>
           </motion.h1>
           <motion.p
             variants={fadeIn}
