@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -83,6 +83,8 @@ const adminDock: DockNavItem[] = [
 ];
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
+
+const LOCALE_TRANSITION_STORAGE_KEY = "site-locale-transition";
 
 const localeDisplayNames: Record<Locale, string> = {
   en: "English",
@@ -285,7 +287,7 @@ function LocaleFlipOverlay({
   return (
     <motion.div
       key="locale-flip-overlay"
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
@@ -451,27 +453,63 @@ export default function SiteDock() {
 
   const currentIndex = indexForPath(dockItems, pathname);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.sessionStorage.getItem(LOCALE_TRANSITION_STORAGE_KEY);
+    if (!stored) return;
+    window.sessionStorage.removeItem(LOCALE_TRANSITION_STORAGE_KEY);
+    try {
+      const payload = JSON.parse(stored) as {
+        words?: string[];
+        locale?: Locale;
+        timestamp?: number;
+      };
+      if (!payload.words || payload.words.length === 0) return;
+      if (!payload.locale) return;
+      if (!payload.timestamp || Date.now() - payload.timestamp > 2000) return;
+      setPendingLocale(payload.locale);
+      setLocaleTransitionWords(payload.words);
+    } catch {
+      // ignore invalid payload
+    }
+  }, [locale]);
+
   const switchLocale = useCallback(
     (targetLocale: Locale) => {
       if (targetLocale === locale) return;
       if (pendingLocale) return;
-      setPendingLocale(targetLocale);
-      setLocaleTransitionWords([
+      const transitionWords = [
         localeDisplayNames[locale] ?? locale,
         localeDisplayNames[targetLocale] ?? targetLocale,
-      ]);
+      ];
+      setPendingLocale(targetLocale);
+      setLocaleTransitionWords(transitionWords);
       setDirection(0);
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem(
+            LOCALE_TRANSITION_STORAGE_KEY,
+            JSON.stringify({
+              words: transitionWords,
+              locale: targetLocale,
+              timestamp: Date.now(),
+            }),
+          );
+        } catch {
+          // ignore storage errors (private browsing, etc.)
+        }
+      }
+      startTransition(() => {
+        router.push(pathname, { locale: targetLocale, scroll: false });
+      });
     },
-    [locale, pendingLocale, setDirection],
+    [locale, pathname, pendingLocale, router, setDirection],
   );
 
   const handleLocaleTransitionComplete = useCallback(() => {
-    if (pendingLocale) {
-      router.push(pathname, { locale: pendingLocale, scroll: false });
-    }
     setPendingLocale(null);
     setLocaleTransitionWords(null);
-  }, [pathname, pendingLocale, router]);
+  }, []);
 
   const handleSelect = (item: DockNavItem) => {
     if (!isLinkItem(item)) {
