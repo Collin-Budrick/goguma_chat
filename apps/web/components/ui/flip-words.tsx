@@ -29,21 +29,23 @@ export function FlipWords({
   const [isAnimating, setIsAnimating] = useState(false);
   const completionNotifiedRef = useRef(false);
 
-  const currentWord = sanitizedWords[index] ?? "";
+  const effectiveLength = sanitizedWords.length || 1;
+  const normalizedIndex = index % effectiveLength;
+  const currentWord = sanitizedWords[normalizedIndex] ?? "";
 
   const goToNext = useCallback(() => {
     if (sanitizedWords.length <= 1) return;
     setIndex((prev) => {
+      if (sanitizedWords.length <= 1) return prev;
       if (loop) {
         return (prev + 1) % sanitizedWords.length;
       }
       return Math.min(prev + 1, sanitizedWords.length - 1);
     });
     setIsAnimating(true);
-  }, [loop, sanitizedWords]);
+  }, [loop, sanitizedWords.length]);
 
   useEffect(() => {
-    setIndex(0);
     completionNotifiedRef.current = false;
   }, [sanitizedWords, loop]);
 

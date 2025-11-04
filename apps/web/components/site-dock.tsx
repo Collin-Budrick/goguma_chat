@@ -27,7 +27,7 @@ import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
 import { FlipWords } from "@/components/ui/flip-words";
-import { routing, type Locale } from "@/i18n/routing";
+import { type Locale } from "@/i18n/routing";
 
 type DockLinkItem = {
   type: "link";
@@ -100,7 +100,6 @@ type DisplaySettings = {
   magnify: boolean;
   showLabels: boolean;
   theme: "dark" | "light";
-  locale: Locale;
 };
 
 function resolveDock(pathname: string): DockNavItem[] {
@@ -136,20 +135,16 @@ function DockItem({
 }) {
   const ref = useRef<HTMLButtonElement | null>(null);
   const hover = useMotionValue<number>(0);
-  const [showLabel, setShowLabel] = useState(false);
+  const [isHovered, setIsHovered] = useState(() => hover.get() === 1);
 
   useEffect(() => {
-    if (!tooltipsEnabled) {
-      setShowLabel(false);
-      return;
-    }
-
-    setShowLabel(hover.get() === 1);
     const unsubscribe = hover.on("change", (latest) => {
-      setShowLabel(latest === 1);
+      setIsHovered(latest === 1);
     });
     return () => unsubscribe();
-  }, [hover, tooltipsEnabled]);
+  }, [hover]);
+
+  const showLabel = tooltipsEnabled && isHovered;
 
   const distance = useTransform(mouseX, (value: number) => {
     const rect = ref.current?.getBoundingClientRect();
@@ -329,7 +324,6 @@ export default function SiteDock() {
       magnify: true,
       showLabels: true,
       theme: "dark",
-      locale: routing.defaultLocale,
     };
 
     if (typeof window === "undefined") {
@@ -344,9 +338,6 @@ export default function SiteDock() {
         ...defaults,
         ...parsed,
         theme: parsed.theme === "light" ? "light" : "dark",
-        locale: routing.locales.includes(parsed.locale as Locale)
-          ? (parsed.locale as Locale)
-          : routing.defaultLocale,
       };
     } catch {
       return defaults;
@@ -360,6 +351,7 @@ export default function SiteDock() {
   const { setDirection } = useTransitionDirection();
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
   const [localeTransitionWords, setLocaleTransitionWords] = useState<string[] | null>(null);
+  const localeToggleValue = (pendingLocale ?? locale) === "ko";
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
@@ -415,8 +407,10 @@ export default function SiteDock() {
   }, [preferencesOpen]);
 
   useEffect(() => {
-    setPreferencesOpen(false);
-  }, [pathname]);
+    if (!preferencesOpen) return;
+    const frame = requestAnimationFrame(() => setPreferencesOpen(false));
+    return () => cancelAnimationFrame(frame);
+  }, [pathname, preferencesOpen]);
 
   const mouseX = useMotionValue<number>(Infinity);
   const hover = useMotionValue<number>(0);
@@ -426,13 +420,6 @@ export default function SiteDock() {
   const range = displaySettings.magnify ? 180 : 120;
   const panelHeight = 74;
   const dockHeight = 110;
-
-  useEffect(() => {
-    setDisplaySettings((prev) => {
-      if (prev.locale === locale) return prev;
-      return { ...prev, locale };
-    });
-  }, [locale]);
 
   const maxHeight = useMemo(
     () => Math.max(dockHeight, magnifiedSize + magnifiedSize / 2 + 12),
@@ -473,10 +460,6 @@ export default function SiteDock() {
         localeDisplayNames[locale] ?? locale,
         localeDisplayNames[targetLocale] ?? targetLocale,
       ]);
-      setDisplaySettings((prev) => {
-        if (prev.locale === targetLocale) return prev;
-        return { ...prev, locale: targetLocale };
-      });
       setDirection(0);
     },
     [locale, pendingLocale, setDirection],
@@ -489,13 +472,6 @@ export default function SiteDock() {
     setPendingLocale(null);
     setLocaleTransitionWords(null);
   }, [pathname, pendingLocale, router]);
-
-  useEffect(() => {
-    if (pendingLocale && !localeTransitionWords) {
-      router.push(pathname, { locale: pendingLocale, scroll: false });
-      setPendingLocale(null);
-    }
-  }, [pendingLocale, localeTransitionWords, pathname, router]);
 
   const handleSelect = (item: DockNavItem) => {
     if (!isLinkItem(item)) {
@@ -659,13 +635,13 @@ export default function SiteDock() {
                                     }))
                                   }
                                 />
-                                <PreferenceToggle
-                                  label="Korean language"
-                                  description="Switch interface text to 한국어."
-                                  value={displaySettings.locale === "ko"}
-                                  theme={displaySettings.theme}
-                                  onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
-                                />
+                              <PreferenceToggle
+                                label="Korean language"
+                                description="Switch interface text to 한국어."
+                                value={localeToggleValue}
+                                theme={displaySettings.theme}
+                                onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
+                              />
                               </div>
                             </motion.div>
                           )}
