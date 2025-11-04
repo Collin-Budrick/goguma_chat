@@ -14,10 +14,10 @@
   "dependencies": {
     "@auth/drizzle-adapter": "1.11.1",
     "@goguma/ui": "workspace:*",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
     "drizzle-orm": "0.44.7",
-    "lucide-react": "^0.552.0",
+    "lucide-react": "0.552.0",
     "motion": "12.23.24",
     "next": "16.0.1",
     "next-auth": "5.0.0-beta.25",
