@@ -13,13 +13,10 @@ import {
 import {
   CircleUserRound,
   Home,
-  Info,
   Layers,
   LayoutDashboard,
-  Mail,
   Megaphone,
   MessageSquare,
-  Palette,
   Settings2,
   X,
 } from "lucide-react";
@@ -52,10 +49,6 @@ function isLinkItem(item: DockNavItem): item is DockLinkItem {
 
 const marketingDock: DockNavItem[] = [
   { type: "link", href: "/", label: "Home", icon: Home, match: (path) => path === "/" },
-  { type: "link", href: "/capture", label: "Capture", icon: Palette },
-  { type: "link", href: "/integrations", label: "Integrations", icon: Layers },
-  { type: "link", href: "/about", label: "About", icon: Info },
-  { type: "link", href: "/contact", label: "Contact", icon: Mail },
   {
     type: "link",
     href: "/login",
