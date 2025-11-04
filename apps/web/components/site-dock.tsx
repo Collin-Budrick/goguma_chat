@@ -86,6 +86,30 @@ const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
 const LOCALE_TRANSITION_STORAGE_KEY = "site-locale-transition";
 
+type LocaleTransitionPayload = {
+  locale?: Locale;
+  words?: string[];
+  timestamp?: number;
+};
+
+const getStoredLocaleTransition = (): {
+  locale: Locale | null;
+  words: string[] | null;
+} | null => {
+  if (typeof window === "undefined") return null;
+  const raw = window.sessionStorage.getItem(LOCALE_TRANSITION_STORAGE_KEY);
+  if (!raw) return null;
+  window.sessionStorage.removeItem(LOCALE_TRANSITION_STORAGE_KEY);
+  try {
+    const parsed = JSON.parse(raw) as LocaleTransitionPayload;
+    if (!parsed.locale || !parsed.words || parsed.words.length === 0) return null;
+    if (!parsed.timestamp || Date.now() - parsed.timestamp > 2000) return null;
+    return { locale: parsed.locale, words: parsed.words };
+  } catch {
+    return null;
+  }
+};
+
 const localeDisplayNames: Record<Locale, string> = {
   en: "English",
   ko: "한국어",
@@ -345,8 +369,15 @@ export default function SiteDock() {
   const preferencesRef = useRef<HTMLDivElement | null>(null);
   const previousPathnameRef = useRef(pathname);
   const { setDirection } = useTransitionDirection();
-  const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
-  const [localeTransitionWords, setLocaleTransitionWords] = useState<string[] | null>(null);
+  const initialTransitionRef = useRef<{ locale: Locale | null; words: string[] | null } | null>(null);
+  if (initialTransitionRef.current === null) {
+    initialTransitionRef.current = getStoredLocaleTransition();
+  }
+  const initialTransition = initialTransitionRef.current;
+  const [pendingLocale, setPendingLocale] = useState<Locale | null>(initialTransition?.locale ?? null);
+  const [localeTransitionWords, setLocaleTransitionWords] = useState<string[] | null>(
+    initialTransition?.words ?? null,
+  );
   const localeToggleValue = (pendingLocale ?? locale) === "ko";
 
   useEffect(() => {
@@ -453,44 +484,21 @@ export default function SiteDock() {
 
   const currentIndex = indexForPath(dockItems, pathname);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.sessionStorage.getItem(LOCALE_TRANSITION_STORAGE_KEY);
-    if (!stored) return;
-    window.sessionStorage.removeItem(LOCALE_TRANSITION_STORAGE_KEY);
-    try {
-      const payload = JSON.parse(stored) as {
-        words?: string[];
-        locale?: Locale;
-        timestamp?: number;
-      };
-      if (!payload.words || payload.words.length === 0) return;
-      if (!payload.locale) return;
-      if (!payload.timestamp || Date.now() - payload.timestamp > 2000) return;
-      setPendingLocale(payload.locale);
-      setLocaleTransitionWords(payload.words);
-    } catch {
-      // ignore invalid payload
-    }
-  }, [locale]);
-
   const switchLocale = useCallback(
     (targetLocale: Locale) => {
       if (targetLocale === locale) return;
       if (pendingLocale) return;
-      const transitionWords = [
-        localeDisplayNames[locale] ?? locale,
-        localeDisplayNames[targetLocale] ?? targetLocale,
-      ];
       setPendingLocale(targetLocale);
-      setLocaleTransitionWords(transitionWords);
       setDirection(0);
       if (typeof window !== "undefined") {
         try {
           window.sessionStorage.setItem(
             LOCALE_TRANSITION_STORAGE_KEY,
             JSON.stringify({
-              words: transitionWords,
+              words: [
+                localeDisplayNames[locale] ?? locale,
+                localeDisplayNames[targetLocale] ?? targetLocale,
+              ],
               locale: targetLocale,
               timestamp: Date.now(),
             }),
