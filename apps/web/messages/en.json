@@ -2,102 +2,102 @@
   "Metadata": {
     "title": "Goguma Chat",
     "titleTemplate": "%s | Goguma Chat",
-    "description": "An elegant black-and-white workspace where teams nurture every conversation."
+    "description": "A cozy monochrome chat lounge where friends swap Korean, Japanese, and English messages all night."
   },
   "Marketing": {
-    "heroEyebrow": "Monochrome Messaging",
-    "heroTitle": "Goguma Chat",
-    "heroDescription": "Goguma Chat is the OLED-native workspace where your team orchestrates every customer moment. Sharp contrast, real context, and AI assistance help your replies land with warmth.",
-    "heroPrimaryCta": "Launch the demo",
-    "heroSecondaryCta": "Explore the toolkit",
+    "heroEyebrow": "Global hangout",
+    "heroTitle": "Say hey in any language",
+    "heroDescription": "Goguma Chat is a chilled space for friends, fandoms, and families who hop between Korean, Japanese, and English. High-contrast bubbles, instant translation, and delightful reactions keep every thread feeling close.",
+    "heroPrimaryCta": "Open the app",
+    "heroSecondaryCta": "See how it works",
     "stats": {
       "activeTeams": {
-        "label": "Active teams",
-        "subtext": "Scaling support daily"
+        "label": "Active circles",
+        "subtext": "Online right now"
       },
       "csat": {
-        "label": "CSAT",
-        "subtext": "Rolling 30-day average"
+        "label": "Languages",
+        "subtext": "KO · JA · EN in one feed"
       },
       "responseTime": {
-        "label": "Response time",
-        "subtext": "Median across channels"
+        "label": "Streaks",
+        "subtext": "Daily chat streaks kept"
       }
     },
-    "whyEyebrow": "Why Goguma Chat",
-    "whyTitle": "A calm command center for every surface.",
-    "whyDescription": "Teams stay grounded with our OLED-native interface: interface chrome fades away so voice, intent, and history stay front and center. Less glare, more glow.",
+    "whyEyebrow": "Why Goguma",
+    "whyTitle": "A calm social lounge for every surface.",
+    "whyDescription": "Our OLED-native design keeps the focus on faces, voice notes, and moments. The UI disappears into the background so nightly catch-ups feel cinematic, even at 2 AM.",
     "features": {
       "fluid": {
-        "title": "Fluid conversations",
-        "description": "Route every thread into a shared inbox with AI assist and rich context that keeps your team in sync."
+        "title": "Live translation",
+        "description": "See Korean, Japanese, and English lines unfold side-by-side so mixed-language chats feel effortless."
       },
       "signals": {
-        "title": "Signals, not noise",
-        "description": "Summaries, smart tags, and sentiment snapshots surface the next best action without overwhelming inboxes."
+        "title": "Signal over spam",
+        "description": "Smart muting, vibe summaries, and gentle reminders keep your favorite rooms cozy and drama-free."
       },
       "integrations": {
-        "title": "Deep integrations",
-        "description": "Connect calendars, CRMs, and data warehouses so every reply carries the full story of your customer."
+        "title": "Playful add-ons",
+        "description": "Drop playlists, camera rolls, or gaming clips right into the thread with zero app juggling."
       }
     },
-    "testimonialEyebrow": "Instant clarity",
-    "testimonialQuote": "“Every message looks cinematic. Our agents move faster, and customers notice the human touch in every response.”",
-    "testimonialAttribution": "Hana Kim · Director of Support, Sweet Systems",
+    "testimonialEyebrow": "Instant comfort",
+    "testimonialQuote": "“It feels like we’re all on the same couch even when we’re split across three countries and three languages.”",
+    "testimonialAttribution": "Hana K. · Seoul ↔ Osaka group chat host",
     "callouts": {
       "encrypted": {
-        "eyebrow": "Fully encrypted",
-        "title": "Enterprise trust, by default",
-        "description": "SOC 2 Type II controls, regional data residency, and automated redaction keep sensitive context safe."
+        "eyebrow": "End-to-end",
+        "title": "Private by default",
+        "description": "We lock down every DM and group chat with modern encryption and region-based storage, so secrets stay in the circle."
       },
       "insights": {
-        "eyebrow": "Real-time insights",
-        "title": "Spot trends before they escalate",
-        "description": "Understand sentiment shifts, queue spikes, and AI routing impact from one monochrome operations view."
+        "eyebrow": "Rhythm check",
+        "title": "See the vibe at a glance",
+        "description": "Room heatmaps, translation stats, and streak counters help you know when to drop in and say hi."
       }
     },
-    "chatLiveRoomLabel": "Live room",
-    "chatResolutionLabel": "Resolution time · 52s",
+    "chatLiveRoomLabel": "Live lounge",
+    "chatResolutionLabel": "Reply streak · 52 days",
     "chatMessages": {
-      "syncPause": "Morning! I spotted a sync pause overnight. Want me to resume the export for finance?",
-      "ledgerUpdate": "Yes please. We updated the ledger template, so I wasn’t sure if that caused it.",
-      "jobRestarted": "Good catch. I merged the template changes and restarted the job — everything is flowing again.",
-      "dashboardUpdated": "Amazing. The dashboard already shows the new totals. Thanks!"
+      "syncPause": "Morning fam! Karaoke room later? I found a new JP playlist we can butcher together.",
+      "ledgerUpdate": "Yes!! Let me finish dinner with 엄마 then I’m in. Text me the link.",
+      "jobRestarted": "Sent it — also dropped romanized lyrics so we all keep up.",
+      "dashboardUpdated": "Legends. See you at 21:00 KST!"
     },
-    "ctaEyebrow": "Ready to glow",
-    "ctaTitle": "Bring your team into the OLED era of customer care.",
-    "ctaDescription": "Spin up shared inboxes, connect your tools, and invite your first teammates in minutes. Our concierge crew will help you migrate history so you ship responses with confidence from day one.",
-    "ctaPrimary": "Start for free",
-    "ctaSecondary": "Talk to sales"
+    "ctaEyebrow": "Ready to vibe",
+    "ctaTitle": "Bring your people into one multilingual chat home.",
+    "ctaDescription": "Create a room, pick a theme, and invite friends across time zones. Translation, reactions, and shared memories arrive out of the box.",
+    "ctaPrimary": "Jump in for free",
+    "ctaSecondary": "Browse rooms"
   },
   "Shell": {
     "footer": {
-      "copy": "© {year} Goguma Chat. All rights reserved.",
+      "copy": "© {year} Goguma Chat. Built for late-night chats everywhere.",
       "links": {
         "privacy": "Privacy",
         "terms": "Terms",
         "status": "Status",
-        "support": "Support"
+        "support": "Help"
       }
     },
     "dock": {
       "nav": {
         "marketing": {
           "home": "Home",
-          "account": "Account"
+          "account": "Join"
         },
         "shared": {
           "display": "Display"
         },
         "app": {
-          "overview": "Overview",
+          "overview": "Lounge",
           "chats": "Chats",
-          "profile": "Profile"
+          "profile": "Me"
         },
         "admin": {
-          "console": "Console",
-          "broadcasts": "Broadcasts",
-          "roster": "Roster"
+          "console": "Studio",
+          "broadcasts": "Announcements",
+          "roster": "Hosts"
         }
       },
       "panel": {
@@ -107,19 +107,19 @@
       "preferences": {
         "magnify": {
           "label": "Dock magnification",
-          "description": "Enlarge icons near your cursor."
+          "description": "Enlarge icons when you hover."
         },
         "labels": {
           "label": "Label tooltips",
-          "description": "Reveal item labels on hover."
+          "description": "Show names over each icon."
         },
         "lightMode": {
           "label": "Light mode",
-          "description": "Bright surfaces and dark text."
+          "description": "Swap to airy whites and warm grays."
         },
         "language": {
-          "label": "Korean language",
-          "description": "Switch interface text to 한국어."
+          "label": "한국어 UI",
+          "description": "Switch every label to Korean."
         }
       },
       "aria": {
@@ -132,12 +132,12 @@
     "form": {
       "headings": {
         "login": "Log in",
-        "signup": "Start your free trial"
+        "signup": "Create your account"
       },
       "fields": {
         "email": {
-          "label": "Work email",
-          "placeholder": "you@example.com"
+          "label": "Email address",
+          "placeholder": "you@email.com"
         },
         "password": {
           "label": "Password",
@@ -155,104 +155,104 @@
         }
       },
       "errors": {
-        "emailRequired": "Enter your work email to continue.",
+        "emailRequired": "Enter your email to continue.",
         "passwordRequired": "Enter your password to continue.",
-        "signInFailed": "We couldn't sign you in with those details. Try again."
+        "signInFailed": "We couldn’t sign you in with those details. Try again."
       },
       "buttons": {
-        "loading": "Signing in…"
+        "loading": "Signing you in…"
       }
     }
   },
   "Login": {
     "metadata": {
       "title": "Log in | Goguma Chat",
-      "description": "Access your Goguma Chat operator console."
+      "description": "Return to your multilingual chats."
     },
     "backLink": "← Back to home",
-    "title": "Log in",
-    "subtitle": "Welcome back. Sign in with your work email to continue.",
-    "forgot": "Forgot your credentials? <link>Contact support</link>.",
-    "signupPrompt": "Need an account? <link>Start your trial</link>."
+    "title": "Log back in",
+    "subtitle": "Pick up the conversation where you left it.",
+    "forgot": "Forgot your password? <link>Contact support</link>.",
+    "signupPrompt": "New here? <link>Create an account</link>."
   },
   "Signup": {
     "metadata": {
       "title": "Create account | Goguma Chat",
-      "description": "Spin up your Goguma Chat workspace in minutes."
+      "description": "Open your cross-language chat lounge."
     },
     "backLink": "← Back to home",
-    "title": "Start your free trial",
-    "subtitle": "Create a workspace and invite your teammates. No credit card required.",
-    "terms": "By continuing you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
-    "loginPrompt": "Already using Goguma Chat? <link>Log in instead</link>."
+    "title": "Create your Goguma account",
+    "subtitle": "Pick a display name, invite friends, and start chatting in seconds.",
+    "terms": "By continuing you agree to the <terms>Community Guidelines</terms> and <privacy>Privacy Policy</privacy>.",
+    "loginPrompt": "Already hanging out here? <link>Log in instead</link>."
   },
   "About": {
     "metadata": {
       "title": "About Goguma Chat",
-      "description": "We build monochrome messaging tools that keep customer relationships bright."
+      "description": "We build a cozy multilingual chat space for day-one friends and far-away family."
     },
     "title": "About Goguma Chat",
-    "description": "We build monochrome messaging tools that keep customer relationships bright.",
+    "description": "We’re obsessed with making conversations feel close, even across oceans.",
     "paragraphs": {
-      "craft": "Goguma Chat exists to make every customer interaction feel hand-crafted. We believe teams deserve a workspace that amplifies clarity instead of clutter, so we designed an OLED-first interface where contrast serves the conversation.",
-      "orchestration": "From rapid incident response to long-running success journeys, our tools help you orchestrate every exchange with context, AI recall, and a touch of hospitality.",
-      "mission": "We are a distributed crew of designers, engineers, and operators who have supported millions of conversations for global companies. The mission is simple: help your team stay human at scale."
+      "craft": "Goguma started as a side project so our Seoul, Tokyo, and LA friend groups could hang out in one place. We leaned into high-contrast UI so photos, stickers, and handwriting pop no matter your screen.",
+      "orchestration": "Translation layers, shared playlists, and memory reels are woven in so you can glide between Korean, Japanese, and English without breaking the flow.",
+      "mission": "We’re a tiny distributed crew who care about warmth more than vanity metrics. Mission: help people feel close, keep communities kind, and give everyone a place to talk after midnight."
     }
   },
   "Capture": {
     "metadata": {
       "title": "Background Capture | Goguma Chat",
-      "description": "Minimal frosted surface for monochrome screen recordings."
+      "description": "Clean monochrome canvas for streaming, journaling, or sharing your screen."
     },
     "srText": "Frosted background capture surface for recordings."
   },
   "Contact": {
     "metadata": {
       "title": "Contact | Goguma Chat",
-      "description": "We are here around the clock for customers and curious teams."
+      "description": "Say hi anytime. We keep the lights on for our global community."
     },
     "title": "Contact",
-    "description": "We are here around the clock for customers and curious teams.",
-    "intro": "Choose the channel that works best for your team. Our response desk is staffed 24/7 across time zones.",
+    "description": "We keep a friendly inbox for feedback, ideas, and support.",
+    "intro": "Pick the channel that fits your vibe. Someone from our crew will respond across time zones.",
     "channels": {
       "email": {
         "label": "Email",
         "value": "support@goguma.chat",
-        "description": "Standard response within 4 business hours."
+        "description": "Usually replies within a few hours."
       },
       "signal": {
         "label": "Signal hotline",
         "value": "+1 (415) 555-0195",
-        "description": "For priority incidents and enterprise on-call."
+        "description": "Urgent moderation help or safety concerns."
       },
       "community": {
         "label": "Community",
         "value": "community.goguma.chat",
-        "description": "Share feedback, vote on features, and meet other operators."
+        "description": "Share stories, vote on features, and meet other hosts."
       }
     }
   },
   "Support": {
     "metadata": {
       "title": "Support | Goguma Chat",
-      "description": "Pick the care plan that fits your scale."
+      "description": "Choose how much help you want from the Goguma crew."
     },
-    "title": "Support plans",
-    "description": "Choose the partnership tier that keeps your operators confident.",
+    "title": "Support options",
+    "description": "From casual questions to community-sized events, we’ve got you.",
     "bundles": {
       "starter": {
         "title": "Starter",
-        "sla": "Email replies in under 8 business hours.",
+        "sla": "Email replies in under 8 hours.",
         "price": "Included"
       },
       "growth": {
-        "title": "Growth",
-        "sla": "24/7 chat with a dedicated success manager.",
-        "price": "$499 / month"
+        "title": "Creator",
+        "sla": "24/7 chat with a community guide.",
+        "price": "$29 / month"
       },
       "enterprise": {
-        "title": "Enterprise",
-        "sla": "Shared Slack channel, quarterly reviews, on-call escalation.",
+        "title": "Community",
+        "sla": "Shared channel, moderation tooling, on-call escalation.",
         "price": "Custom"
       }
     }
@@ -260,24 +260,24 @@
   "Terms": {
     "metadata": {
       "title": "Terms of Service | Goguma Chat",
-      "description": "The agreement that governs your use of Goguma Chat."
+      "description": "Understand the ground rules for keeping Goguma safe and friendly."
     },
     "title": "Terms of Service",
-    "description": "Plain-language commitments around availability, data ownership, and supported use.",
+    "description": "Plain-language promises about availability, data ownership, and respectful behavior.",
     "body": {
-      "commitment": "By operating a Goguma Chat workspace you retain ownership of the content you upload. We provide 99.95% uptime backed by service credits and commit to 90-day advanced notice for changes to critical APIs.",
-      "customAgreements": "Custom agreements are available for enterprise plans. Reach out to"
+      "commitment": "You own the photos, messages, and memories you share. We deliver 99.95% uptime, give heads-up before major changes, and remove content that breaks our community guidelines.",
+      "customAgreements": "Need something special for a large community? Reach out to"
     }
   },
   "Privacy": {
     "metadata": {
       "title": "Privacy Policy | Goguma Chat",
-      "description": "Understand how Goguma Chat protects and processes your data."
+      "description": "See how Goguma Chat protects and processes your data."
     },
     "title": "Privacy Policy",
     "description": "We encrypt, minimize, and guard the conversations entrusted to us.",
     "body": {
-      "storage": "Goguma Chat stores customer messages in region-specific clusters with envelope encryption and strict access controls. Operators can request audit trails at any time, and personal data requests are honored within 72 hours.",
+      "storage": "Goguma stores messages in region-specific clusters with envelope encryption and strict access controls. You can request exports or deletion anytime, and we honor data requests within 72 hours.",
       "contact": "Contact"
     }
   },
@@ -287,10 +287,10 @@
       "description": "Live view into Goguma Chat uptime and maintenance windows."
     },
     "title": "Service status",
-    "description": "Snapshots refresh every 60 seconds. Subscribe for webhooks or email updates.",
+    "description": "Snapshots refresh every 60 seconds. Subscribe for push or email updates.",
     "services": {
       "chatApi": {
-        "name": "Chat API",
+        "name": "Messages",
         "status": "Operational",
         "note": "All clusters healthy."
       },
@@ -300,63 +300,63 @@
         "note": "Increased latency in EU West."
       },
       "automation": {
-        "name": "Automation engine",
+        "name": "Live translation",
         "status": "Operational",
         "note": "No incidents reported."
       },
       "exports": {
-        "name": "Exports",
+        "name": "Media uploads",
         "status": "Monitoring",
-        "note": "Queued jobs clearing after spike."
+        "note": "Queued clips clearing after spike."
       }
     }
   },
   "Integrations": {
     "metadata": {
       "title": "Integrations | Goguma Chat",
-      "description": "Connect game engines, automations, media pipelines, and analytics to keep every conversation contextual."
+      "description": "Connect music, games, and creative tools that make every chat feel alive."
     },
     "title": "Integrations",
-    "description": "A few highlights from the tools our teams wire into the Goguma Chat workspace.",
+    "description": "A few fan-favorite add-ons Goguma hosts plug into their rooms.",
     "items": {
       "bevy": {
-        "description": "Monitor WebGPU scenes directly inside the chat workspace with low-latency streaming previews."
+        "description": "Stream shared gaming sessions or watch parties directly inside Goguma with low-latency previews."
       },
       "motion": {
-        "description": "Trigger buttery-smooth animations that respond to customer activity and agent updates."
+        "description": "Trigger smooth ambient animations that react when the room hits new streaks or milestones."
       },
       "faker": {
-        "description": "Generate realistic rosters for demos, QA, and onboarding runs without leaving your inbox."
+        "description": "Spin up playful sample profiles for testing layouts or onboarding friends without exposing real info."
       },
       "iconify": {
-        "description": "Access thousands of icons to brand notifications and macros on the fly."
+        "description": "Access thousands of icons to give channels personality and keep notifications fun."
       },
       "unpic": {
-        "description": "Ship lossless imagery with adaptive formats so every surface looks sharp on OLED screens."
+        "description": "Share lossless photos and scans so every sticker, doodle, and screenshot looks sharp on OLED screens."
       }
     }
   },
   "AdminHome": {
     "metadata": {
-      "title": "Admin Console | Goguma Chat"
+      "title": "Host Console | Goguma Chat"
     },
-    "title": "Admin console",
-    "description": "Choose a management area from the navigation to review system health, send announcements, or manage operator access."
+    "title": "Host console",
+    "description": "Pick a panel to check room health, drop announcements, or invite new moderators."
   },
   "AdminPush": {
     "metadata": {
-      "title": "Admin · Broadcasts | Goguma Chat"
+      "title": "Hosts · Announcements | Goguma Chat"
     },
-    "title": "Broadcast announcements",
-    "description": "Schedule monochrome system toasts or long-form status updates.",
-    "targetHeading": "Target audience",
+    "title": "Send announcements",
+    "description": "Schedule monochrome toasts or long-form updates for your community.",
+    "targetHeading": "Audience",
     "composeHeading": "Compose",
-    "placeholder": "Draft the message operators will receive…",
+    "placeholder": "Share what’s new with your members…",
     "audiences": {
-      "all": "All connected workspaces",
-      "enterprise": "Enterprise workspaces only",
-      "sandbox": "Sandbox and staging environments",
-      "custom": "Custom segment (CSV upload)"
+      "all": "All rooms I host",
+      "enterprise": "Verified communities only",
+      "sandbox": "Test spaces",
+      "custom": "Custom list (CSV upload)"
     },
     "actions": {
       "sendNow": "Send now",
@@ -365,10 +365,10 @@
   },
   "AdminUsers": {
     "metadata": {
-      "title": "Admin · Users | Goguma Chat"
+      "title": "Hosts · People | Goguma Chat"
     },
-    "title": "Operator roster",
-    "description": "Manage who can access Goguma Chat and adjust their permissions.",
+    "title": "Moderator roster",
+    "description": "Manage who can help run your rooms and adjust their permissions.",
     "table": {
       "name": "Name",
       "role": "Role",
@@ -376,8 +376,8 @@
     },
     "roles": {
       "admin": "Admin",
-      "supervisor": "Supervisor",
-      "agent": "Agent"
+      "supervisor": "Moderator",
+      "agent": "Member"
     },
     "statuses": {
       "active": "Active",
@@ -390,103 +390,103 @@
       "title": "Contacts | Goguma Chat"
     },
     "title": "Contacts live inside chat threads",
-    "description": "We merged profiles into the unified chat canvas so you never leave the context of a conversation.",
-    "body": "Head to the <link>chat workspace</link> to browse teammates, invite new operators, and manage customer linkage."
+    "description": "Profiles stay beside every message so the story never leaves the chat.",
+    "body": "Jump into the <link>chat lounge</link> to browse friends, invite new members, and pin favorite people."
   },
   "Dashboard": {
     "metrics": {
-      "title": "Live metrics",
+      "title": "Community pulse",
       "description": "Rolling updates refresh every 15 seconds.",
       "items": {
         "openConversations": {
-          "label": "Open conversations",
+          "label": "Rooms live",
           "value": "42",
-          "delta": "-18% vs last week"
+          "delta": "+8 vs yesterday"
         },
         "firstResponse": {
-          "label": "Avg first response",
+          "label": "Avg reply time",
           "value": "47s",
           "delta": "+6s vs goal"
         },
         "resolvedToday": {
-          "label": "Resolved today",
+          "label": "Photos shared today",
           "value": "318",
           "delta": "+12% vs yesterday"
         }
       }
     },
     "spotlight": {
-      "title": "Spotlight · Automation win",
-      "body": "AI auto-solved 63% of logistics questions this morning. Agents reclaimed 280 minutes and CSAT held steady at 98%."
+      "title": "Spotlight · Translation boost",
+      "body": "Live translation saved 280 minutes this morning and helped 63% of members join conversations outside their primary language."
     },
     "queues": {
-      "title": "Queues",
-      "description": "Drag to reprioritize for your team.",
+      "title": "Rooms",
+      "description": "Tap to jump into the next conversation.",
       "items": {
         "priority": {
-          "name": "Priority",
+          "name": "Late-night study",
           "count": "8",
-          "status": "🟢 Stable"
+          "status": "🟢 Cozy"
         },
         "billing": {
-          "name": "Billing",
+          "name": "Anime watch party",
           "count": "14",
-          "status": "🟡 Warming up"
+          "status": "🟡 Filling up"
         },
         "feedback": {
-          "name": "Product feedback",
+          "name": "Photo drop",
           "count": "2",
           "status": "🟢 Clear"
         },
         "logistics": {
-          "name": "Logistics",
+          "name": "Language exchange",
           "count": "18",
-          "status": "🟠 Spike"
+          "status": "🟠 Buzzing"
         }
       }
     }
   },
   "Chat": {
     "sidebar": {
-      "title": "Threads",
+      "title": "Rooms",
       "new": "New"
     },
     "threads": {
       "shipping": {
-        "preview": "Re: Shipment arrival window this week",
+        "preview": "Late-night ramen meetup?",
         "time": "2m"
       },
       "webhook": {
-        "preview": "Need to re-enable webhook delivery",
+        "preview": "Share your Tokyo pics!!",
         "time": "7m"
       },
       "handoff": {
-        "preview": "Pager rotation handoff recap",
+        "preview": "Game queue in 10?",
         "time": "12m"
       }
     },
     "activeThread": {
-      "participant": "Avery C.",
-      "topic": "Subscription add-on inquiry",
+      "participant": "Avery",
+      "topic": "Osaka spring trip planning",
       "badges": {
         "transcript": "Transcript",
         "macros": "Macros"
       }
     },
     "messages": {
-      "customerGreeting": "Thanks again for the smooth onboarding. Any update on the delivery ETA?",
-      "agentUpdate": "Absolutely. The courier confirmed a 14:30 arrival and we pushed the updated window to your dashboard.",
-      "customerThanks": "Perfect. Appreciate the proactive heads up!"
+      "customerGreeting": "Guys I found a tiny cafe near Dotonbori that does late-night bingsu?",
+      "agentUpdate": "Need!! Does it have vegan options for Mina? Also can we book six seats?",
+      "customerThanks": "Menu says yes + private booth if we call ahead. Dropping the number now."
     },
     "composer": {
-      "placeholder": "Compose a reply…",
+      "placeholder": "Drop a message…",
       "send": "Send"
     }
   },
   "Settings": {
     "appearance": {
       "title": "Appearance",
-      "description": "Personalize your OLED workspace vibe.",
+      "description": "Personalize your OLED lounge vibe.",
       "modes": {
         "dark": "Dark mode",
         "light": "Light mode"
@@ -494,25 +494,25 @@
     },
     "motion": {
       "title": "Motion",
-      "description": "Reduce motion for recording or accessibility needs.",
+      "description": "Reduce motion if you get woozy or are screen recording.",
       "on": "Motion on",
       "off": "Motion off"
     },
     "preferences": {
       "title": "Preferences",
-      "description": "Choose the automations that keep you in flow.",
+      "description": "Pick the helpers that keep your chats feeling effortless.",
       "items": {
         "notifications": {
           "label": "Push notifications",
-          "description": "Send alerts for mentions, escalations, and assignments."
+          "description": "Get alerts for mentions, replies, and event reminders."
         },
         "aiDrafts": {
           "label": "AI drafting",
-          "description": "Suggest replies with context from previous customer threads."
+          "description": "Suggest playful replies using past conversations."
         },
         "presence": {
           "label": "Smart presence",
-          "description": "Auto-update my status when in focus mode or away."
+          "description": "Auto-update my status when I’m focusing or away."
         }
       },
       "state": {
@@ -527,17 +527,17 @@
       "description": "Review your identity and presence settings inside Goguma Chat."
     },
     "title": "Your profile",
-    "description": "Control how your teammates see you across conversations.",
+    "description": "Control how friends and followers see you across chats.",
     "fields": {
       "displayName": "Display name",
-      "role": "Workspace role",
+      "role": "Account type",
       "email": "Email",
       "timezone": "Time zone",
       "created": "Account created",
       "updated": "Last synced"
     },
     "values": {
-      "role": "Operator",
+      "role": "Member",
       "timezone": "UTC"
     }
   }

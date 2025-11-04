@@ -2,102 +2,102 @@
   "Metadata": {
     "title": "고구마 챗",
     "titleTemplate": "%s | 고구마 챗",
-    "description": "팀이 모든 대화를 세심하게 돌보는 우아한 흑백 워크스페이스."
+    "description": "한국어·일본어·영어가 자연스럽게 섞이는 아늑한 모노크롬 수다방."
   },
   "Marketing": {
-    "heroEyebrow": "모노크롬 메시징",
-    "heroTitle": "규모가 커져도 큐레이션된 듯 선명한 대화.",
-    "heroDescription": "고구마 챗은 팀이 모든 고객 순간을 오케스트레이션하는 OLED 기반 워크스페이스입니다. 또렷한 대비, 살아있는 컨텍스트, AI 어시스트가 따뜻한 응답을 완성합니다.",
-    "heroPrimaryCta": "데모 살펴보기",
-    "heroSecondaryCta": "툴킷 둘러보기",
+    "heroEyebrow": "글로벌 라운지",
+    "heroTitle": "어떤 언어로든 안부를 전하세요.",
+    "heroDescription": "고구마 챗은 한국·일본·세계 곳곳의 친구, 팬덤, 가족이 한국어·일본어·영어를 오가며 어울리는 차분한 공간입니다. 높은 대비의 말풍선과 즉시 번역, 사랑스러운 리액션이 멀리 있는 친구도 바로 옆에 있는 듯 느끼게 해요.",
+    "heroPrimaryCta": "앱 열기",
+    "heroSecondaryCta": "작동 방식 보기",
     "stats": {
       "activeTeams": {
-        "label": "활성 팀",
-        "subtext": "매일 성장하는 지원"
+        "label": "활성 서클",
+        "subtext": "지금 온라인"
       },
       "csat": {
-        "label": "CSAT",
-        "subtext": "최근 30일 평균"
+        "label": "사용 언어",
+        "subtext": "KO · JA · EN 한 피드"
       },
       "responseTime": {
-        "label": "응답 시간",
-        "subtext": "모든 채널 중앙값"
+        "label": "연속 기록",
+        "subtext": "매일 이어지는 스트릭"
       }
     },
-    "whyEyebrow": "왜 고구마 챗인가",
-    "whyTitle": "모든 화면에 어울리는 차분한 지휘 센터.",
-    "whyDescription": "팀은 OLED 기반 인터페이스로 본질에 집중합니다. 불필요한 크롬은 사라지고 목소리, 의도, 기록이 중심에 남습니다. 눈부심은 줄이고, 몰입감은 더합니다.",
+    "whyEyebrow": "고구마를 고르는 이유",
+    "whyTitle": "어떤 화면에서도 어울리는 소셜 라운지.",
+    "whyDescription": "OLED 기반 디자인이 UI를 뒤로 물리고 얼굴, 음성, 순간만 남겨요. 새벽 2시에도 영화처럼 선명한 대화를 즐길 수 있죠.",
     "features": {
       "fluid": {
-        "title": "유연한 대화",
-        "description": "모든 스레드를 AI 지원과 풍부한 컨텍스트가 담긴 공유 인박스로 라우팅해 팀의 호흡을 맞춥니다."
+        "title": "실시간 번역",
+        "description": "한국어·일본어·영어 메시지를 나란히 보여 줘 언어가 달라도 흐름이 끊기지 않아요."
       },
       "signals": {
-        "title": "소음 대신 신호",
-        "description": "요약, 스마트 태그, 감정 스냅샷이 인박스를 과부하하지 않고 다음 액션을 떠올려 줍니다."
+        "title": "소음보다 분위기",
+        "description": "스마트 뮤트와 분위기 요약이 좋아하는 방을 아늑하게 유지해 줍니다."
       },
       "integrations": {
-        "title": "깊이 있는 통합",
-        "description": "캘린더, CRM, 데이터 웨어하우스를 연결해 고객의 전 이야기가 응답마다 스며들게 합니다."
+        "title": "놀 거리 애드온",
+        "description": "플레이리스트, 사진첩, 게임 화면을 그대로 떨궈서 앱을 이리저리 바꿀 필요가 없어요."
       }
     },
-    "testimonialEyebrow": "즉각적인 선명도",
-    "testimonialQuote": "“모든 메시지가 영화처럼 느껴집니다. 에이전트는 더 빨라지고, 고객은 응답에서 사람의 온기를 느낍니다.”",
-    "testimonialAttribution": "김하나 · 고객지원 총괄, 스윗 시스템",
+    "testimonialEyebrow": "즉시 전해지는 편안함",
+    "testimonialQuote": "“세 나라에 흩어져 있어도 같은 소파에 앉아 수다 떠는 느낌이에요.”",
+    "testimonialAttribution": "김하나 · 서울↔오사카 방장",
     "callouts": {
       "encrypted": {
-        "eyebrow": "완전 암호화",
-        "title": "기본으로 제공되는 엔터프라이즈 신뢰",
-        "description": "SOC 2 Type II 통제, 지역 데이터 보관, 자동 마스킹으로 민감한 컨텍스트를 안전하게 지킵니다."
+        "eyebrow": "엔드 투 엔드",
+        "title": "기본으로 사적인 공간",
+        "description": "모든 DM과 그룹 채팅을 최신 암호화와 지역별 저장소로 잠궈 비밀이 밖으로 새지 않게 지켜요."
       },
       "insights": {
-        "eyebrow": "실시간 인사이트",
-        "title": "커지기 전에 트렌드를 포착하세요",
-        "description": "감정 변화, 대기열 급증, AI 라우팅 영향을 하나의 모노크롬 운영 뷰에서 파악합니다."
+        "eyebrow": "리듬 체크",
+        "title": "분위기를 한눈에",
+        "description": "방 열기, 번역 비율, 스트릭 카운터로 언제 인사해야 할지 바로 알 수 있어요."
       }
     },
-    "chatLiveRoomLabel": "라이브 룸",
-    "chatResolutionLabel": "해결 시간 · 52초",
+    "chatLiveRoomLabel": "라이브 라운지",
+    "chatResolutionLabel": "연속 답장 · 52일",
     "chatMessages": {
-      "syncPause": "좋은 아침이에요! 밤새 동기화가 잠시 멈춘 걸 봤어요. 재무팀 내보내기를 다시 시작해 드릴까요?",
-      "ledgerUpdate": "네 부탁해요. 원장 템플릿을 업데이트해서 그 영향인지 확실치 않았거든요.",
-      "jobRestarted": "잘 발견하셨어요. 템플릿 변경분을 병합하고 작업을 재시작했어요 — 이제 다시 흐르고 있어요.",
-      "dashboardUpdated": "완벽하네요. 대시보드도 벌써 새로운 합계로 업데이트됐어요. 고마워요!"
+      "syncPause": "굿모닝! 오늘 밤 노래방룸 어때? 찢어볼 일본 플레이리스트 찾았어.",
+      "ledgerUpdate": "좋지! 엄마랑 저녁 먹고 합류할게. 링크 보내 줘.",
+      "jobRestarted": "방금 보냈고 가사도 로마자로 정리해 놨어!",
+      "dashboardUpdated": "완벽. 21시 KST에 보자!"
     },
-    "ctaEyebrow": "빛날 준비 완료",
-    "ctaTitle": "고객 케어의 OLED 시대를 팀과 함께 시작하세요.",
-    "ctaDescription": "공유 인박스를 손쉽게 열고 도구를 연결한 뒤, 몇 분 만에 첫 동료를 초대하세요. 컨시어지 팀이 기록 이관을 도와 첫 응답부터 확신을 드립니다.",
-    "ctaPrimary": "무료로 시작하기",
-    "ctaSecondary": "영업팀에 문의하기"
+    "ctaEyebrow": "분위기 살릴 준비 되셨나요",
+    "ctaTitle": "사람들을 한 번에 모으는 다국어 채팅 홈.",
+    "ctaDescription": "방을 만들고 테마를 고른 뒤 친구를 초대하세요. 번역, 리액션, 추억 앨범이 기본 제공됩니다.",
+    "ctaPrimary": "무료로 합류하기",
+    "ctaSecondary": "방 둘러보기"
   },
   "Shell": {
     "footer": {
-      "copy": "© {year} Goguma Chat. 모든 권리를 보유하고 있습니다.",
+      "copy": "© {year} 고구마 챗. 밤새는 대화를 위해 만듭니다.",
       "links": {
         "privacy": "개인정보",
         "terms": "이용 약관",
         "status": "상태",
-        "support": "지원"
+        "support": "도움말"
       }
     },
     "dock": {
       "nav": {
         "marketing": {
           "home": "홈",
-          "account": "계정"
+          "account": "가입"
         },
         "shared": {
           "display": "디스플레이"
         },
         "app": {
-          "overview": "개요",
-          "chats": "대화",
-          "profile": "프로필"
+          "overview": "라운지",
+          "chats": "채팅",
+          "profile": "나"
         },
         "admin": {
-          "console": "콘솔",
-          "broadcasts": "브로드캐스트",
-          "roster": "구성원"
+          "console": "스튜디오",
+          "broadcasts": "공지",
+          "roster": "호스트"
         }
       },
       "panel": {
@@ -107,19 +107,19 @@
       "preferences": {
         "magnify": {
           "label": "도크 확대",
-          "description": "커서 주변 아이콘을 더 크게 보여 줍니다."
+          "description": "호버하면 아이콘을 크게 보여 줍니다."
         },
         "labels": {
           "label": "레이블 툴팁",
-          "description": "호버 시 항목 이름을 표시합니다."
+          "description": "아이콘 위에 이름을 띄워 주세요."
         },
         "lightMode": {
           "label": "라이트 모드",
-          "description": "밝은 배경과 어두운 텍스트."
+          "description": "밝은 배경과 따뜻한 그레이."
         },
         "language": {
-          "label": "한국어 인터페이스",
-          "description": "인터페이스 텍스트를 한국어로 전환합니다."
+          "label": "한국어 UI",
+          "description": "모든 문구를 한국어로 바꿉니다."
         }
       },
       "aria": {
@@ -132,12 +132,12 @@
     "form": {
       "headings": {
         "login": "로그인",
-        "signup": "무료 체험 시작하기"
+        "signup": "계정 만들기"
       },
       "fields": {
         "email": {
-          "label": "업무용 이메일",
-          "placeholder": "you@example.com"
+          "label": "이메일 주소",
+          "placeholder": "you@email.com"
         },
         "password": {
           "label": "비밀번호",
@@ -155,9 +155,9 @@
         }
       },
       "errors": {
-        "emailRequired": "계속하려면 이메일을 입력하세요.",
-        "passwordRequired": "계속하려면 비밀번호를 입력하세요.",
-        "signInFailed": "입력하신 정보로 로그인할 수 없습니다. 다시 시도해 주세요."
+        "emailRequired": "이메일을 입력해 주세요.",
+        "passwordRequired": "비밀번호를 입력해 주세요.",
+        "signInFailed": "해당 정보로 로그인할 수 없어요. 다시 시도해 주세요."
       },
       "buttons": {
         "loading": "로그인 중…"
@@ -167,36 +167,36 @@
   "Login": {
     "metadata": {
       "title": "로그인 | 고구마 챗",
-      "description": "고구마 챗 운영자 콘솔에 접속하세요."
+      "description": "다국어 채팅으로 바로 돌아오세요."
     },
     "backLink": "← 홈으로 돌아가기",
-    "title": "로그인",
-    "subtitle": "다시 오신 것을 환영합니다. 업무용 이메일로 로그인해 주세요.",
-    "forgot": "자격 증명을 잊으셨나요? <link>지원팀에 문의하기</link>.",
-    "signupPrompt": "계정이 필요하신가요? <link>체험을 시작하세요</link>."
+    "title": "다시 로그인",
+    "subtitle": "떠났던 대화를 이어가요.",
+    "forgot": "비밀번호를 잊으셨나요? <link>지원팀에 문의하기</link>.",
+    "signupPrompt": "처음 오셨나요? <link>계정 만들기</link>."
   },
   "Signup": {
     "metadata": {
       "title": "계정 만들기 | 고구마 챗",
-      "description": "몇 분 만에 고구마 챗 워크스페이스를 시작하세요."
+      "description": "다국어 수다방을 여는 가장 빠른 방법."
     },
     "backLink": "← 홈으로 돌아가기",
-    "title": "무료 체험 시작하기",
-    "subtitle": "워크스페이스를 만들고 동료를 초대하세요. 결제 정보는 필요 없습니다.",
-    "terms": "계속하면 <terms>서비스 약관</terms>과 <privacy>개인정보 처리방침</privacy>에 동의하게 됩니다.",
-    "loginPrompt": "이미 고구마 챗을 사용 중이신가요? <link>대신 로그인하기</link>."
+    "title": "고구마 계정 만들기",
+    "subtitle": "닉네임을 고르고 친구를 초대하면 바로 이야기할 수 있어요.",
+    "terms": "계속하면 <terms>커뮤니티 가이드</terms>와 <privacy>개인정보 처리방침</privacy>에 동의하게 됩니다.",
+    "loginPrompt": "이미 멤버신가요? <link>로그인하기</link>."
   },
   "About": {
     "metadata": {
       "title": "고구마 챗 소개",
-      "description": "고객 관계를 빛나게 하는 모노크롬 메시징 도구를 만듭니다."
+      "description": "멀리 있는 친구가 바로 옆에 있는 듯 느껴지는 다국어 수다방을 만듭니다."
     },
     "title": "고구마 챗 소개",
-    "description": "고객 관계를 빛나게 하는 모노크롬 메시징 도구를 만듭니다.",
+    "description": "서로 다른 언어와 시간이 겹쳐도 관계가 가깝게 느껴지도록 만들고 있어요.",
     "paragraphs": {
-      "craft": "고구마 챗은 모든 고객 대화가 수제로 다듬어진 듯 느껴지도록 설계되었습니다. 팀이 잡음 대신 명료함에 집중할 수 있도록 OLED 퍼스트 인터페이스로 대비만 남기고 군더더기를 덜어냈습니다.",
-      "orchestration": "긴급한 장애 대응부터 장기적인 성공 여정까지, 풍부한 컨텍스트와 AI 리콜, 환대의 터치를 더해 모든 상호작용을 지휘할 수 있습니다.",
-      "mission": "우리는 전 세계 기업의 수백만 건 대화를 지원해 온 디자이너, 엔지니어, 운영자로 구성된 분산 팀입니다. 미션은 하나, 규모가 커져도 팀이 인간적인 온기를 유지하도록 돕는 것입니다."
+      "craft": "서울·도쿄·LA 친구들이 한 앱에서 이야기하려다 시작된 사이드 프로젝트였어요. 사진과 손글씨가 가장 잘 보이도록 OLED 기반 대비를 그대로 살렸습니다.",
+      "orchestration": "번역 레이어, 공유 플레이리스트, 추억 타임라인이 자연스럽게 녹아 있어 언어를 바꿔도 흐름이 끊기지 않아요.",
+      "mission": "우리는 작은 분산 팀이지만 온도를 가장 먼저 생각합니다. 모두가 인간적인 온기를 느끼며 밤늦게까지 이야기할 수 있는 공간을 만드는 것이 우리의 미션입니다."
     }
   },
   "Capture": {
@@ -209,50 +209,50 @@
   "Contact": {
     "metadata": {
       "title": "문의하기 | 고구마 챗",
-      "description": "고객과 호기심 많은 팀을 위해 항상 대기하고 있습니다."
+      "description": "언제든 인사해 주세요. 전 세계 친구들을 위해 불을 켜 두고 있어요."
     },
     "title": "문의하기",
-    "description": "고객과 호기심 많은 팀을 위해 늘 대기하고 있습니다.",
-    "intro": "팀에 가장 잘 맞는 채널을 선택하세요. 우리의 대응 데스크는 24/7 전 세계에서 운영됩니다.",
+    "description": "피드백과 아이디어를 위해 열린 편지를 유지하고 있어요.",
+    "intro": "편한 채널을 고르세요. 어느 시간대든 곧 답장이 갈 거예요.",
     "channels": {
       "email": {
         "label": "이메일",
         "value": "support@goguma.chat",
-        "description": "영업일 4시간 이내 표준 응답."
+        "description": "몇 시간 안에 답장해 드립니다."
       },
       "signal": {
         "label": "시그널 핫라인",
         "value": "+1 (415) 555-0195",
-        "description": "우선순위 인시던트와 엔터프라이즈 온콜 전용."
+        "description": "긴급 신고나 안전 관련 이슈는 여기에 알려 주세요."
       },
       "community": {
         "label": "커뮤니티",
         "value": "community.goguma.chat",
-        "description": "피드백을 공유하고 기능에 투표하며 다른 운영자를 만나보세요."
+        "description": "이야기를 나누고 기능을 제안하며 다른 호스트를 만나보세요."
       }
     }
   },
   "Support": {
     "metadata": {
       "title": "지원 | 고구마 챗",
-      "description": "조직 규모에 맞는 케어 플랜을 선택하세요."
+      "description": "원하는 만큼 고구마 팀의 도움을 받아보세요."
     },
-    "title": "지원 플랜",
-    "description": "운영자가 안심할 수 있는 파트너십 단계를 고르세요.",
+    "title": "지원 옵션",
+    "description": "가벼운 질문부터 커뮤니티 운영까지 함께 챙겨 드립니다.",
     "bundles": {
       "starter": {
         "title": "스타터",
-        "sla": "영업일 기준 8시간 이내 이메일 응답.",
+        "sla": "8시간 이내 이메일 응답.",
         "price": "포함"
       },
       "growth": {
-        "title": "그로스",
-        "sla": "전담 성공 매니저와 24/7 채팅.",
-        "price": "$499 / 월"
+        "title": "크리에이터",
+        "sla": "커뮤니티 가이드와 24/7 채팅.",
+        "price": "$29 / 월"
       },
       "enterprise": {
-        "title": "엔터프라이즈",
-        "sla": "공유 슬랙 채널, 분기별 리뷰, 온콜 에스컬레이션.",
+        "title": "커뮤니티",
+        "sla": "공유 채널, 모더레이션 도구, 온콜 에스컬레이션.",
         "price": "맞춤형"
       }
     }
@@ -260,24 +260,24 @@
   "Terms": {
     "metadata": {
       "title": "서비스 약관 | 고구마 챗",
-      "description": "고구마 챗 사용을 규정하는 약속입니다."
+      "description": "고구마를 안전하고 따뜻하게 사용하는 기본 약속을 확인하세요."
     },
     "title": "서비스 약관",
-    "description": "가용성, 데이터 소유권, 지원되는 사용 방식에 대한 명확한 약속.",
+    "description": "가용성, 데이터 소유권, 서로를 존중하는 행동에 대한 명확한 약속.",
     "body": {
-      "commitment": "고구마 챗 워크스페이스를 운영하더라도 업로드한 콘텐츠의 소유권은 여러분에게 있습니다. 우리는 서비스 크레딧으로 보장되는 99.95% 가동 시간을 제공하고 핵심 API 변경 시 90일 전에 미리 알려드립니다.",
-      "customAgreements": "엔터프라이즈 요금제에는 맞춤 계약을 제공합니다. 문의:"
+      "commitment": "고구마 챗에 올린 사진과 메시지는 언제나 여러분 소유입니다. 99.95% 가용성을 약속하고, 큰 변경 사항은 미리 안내하며, 커뮤니티 가이드를 어기는 콘텐츠는 삭제합니다.",
+      "customAgreements": "큰 커뮤니티를 위한 별도 약속이 필요하면 아래로 문의해 주세요:"
     }
   },
   "Privacy": {
     "metadata": {
       "title": "개인정보 처리방침 | 고구마 챗",
-      "description": "고구마 챗이 데이터를 보호하고 처리하는 방식을 확인하세요."
+      "description": "고구마 챗이 데이터를 보호하고 처리하는 방식을 알려 드립니다."
     },
     "title": "개인정보 처리방침",
     "description": "우리에게 맡겨진 대화는 최소 수집과 암호화로 지켜집니다.",
     "body": {
-      "storage": "고구마 챗은 지역별 클러스터에 고객 메시지를 저장하고 엔벨로프 암호화와 엄격한 접근 제어를 적용합니다. 언제든 감사 로그를 요청할 수 있으며, 개인정보 요청은 72시간 내 처리됩니다.",
+      "storage": "고구마 챗은 지역별 클러스터에 메시지를 저장하고 엔벨로프 암호화와 엄격한 접근 제어를 적용합니다. 언제든 내보내기나 삭제를 요청할 수 있으며 72시간 내 처리합니다.",
       "contact": "문의:"
     }
   },
@@ -287,10 +287,10 @@
       "description": "고구마 챗 가동 상태와 점검 일정을 실시간으로 확인하세요."
     },
     "title": "서비스 상태",
-    "description": "스냅샷은 60초마다 새로고침됩니다. 웹후크나 이메일 알림을 구독하세요.",
+    "description": "스냅샷은 60초마다 새로고침됩니다. 푸시나 이메일 알림을 구독할 수 있어요.",
     "services": {
       "chatApi": {
-        "name": "채팅 API",
+        "name": "메시지",
         "status": "정상",
         "note": "모든 클러스터가 안정적입니다."
       },
@@ -300,63 +300,63 @@
         "note": "EU West 지역 지연이 증가했습니다."
       },
       "automation": {
-        "name": "자동화 엔진",
+        "name": "라이브 번역",
         "status": "정상",
-        "note": "보고된 인시던트가 없습니다."
+        "note": "보고된 이슈 없음."
       },
       "exports": {
-        "name": "내보내기",
+        "name": "미디어 업로드",
         "status": "모니터링",
-        "note": "급증 이후 대기열 작업을 정리 중입니다."
+        "note": "급증 이후 대기열을 비우는 중."
       }
     }
   },
   "Integrations": {
     "metadata": {
       "title": "통합 | 고구마 챗",
-      "description": "게임 엔진, 자동화, 미디어, 분석 워크플로를 연결해 모든 대화에 컨텍스트를 더하세요."
+      "description": "음악, 게임, 크리에이티브 도구를 연결해 대화를 더 즐겁게 만드세요."
     },
     "title": "통합",
-    "description": "팀이 고구마 챗 워크스페이스에 연결하는 대표적인 툴을 소개합니다.",
+    "description": "호스트들이 방에 연결하는 인기 애드온을 소개합니다.",
     "items": {
       "bevy": {
-        "description": "저지연 스트리밍 미리보기로 채팅 워크스페이스 안에서 WebGPU 장면을 모니터링하세요."
+        "description": "저지연 스트리밍으로 게임 세션이나 시청 파티를 채팅 안에서 바로 공유하세요."
       },
       "motion": {
-        "description": "고객 활동과 상담사 업데이트에 반응하는 매끄러운 애니메이션을 트리거합니다."
+        "description": "방이 새 스트릭을 달성하면 부드러운 애니메이션이 반응하도록 설정하세요."
       },
       "faker": {
-        "description": "데모, QA, 온보딩을 위해 사실적인 명단을 받은 편지함 안에서 바로 생성합니다."
+        "description": "레이아웃을 시험하거나 온보딩을 돕기 위해 가짜 프로필을 손쉽게 생성하세요."
       },
       "iconify": {
-        "description": "수천 개 아이콘으로 알림과 매크로를 즉시 브랜딩하세요."
+        "description": "수천 개 아이콘으로 채널과 알림에 개성을 더하세요."
       },
       "unpic": {
-        "description": "OLED 화면에서도 선명한 적응형 포맷으로 손실 없는 이미지를 전달합니다."
+        "description": "OLED 화면에서도 또렷한 손실 없는 이미지와 스티커를 공유하세요."
       }
     }
   },
   "AdminHome": {
     "metadata": {
-      "title": "관리 콘솔 | 고구마 챗"
+      "title": "호스트 콘솔 | 고구마 챗"
     },
-    "title": "관리 콘솔",
-    "description": "내비게이션에서 영역을 선택해 시스템 상태를 보고, 공지를 보내고, 운영자 접근을 관리하세요."
+    "title": "호스트 콘솔",
+    "description": "패널을 골라 방 상태를 확인하고 공지를 보내거나 새 모더레이터를 초대하세요."
   },
   "AdminPush": {
     "metadata": {
-      "title": "관리자 · 브로드캐스트 | 고구마 챗"
+      "title": "호스트 · 공지 | 고구마 챗"
     },
-    "title": "공지 브로드캐스트",
-    "description": "모노크롬 시스템 토스트나 장문의 상태 업데이트를 예약합니다.",
+    "title": "공지 보내기",
+    "description": "모노크롬 토스트나 장문의 업데이트를 예약해 커뮤니티에 전하세요.",
     "targetHeading": "대상",
     "composeHeading": "작성",
-    "placeholder": "운영자가 받을 메시지를 작성하세요…",
+    "placeholder": "멤버에게 전할 소식을 적어 주세요…",
     "audiences": {
-      "all": "연결된 모든 워크스페이스",
-      "enterprise": "엔터프라이즈 워크스페이스",
-      "sandbox": "샌드박스 및 스테이징",
-      "custom": "맞춤 세그먼트 (CSV 업로드)"
+      "all": "내가 운영하는 모든 방",
+      "enterprise": "인증 커뮤니티만",
+      "sandbox": "테스트 공간",
+      "custom": "맞춤 목록 (CSV 업로드)"
     },
     "actions": {
       "sendNow": "지금 보내기",
@@ -365,10 +365,10 @@
   },
   "AdminUsers": {
     "metadata": {
-      "title": "관리자 · 사용자 | 고구마 챗"
+      "title": "호스트 · 인원 | 고구마 챗"
     },
-    "title": "운영자 명단",
-    "description": "고구마 챗 접근 권한과 권한 수준을 관리하세요.",
+    "title": "모더레이터 명단",
+    "description": "방을 함께 운영할 사람과 권한을 관리하세요.",
     "table": {
       "name": "이름",
       "role": "역할",
@@ -376,8 +376,8 @@
     },
     "roles": {
       "admin": "관리자",
-      "supervisor": "감독",
-      "agent": "상담사"
+      "supervisor": "모더레이터",
+      "agent": "멤버"
     },
     "statuses": {
       "active": "활성",
@@ -389,104 +389,104 @@
     "metadata": {
       "title": "연락처 | 고구마 챗"
     },
-    "title": "연락처는 대화 안에 살아요",
-    "description": "프로필을 통합된 채팅 화면에 녹여 대화 컨텍스트에서 벗어나지 않습니다.",
-    "body": "<link>채팅 워크스페이스</link>에서 팀원을 탐색하고 새 운영자를 초대하며 고객 연결을 관리하세요."
+    "title": "연락처는 채팅 안에서 숨 쉬어요",
+    "description": "프로필이 메시지 옆에 붙어 있어 대화 맥락을 놓치지 않습니다.",
+    "body": "<link>채팅 라운지</link>에서 친구를 둘러보고 새 멤버를 초대하며 즐겨찾기를 고정하세요."
   },
   "Dashboard": {
     "metrics": {
-      "title": "실시간 지표",
+      "title": "커뮤니티 맥박",
       "description": "15초마다 롤링 업데이트가 새로고침됩니다.",
       "items": {
         "openConversations": {
-          "label": "열린 대화",
+          "label": "활성 방",
           "value": "42",
-          "delta": "지난주 대비 -18%"
+          "delta": "어제 대비 +8"
         },
         "firstResponse": {
-          "label": "평균 첫 응답",
+          "label": "평균 답장 속도",
           "value": "47초",
           "delta": "목표 대비 +6초"
         },
         "resolvedToday": {
-          "label": "오늘 해결",
+          "label": "오늘 공유한 사진",
           "value": "318",
           "delta": "어제 대비 +12%"
         }
       }
     },
     "spotlight": {
-      "title": "스포트라이트 · 자동화 성과",
-      "body": "오늘 오전 물류 문의의 63%를 AI가 자동 해결했습니다. 상담사는 280분을 회수했고 CSAT는 98%로 유지됐습니다."
+      "title": "스포트라이트 · 번역 부스트",
+      "body": "오늘 오전 라이브 번역이 63%의 멤버가 모국어가 아닌 방에 참여하도록 도와 280분을 절약했어요."
     },
     "queues": {
-      "title": "큐",
-      "description": "팀 우선순위를 드래그로 조정하세요.",
+      "title": "방 목록",
+      "description": "다음으로 들어가고 싶은 방을 탭하세요.",
       "items": {
         "priority": {
-          "name": "우선",
+          "name": "야간 공부방",
           "count": "8",
-          "status": "🟢 안정적"
+          "status": "🟢 포근"
         },
         "billing": {
-          "name": "결제",
+          "name": "애니 감상회",
           "count": "14",
-          "status": "🟡 데워지는 중"
+          "status": "🟡 착석 중"
         },
         "feedback": {
-          "name": "제품 피드백",
+          "name": "사진 드롭",
           "count": "2",
-          "status": "🟢 깨끗함"
+          "status": "🟢 여유"
         },
         "logistics": {
-          "name": "물류",
+          "name": "언어 교환",
           "count": "18",
-          "status": "🟠 스파이크"
+          "status": "🟠 북적임"
         }
       }
     }
   },
   "Chat": {
     "sidebar": {
-      "title": "스레드",
-      "new": "신규"
+      "title": "방",
+      "new": "새 방"
     },
     "threads": {
       "shipping": {
-        "preview": "Re: 이번 주 배송 도착 시간",
-        "time": "2분"
+        "preview": "야식 라면 모임?",
+        "time": "2분 전"
       },
       "webhook": {
-        "preview": "웹훅 전달을 다시 활성화해야 해요",
-        "time": "7분"
+        "preview": "도쿄 사진 공유해!!",
+        "time": "7분 전"
       },
       "handoff": {
-        "preview": "페이저 교대 핸드오프 회고",
-        "time": "12분"
+        "preview": "게임 큐 10분 뒤?",
+        "time": "12분 전"
       }
     },
     "activeThread": {
-      "participant": "Avery C.",
-      "topic": "구독 애드온 문의",
+      "participant": "에이브리",
+      "topic": "오사카 봄 여행 계획",
       "badges": {
         "transcript": "대화록",
         "macros": "매크로"
       }
     },
     "messages": {
-      "customerGreeting": "온보딩이 매끄러워서 고마워요. 배송 ETA 업데이트가 있을까요?",
-      "agentUpdate": "물론이죠. 택배사가 14:30 도착을 확정했고 대시보드에 갱신해 두었습니다.",
-      "customerThanks": "완벽해요. 미리 알려줘서 고마워요!"
+      "customerGreeting": "도톤보리 근처 심야 빙수 카페 찾았는데 갈 사람?",
+      "agentUpdate": "좋아!! 미나도 먹을 수 있는 비건 옵션 있나? 자리 여섯 개 예약할 수 있을까?",
+      "customerThanks": "메뉴 보니 있고 전화하면 룸 예약도 가능래. 번호 넣을게!"
     },
     "composer": {
-      "placeholder": "답장을 작성하세요…",
+      "placeholder": "메시지를 남겨 보세요…",
       "send": "보내기"
     }
   },
   "Settings": {
     "appearance": {
       "title": "모양새",
-      "description": "OLED 워크스페이스의 분위기를 개인화하세요.",
+      "description": "OLED 라운지의 분위기를 원하는 대로 꾸며 보세요.",
       "modes": {
         "dark": "다크 모드",
         "light": "라이트 모드"
@@ -494,25 +494,25 @@
     },
     "motion": {
       "title": "모션",
-      "description": "녹화나 접근성 목적을 위해 모션을 줄입니다.",
+      "description": "어지럽거나 녹화 중일 때 모션을 줄일 수 있어요.",
       "on": "모션 켜짐",
       "off": "모션 꺼짐"
     },
     "preferences": {
       "title": "환경설정",
-      "description": "몰입감을 유지시켜 주는 자동화를 고르세요.",
+      "description": "채팅을 부드럽게 이어 주는 도우미를 고르세요.",
       "items": {
         "notifications": {
           "label": "푸시 알림",
-          "description": "멘션, 에스컬레이션, 할당에 대한 알림을 받습니다."
+          "description": "멘션, 답장, 이벤트 리마인더를 알려 드립니다."
         },
         "aiDrafts": {
           "label": "AI 초안",
-          "description": "이전 대화 컨텍스트로 답장을 제안합니다."
+          "description": "지난 대화를 참고해 재치 있는 답장을 제안합니다."
         },
         "presence": {
           "label": "스마트 프레즌스",
-          "description": "집중 모드나 자리 비움에 따라 상태를 자동으로 바꿉니다."
+          "description": "집중하거나 자리를 비우면 상태를 자동으로 바꿔요."
         }
       },
       "state": {
@@ -524,20 +524,20 @@
   "Profile": {
     "metadata": {
       "title": "프로필 | 고구마 챗",
-      "description": "고구마 챗 안에서 본인의 정보와 존재감을 확인하세요."
+      "description": "고구마 챗 안에서 나를 표현하는 방식을 다듬어 보세요."
     },
     "title": "내 프로필",
-    "description": "팀원이 대화 전반에서 나를 어떻게 보는지 관리하세요.",
+    "description": "친구와 팔로워가 나를 어떻게 보는지 직접 정할 수 있어요.",
     "fields": {
       "displayName": "표시 이름",
-      "role": "워크스페이스 역할",
+      "role": "계정 유형",
       "email": "이메일",
       "timezone": "시간대",
       "created": "계정 생성일",
       "updated": "마지막 동기화"
     },
     "values": {
-      "role": "운영자",
+      "role": "멤버",
       "timezone": "UTC"
     }
   }
