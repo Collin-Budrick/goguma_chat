@@ -369,11 +369,7 @@ export default function SiteDock() {
   const preferencesRef = useRef<HTMLDivElement | null>(null);
   const previousPathnameRef = useRef(pathname);
   const { setDirection } = useTransitionDirection();
-  const initialTransitionRef = useRef<{ locale: Locale | null; words: string[] | null } | null>(null);
-  if (initialTransitionRef.current === null) {
-    initialTransitionRef.current = getStoredLocaleTransition();
-  }
-  const initialTransition = initialTransitionRef.current;
+  const initialTransition = useMemo(() => getStoredLocaleTransition(), []);
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(initialTransition?.locale ?? null);
   const [localeTransitionWords, setLocaleTransitionWords] = useState<string[] | null>(
     initialTransition?.words ?? null,
