@@ -348,6 +348,7 @@ export default function SiteDock() {
     ? "border-slate-200 bg-white text-slate-900 shadow-[0_30px_70px_rgba(148,163,184,0.35)]"
     : "border-white/12 bg-black/85 text-white shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
   const preferencesRef = useRef<HTMLDivElement | null>(null);
+  const previousPathnameRef = useRef(pathname);
   const { setDirection } = useTransitionDirection();
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(null);
   const [localeTransitionWords, setLocaleTransitionWords] = useState<string[] | null>(null);
@@ -407,8 +408,14 @@ export default function SiteDock() {
   }, [preferencesOpen]);
 
   useEffect(() => {
-    if (!preferencesOpen) return;
+    if (!preferencesOpen) {
+      previousPathnameRef.current = pathname;
+      return;
+    }
+    if (previousPathnameRef.current === pathname) return;
+
     const frame = requestAnimationFrame(() => setPreferencesOpen(false));
+    previousPathnameRef.current = pathname;
     return () => cancelAnimationFrame(frame);
   }, [pathname, preferencesOpen]);
 
