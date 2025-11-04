@@ -10,6 +10,60 @@
     "heroDescription": "Goguma Chat is the OLED-native workspace where your team orchestrates every customer moment. Sharp contrast, real context, and AI assistance help your replies land with warmth.",
     "heroPrimaryCta": "Launch the demo",
     "heroSecondaryCta": "Explore the toolkit",
+    "stats": {
+      "activeTeams": {
+        "label": "Active teams",
+        "subtext": "Scaling support daily"
+      },
+      "csat": {
+        "label": "CSAT",
+        "subtext": "Rolling 30-day average"
+      },
+      "responseTime": {
+        "label": "Response time",
+        "subtext": "Median across channels"
+      }
+    },
+    "whyEyebrow": "Why Goguma Chat",
+    "whyTitle": "A calm command center for every surface.",
+    "whyDescription": "Teams stay grounded with our OLED-native interface: interface chrome fades away so voice, intent, and history stay front and center. Less glare, more glow.",
+    "features": {
+      "fluid": {
+        "title": "Fluid conversations",
+        "description": "Route every thread into a shared inbox with AI assist and rich context that keeps your team in sync."
+      },
+      "signals": {
+        "title": "Signals, not noise",
+        "description": "Summaries, smart tags, and sentiment snapshots surface the next best action without overwhelming inboxes."
+      },
+      "integrations": {
+        "title": "Deep integrations",
+        "description": "Connect calendars, CRMs, and data warehouses so every reply carries the full story of your customer."
+      }
+    },
+    "testimonialEyebrow": "Instant clarity",
+    "testimonialQuote": "“Every message looks cinematic. Our agents move faster, and customers notice the human touch in every response.”",
+    "testimonialAttribution": "Hana Kim · Director of Support, Sweet Systems",
+    "callouts": {
+      "encrypted": {
+        "eyebrow": "Fully encrypted",
+        "title": "Enterprise trust, by default",
+        "description": "SOC 2 Type II controls, regional data residency, and automated redaction keep sensitive context safe."
+      },
+      "insights": {
+        "eyebrow": "Real-time insights",
+        "title": "Spot trends before they escalate",
+        "description": "Understand sentiment shifts, queue spikes, and AI routing impact from one monochrome operations view."
+      }
+    },
+    "chatLiveRoomLabel": "Live room",
+    "chatResolutionLabel": "Resolution time · 52s",
+    "chatMessages": {
+      "syncPause": "Morning! I spotted a sync pause overnight. Want me to resume the export for finance?",
+      "ledgerUpdate": "Yes please. We updated the ledger template, so I wasn’t sure if that caused it.",
+      "jobRestarted": "Good catch. I merged the template changes and restarted the job — everything is flowing again.",
+      "dashboardUpdated": "Amazing. The dashboard already shows the new totals. Thanks!"
+    },
     "ctaEyebrow": "Ready to glow",
     "ctaTitle": "Bring your team into the OLED era of customer care.",
     "ctaDescription": "Spin up shared inboxes, connect your tools, and invite your first teammates in minutes. Our concierge crew will help you migrate history so you ship responses with confidence from day one.",

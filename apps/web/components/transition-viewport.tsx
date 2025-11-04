@@ -9,9 +9,19 @@ import { usePathname } from "next/navigation";
 import type { PropsWithChildren } from "react";
 import { useTransitionDirection } from "./transition-context";
 
+const resolveEnterOffset = (direction: 1 | -1 | 0) => {
+  if (direction === 0) return 0;
+  return direction === 1 ? -160 : 160;
+};
+
+const resolveExitOffset = (direction: 1 | -1 | 0) => {
+  if (direction === 0) return 0;
+  return direction === 1 ? 160 : -160;
+};
+
 const slideVariants: Variants = {
-  enter: (direction: 1 | -1) => ({
-    x: direction === 1 ? -160 : 160,
+  enter: (direction: 1 | -1 | 0) => ({
+    x: resolveEnterOffset(direction),
     opacity: 1,
     position: "absolute",
     width: "100%",
@@ -22,8 +32,8 @@ const slideVariants: Variants = {
     position: "relative",
     width: "100%",
   },
-  exit: (direction: 1 | -1) => ({
-    x: direction === 1 ? 160 : -160,
+  exit: (direction: 1 | -1 | 0) => ({
+    x: resolveExitOffset(direction),
     opacity: 1,
     position: "absolute",
     width: "100%",

@@ -68,13 +68,13 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-black font-sans text-white antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen font-sans antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <TransitionProvider>
-            <div className="flex min-h-screen flex-col">
+            <div className="app-shell flex min-h-screen flex-col">
               <TransitionViewport>
-                <div className="min-h-full bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
+                <div className="app-gradient min-h-full bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
                   {children}
                 </div>
               </TransitionViewport>

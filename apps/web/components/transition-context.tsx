@@ -9,14 +9,14 @@ import {
 } from "react";
 
 type TransitionContextValue = {
-  direction: 1 | -1;
-  setDirection: (direction: 1 | -1) => void;
+  direction: 1 | -1 | 0;
+  setDirection: (direction: 1 | -1 | 0) => void;
 };
 
 const TransitionContext = createContext<TransitionContextValue | null>(null);
 
 export function TransitionProvider({ children }: PropsWithChildren) {
-  const [direction, setDirection] = useState<1 | -1>(1);
+  const [direction, setDirection] = useState<1 | -1 | 0>(1);
   const value = useMemo(
     () => ({
       direction,

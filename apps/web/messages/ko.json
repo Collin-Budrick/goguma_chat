@@ -10,6 +10,60 @@
     "heroDescription": "고구마 챗은 팀이 모든 고객 순간을 오케스트레이션하는 OLED 기반 워크스페이스입니다. 또렷한 대비, 살아있는 컨텍스트, AI 어시스트가 따뜻한 응답을 완성합니다.",
     "heroPrimaryCta": "데모 살펴보기",
     "heroSecondaryCta": "툴킷 둘러보기",
+    "stats": {
+      "activeTeams": {
+        "label": "활성 팀",
+        "subtext": "매일 성장하는 지원"
+      },
+      "csat": {
+        "label": "CSAT",
+        "subtext": "최근 30일 평균"
+      },
+      "responseTime": {
+        "label": "응답 시간",
+        "subtext": "모든 채널 중앙값"
+      }
+    },
+    "whyEyebrow": "왜 고구마 챗인가",
+    "whyTitle": "모든 화면에 어울리는 차분한 지휘 센터.",
+    "whyDescription": "팀은 OLED 기반 인터페이스로 본질에 집중합니다. 불필요한 크롬은 사라지고 목소리, 의도, 기록이 중심에 남습니다. 눈부심은 줄이고, 몰입감은 더합니다.",
+    "features": {
+      "fluid": {
+        "title": "유연한 대화",
+        "description": "모든 스레드를 AI 지원과 풍부한 컨텍스트가 담긴 공유 인박스로 라우팅해 팀의 호흡을 맞춥니다."
+      },
+      "signals": {
+        "title": "소음 대신 신호",
+        "description": "요약, 스마트 태그, 감정 스냅샷이 인박스를 과부하하지 않고 다음 액션을 떠올려 줍니다."
+      },
+      "integrations": {
+        "title": "깊이 있는 통합",
+        "description": "캘린더, CRM, 데이터 웨어하우스를 연결해 고객의 전 이야기가 응답마다 스며들게 합니다."
+      }
+    },
+    "testimonialEyebrow": "즉각적인 선명도",
+    "testimonialQuote": "“모든 메시지가 영화처럼 느껴집니다. 에이전트는 더 빨라지고, 고객은 응답에서 사람의 온기를 느낍니다.”",
+    "testimonialAttribution": "김하나 · 고객지원 총괄, 스윗 시스템",
+    "callouts": {
+      "encrypted": {
+        "eyebrow": "완전 암호화",
+        "title": "기본으로 제공되는 엔터프라이즈 신뢰",
+        "description": "SOC 2 Type II 통제, 지역 데이터 보관, 자동 마스킹으로 민감한 컨텍스트를 안전하게 지킵니다."
+      },
+      "insights": {
+        "eyebrow": "실시간 인사이트",
+        "title": "커지기 전에 트렌드를 포착하세요",
+        "description": "감정 변화, 대기열 급증, AI 라우팅 영향을 하나의 모노크롬 운영 뷰에서 파악합니다."
+      }
+    },
+    "chatLiveRoomLabel": "라이브 룸",
+    "chatResolutionLabel": "해결 시간 · 52초",
+    "chatMessages": {
+      "syncPause": "좋은 아침이에요! 밤새 동기화가 잠시 멈춘 걸 봤어요. 재무팀 내보내기를 다시 시작해 드릴까요?",
+      "ledgerUpdate": "네 부탁해요. 원장 템플릿을 업데이트해서 그 영향인지 확실치 않았거든요.",
+      "jobRestarted": "잘 발견하셨어요. 템플릿 변경분을 병합하고 작업을 재시작했어요 — 이제 다시 흐르고 있어요.",
+      "dashboardUpdated": "완벽하네요. 대시보드도 벌써 새로운 합계로 업데이트됐어요. 고마워요!"
+    },
     "ctaEyebrow": "빛날 준비 완료",
     "ctaTitle": "고객 케어의 OLED 시대를 팀과 함께 시작하세요.",
     "ctaDescription": "공유 인박스를 손쉽게 열고 도구를 연결한 뒤, 몇 분 만에 첫 동료를 초대하세요. 컨시어지 팀이 기록 이관을 도와 첫 응답부터 확신을 드립니다.",

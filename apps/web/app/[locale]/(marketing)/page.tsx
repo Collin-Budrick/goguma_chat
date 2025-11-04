@@ -8,87 +8,28 @@ import { Link } from "@/i18n/navigation";
 import CountUp from "@/components/count-up";
 
 const STATS = [
-  {
-    label: "Active teams",
-    value: 480,
-    suffix: "+",
-    duration: 1.2,
-    subtext: "Scaling support daily",
-  },
-  {
-    label: "CSAT",
-    value: 98.4,
-    suffix: "%",
-    duration: 1.4,
-    subtext: "Rolling 30-day average",
-  },
-  {
-    label: "Response time",
-    value: 47,
-    suffix: "s",
-    duration: 1,
-    subtext: "Median across channels",
-  },
-];
+  { id: "activeTeams", value: 480, suffix: "+", duration: 1.2 },
+  { id: "csat", value: 98.4, suffix: "%", duration: 1.4 },
+  { id: "responseTime", value: 47, suffix: "s", duration: 1 },
+] as const;
 
 const FEATURES = [
-  {
-    title: "Fluid conversations",
-    description:
-      "Route every thread into a shared inbox with AI assist and rich context that keeps your team in sync.",
-  },
-  {
-    title: "Signals, not noise",
-    description:
-      "Summaries, smart tags, and sentiment snapshots surface the next best action without overwhelming inboxes.",
-  },
-  {
-    title: "Deep integrations",
-    description:
-      "Connect calendars, CRMs, and data warehouses so every reply carries the full story of your customer.",
-  },
-];
+  { id: "fluid" },
+  { id: "signals" },
+  { id: "integrations" },
+] as const;
 
 const CHAT_TRANSCRIPT = [
-  {
-    from: "Mina",
-    tone: "agent",
-    message:
-      "Morning! I spotted a sync pause overnight. Want me to resume the export for finance?",
-  },
-  {
-    from: "Eli",
-    tone: "customer",
-    message:
-      "Yes please. We updated the ledger template, so I wasn’t sure if that caused it.",
-  },
-  {
-    from: "Mina",
-    tone: "agent",
-    message:
-      "Good catch. I merged the template changes and restarted the job — everything is flowing again.",
-  },
-  {
-    from: "Eli",
-    tone: "customer",
-    message: "Amazing. The dashboard already shows the new totals. Thanks!",
-  },
-];
+  { from: "Mina", tone: "agent" as const, id: "syncPause" },
+  { from: "Eli", tone: "customer" as const, id: "ledgerUpdate" },
+  { from: "Mina", tone: "agent" as const, id: "jobRestarted" },
+  { from: "Eli", tone: "customer" as const, id: "dashboardUpdated" },
+] as const;
 
 const CALLOUTS = [
-  {
-    eyebrow: "Fully encrypted",
-    title: "Enterprise trust, by default",
-    description:
-      "SOC 2 Type II controls, regional data residency, and automated redaction keep sensitive context safe.",
-  },
-  {
-    eyebrow: "Real-time insights",
-    title: "Spot trends before they escalate",
-    description:
-      "Understand sentiment shifts, queue spikes, and AI routing impact from one monochrome operations view.",
-  },
-];
+  { id: "encrypted" },
+  { id: "insights" },
+] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -102,6 +43,10 @@ const fadeIn = {
 
 export default function Home() {
   const t = useTranslations("Marketing");
+  const tStats = useTranslations("Marketing.stats");
+  const tFeatures = useTranslations("Marketing.features");
+  const tCallouts = useTranslations("Marketing.callouts");
+  const tChat = useTranslations("Marketing.chatMessages");
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-24 px-6 py-24 pb-10 lg:gap-32">
@@ -160,8 +105,10 @@ export default function Home() {
           className="space-y-6 rounded-3xl border border-white/10 bg-white/[0.03] p-8"
         >
           <header className="flex items-center justify-between text-sm text-white/60">
-            <span className="uppercase tracking-[0.2em]">Live room</span>
-            <span>Resolution time · 52s</span>
+            <span className="uppercase tracking-[0.2em]">
+              {t("chatLiveRoomLabel")}
+            </span>
+            <span>{t("chatResolutionLabel")}</span>
           </header>
           <div className="space-y-4">
             {CHAT_TRANSCRIPT.map((entry, index) => {
@@ -185,7 +132,7 @@ export default function Home() {
                   >
                     {entry.from}
                   </div>
-                  <p>{entry.message}</p>
+                  <p>{tChat(entry.id)}</p>
                 </motion.div>
               );
             })}
@@ -202,7 +149,7 @@ export default function Home() {
       >
         {STATS.map((stat, index) => (
           <motion.div
-            key={stat.label}
+            key={stat.id}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
@@ -210,7 +157,7 @@ export default function Home() {
             className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
           >
             <div className="text-xs uppercase tracking-[0.35em] text-white/50">
-              {stat.label}
+              {tStats(`${stat.id}.label`)}
             </div>
             <div className="mt-4 text-3xl font-semibold text-white">
               <CountUp
@@ -219,7 +166,9 @@ export default function Home() {
                 duration={stat.duration}
               />
             </div>
-            <div className="mt-2 text-sm text-white/60">{stat.subtext}</div>
+            <div className="mt-2 text-sm text-white/60">
+              {tStats(`${stat.id}.subtext`)}
+            </div>
           </motion.div>
         ))}
       </motion.section>
@@ -233,20 +182,18 @@ export default function Home() {
       >
         <div className="space-y-6">
           <p className="text-sm uppercase tracking-[0.4em] text-white/50">
-            Why Goguma Chat
+            {t("whyEyebrow")}
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            A calm command center for every surface.
+            {t("whyTitle")}
           </h2>
           <p className="text-base leading-relaxed text-white/70">
-            Teams stay grounded with our OLED-native interface: interface chrome fades
-            away so voice, intent, and history stay front and center. Less glare, more
-            glow.
+            {t("whyDescription")}
           </p>
           <div className="space-y-4">
             {FEATURES.map((feature, index) => (
               <motion.div
-                key={feature.title}
+                key={feature.id}
                 initial={{ opacity: 0, x: -24 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
@@ -254,10 +201,10 @@ export default function Home() {
                 className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
               >
                 <h3 className="text-lg font-semibold text-white">
-                  {feature.title}
+                  {tFeatures(`${feature.id}.title`)}
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-white/60">
-                  {feature.description}
+                  {tFeatures(`${feature.id}.description`)}
                 </p>
               </motion.div>
             ))}
@@ -271,14 +218,11 @@ export default function Home() {
           className="space-y-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-transparent p-8"
         >
           <header className="text-xs uppercase tracking-[0.3em] text-white/50">
-            Instant clarity
+            {t("testimonialEyebrow")}
           </header>
-          <p className="text-lg font-medium text-white">
-            “Every message looks cinematic. Our agents move faster, and customers
-            notice the human touch in every response.”
-          </p>
+          <p className="text-lg font-medium text-white">{t("testimonialQuote")}</p>
           <div className="text-sm text-white/60">
-            Hana Kim · Director of Support, Sweet Systems
+            {t("testimonialAttribution")}
           </div>
         </motion.div>
       </motion.section>
@@ -292,7 +236,7 @@ export default function Home() {
       >
         {CALLOUTS.map((callout, index) => (
           <motion.article
-            key={callout.title}
+            key={callout.id}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.2 }}
@@ -300,13 +244,13 @@ export default function Home() {
             className="space-y-4 rounded-3xl border border-white/10 bg-black p-8 shadow-[0_14px_50px_rgba(0,0,0,0.45)]"
           >
             <div className="text-xs uppercase tracking-[0.35em] text-white/50">
-              {callout.eyebrow}
+              {tCallouts(`${callout.id}.eyebrow`)}
             </div>
             <h3 className="text-2xl font-semibold text-white">
-              {callout.title}
+              {tCallouts(`${callout.id}.title`)}
             </h3>
             <p className="text-sm leading-6 text-white/70">
-              {callout.description}
+              {tCallouts(`${callout.id}.description`)}
             </p>
           </motion.article>
         ))}
