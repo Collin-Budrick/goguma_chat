@@ -1,78 +1,78 @@
 {
   "Metadata": {
-    "title": "Goguma Chat",
-    "titleTemplate": "%s | Goguma Chat",
-    "description": "A cozy monochrome chat lounge where friends swap Korean, Japanese, and English messages all night."
+    "title": "Yaong-i Chat",
+    "titleTemplate": "%s | Yaong-i Chat",
+    "description": "A whimsical cat-run chat lounge where Korean, Japanese, and English threads curl up together."
   },
   "Marketing": {
-    "heroEyebrow": "Global hangout",
-    "heroTitle": "Say hey in any language",
-    "heroDescription": "Goguma Chat is a chilled space for friends, fandoms, and families who hop between Korean, Japanese, and English. High-contrast bubbles, instant translation, and delightful reactions keep every thread feeling close.",
+    "heroEyebrow": "Whiskered hangout",
+    "heroTitle": "Yaong-i Chat",
+    "heroDescription": "Yaong-i is a playful, cat-themed chat home where Korean, Japanese, and English friends lounge together. Cozy gradients, soft paw animations, and instant translation keep every thread feeling like a shared windowsill.",
     "heroPrimaryCta": "Open the app",
     "heroSecondaryCta": "See how it works",
     "stats": {
       "activeTeams": {
-        "label": "Active circles",
-        "subtext": "Online right now"
+        "label": "Cat circles",
+        "subtext": "Lounging right meow"
       },
       "csat": {
         "label": "Languages",
-        "subtext": "KO · JA · EN in one feed"
+        "subtext": "KO · JA · EN per paw"
       },
       "responseTime": {
         "label": "Streaks",
-        "subtext": "Daily chat streaks kept"
+        "subtext": "Daily cozy streaks kept"
       }
     },
-    "whyEyebrow": "Why Goguma",
-    "whyTitle": "A calm social lounge for every surface.",
-    "whyDescription": "Our OLED-native design keeps the focus on faces, voice notes, and moments. The UI disappears into the background so nightly catch-ups feel cinematic, even at 2 AM.",
+    "whyEyebrow": "Why Yaong-i",
+    "whyTitle": "A cat-curated social lounge for every surface.",
+    "whyDescription": "OLED-friendly darks, gentle glows, and paw-print accents let photos and stickers pop while Yaong-i keeps the vibe soft and feline.",
     "features": {
       "fluid": {
-        "title": "Live translation",
-        "description": "See Korean, Japanese, and English lines unfold side-by-side so mixed-language chats feel effortless."
+        "title": "Purr-fect translation",
+        "description": "Yaong-i perks its ears for Korean, Japanese, and English lines, translating them side-by-side so every friend keeps pace."
       },
       "signals": {
-        "title": "Signal over spam",
-        "description": "Smart muting, vibe summaries, and gentle reminders keep your favorite rooms cozy and drama-free."
+        "title": "Soft paw moderation",
+        "description": "Gentle nudges, auto-muting, and mood summaries keep your rooms cozy while our mascot keeps watch."
       },
       "integrations": {
-        "title": "Playful add-ons",
-        "description": "Drop playlists, camera rolls, or gaming clips right into the thread with zero app juggling."
+        "title": "Cat toys & add-ons",
+        "description": "Drop playlists, ambient sounds, or AR cat ears into the thread without app juggling."
       }
     },
     "testimonialEyebrow": "Instant comfort",
-    "testimonialQuote": "“It feels like we’re all on the same couch even when we’re split across three countries and three languages.”",
+    "testimonialQuote": "“Yaong-i feels like a sleepy cat weaving between us—suddenly everyone’s relaxed and ready to share in three languages.”",
     "testimonialAttribution": "Hana K. · Seoul ↔ Osaka group chat host",
     "callouts": {
       "encrypted": {
-        "eyebrow": "End-to-end",
+        "eyebrow": "Whisker-safe",
         "title": "Private by default",
-        "description": "We lock down every DM and group chat with modern encryption and region-based storage, so secrets stay in the circle."
+        "description": "End-to-end encryption and region-based storage keep every secret tucked under Yaong-i’s paw."
       },
       "insights": {
-        "eyebrow": "Rhythm check",
+        "eyebrow": "Mood tracker",
         "title": "See the vibe at a glance",
-        "description": "Room heatmaps, translation stats, and streak counters help you know when to drop in and say hi."
+        "description": "Heatmaps, streak counters, and translation stats show when the lounge needs another playful ping."
       }
     },
-    "chatLiveRoomLabel": "Live lounge",
-    "chatResolutionLabel": "Reply streak · 52 days",
+    "chatLiveRoomLabel": "Cat tower",
+    "chatResolutionLabel": "Reply streak · 52 naps",
     "chatMessages": {
-      "syncPause": "Morning fam! Karaoke room later? I found a new JP playlist we can butcher together.",
-      "ledgerUpdate": "Yes!! Let me finish dinner with 엄마 then I’m in. Text me the link.",
-      "jobRestarted": "Sent it — also dropped romanized lyrics so we all keep up.",
-      "dashboardUpdated": "Legends. See you at 21:00 KST!"
+      "syncPause": "Morning pride! Rooftop sunbeam later? I’ll bring the milk tea.",
+      "ledgerUpdate": "Yes!! Need to feed the actual cat first, then I’m in. DM the room link.",
+      "jobRestarted": "Dropped it—plus a playlist of purring beats so we stay focused.",
+      "dashboardUpdated": "Claws crossed for 21:00 KST!"
     },
-    "ctaEyebrow": "Ready to vibe",
-    "ctaTitle": "Bring your people into one multilingual chat home.",
-    "ctaDescription": "Create a room, pick a theme, and invite friends across time zones. Translation, reactions, and shared memories arrive out of the box.",
+    "ctaEyebrow": "Ready to play",
+    "ctaTitle": "Let Yaong-i host your multilingual cat chat.",
+    "ctaDescription": "Spin up a room, choose a feline theme, and invite friends across time zones. Translation, reactions, and paw-sitive vibes are built in.",
     "ctaPrimary": "Jump in for free",
     "ctaSecondary": "Browse rooms"
   },
   "Shell": {
     "footer": {
-      "copy": "© {year} Goguma Chat. Built for late-night chats everywhere.",
+      "copy": "© {year} Yaong-i Chat. Built for night-owl and cat-nap chats everywhere.",
       "links": {
         "privacy": "Privacy",
         "terms": "Terms",
@@ -166,50 +166,50 @@
   },
   "Login": {
     "metadata": {
-      "title": "Log in | Goguma Chat",
-      "description": "Return to your multilingual chats."
+      "title": "Log in | Yaong-i Chat",
+      "description": "Return to your cat-lounge chats."
     },
     "backLink": "← Back to home",
-    "title": "Log back in",
+    "title": "Login",
     "subtitle": "Pick up the conversation where you left it.",
     "forgot": "Forgot your password? <link>Contact support</link>.",
     "signupPrompt": "New here? <link>Create an account</link>."
   },
   "Signup": {
     "metadata": {
-      "title": "Create account | Goguma Chat",
-      "description": "Open your cross-language chat lounge."
+      "title": "Create account | Yaong-i Chat",
+      "description": "Open your cozy cat-themed chat lounge."
     },
     "backLink": "← Back to home",
-    "title": "Create your Goguma account",
+    "title": "Create your Yaong-i account",
     "subtitle": "Pick a display name, invite friends, and start chatting in seconds.",
     "terms": "By continuing you agree to the <terms>Community Guidelines</terms> and <privacy>Privacy Policy</privacy>.",
     "loginPrompt": "Already hanging out here? <link>Log in instead</link>."
   },
   "About": {
     "metadata": {
-      "title": "About Goguma Chat",
-      "description": "We build a cozy multilingual chat space for day-one friends and far-away family."
+      "title": "About Yaong-i Chat",
+      "description": "We build a cat-themed multilingual chat space for day-one friends and far-away family."
     },
-    "title": "About Goguma Chat",
-    "description": "We’re obsessed with making conversations feel close, even across oceans.",
+    "title": "About Yaong-i Chat",
+    "description": "We’re obsessed with building a cat-comfy place for conversations that span oceans.",
     "paragraphs": {
-      "craft": "Goguma started as a side project so our Seoul, Tokyo, and LA friend groups could hang out in one place. We leaned into high-contrast UI so photos, stickers, and handwriting pop no matter your screen.",
-      "orchestration": "Translation layers, shared playlists, and memory reels are woven in so you can glide between Korean, Japanese, and English without breaking the flow.",
-      "mission": "We’re a tiny distributed crew who care about warmth more than vanity metrics. Mission: help people feel close, keep communities kind, and give everyone a place to talk after midnight."
+      "craft": "Yaong-i began as a mascot doodle for our Seoul, Tokyo, and LA friend groups. The cat stuck—now the UI leans into velvety blacks so photos, stickers, and whisker doodles pop on any screen.",
+      "orchestration": "Translation layers, shared playlists, and memory reels are woven in so you can glide between Korean, Japanese, and English without breaking the feline flow.",
+      "mission": "We’re a tiny distributed crew chasing warmth over vanity metrics. Mission: help people feel close, keep communities kind, and let a playful cat spirit guide late-night chats."
     }
   },
   "Capture": {
     "metadata": {
-      "title": "Background Capture | Goguma Chat",
+      "title": "Background Capture | Yaong-i Chat",
       "description": "Clean monochrome canvas for streaming, journaling, or sharing your screen."
     },
     "srText": "Frosted background capture surface for recordings."
   },
   "Contact": {
     "metadata": {
-      "title": "Contact | Goguma Chat",
-      "description": "Say hi anytime. We keep the lights on for our global community."
+      "title": "Contact | Yaong-i Chat",
+      "description": "Say hi anytime. We keep the lantern on for the Yaong-i community."
     },
     "title": "Contact",
     "description": "We keep a friendly inbox for feedback, ideas, and support.",
@@ -217,7 +217,7 @@
     "channels": {
       "email": {
         "label": "Email",
-        "value": "support@goguma.chat",
+        "value": "support@yaongi.chat",
         "description": "Usually replies within a few hours."
       },
       "signal": {
@@ -227,15 +227,15 @@
       },
       "community": {
         "label": "Community",
-        "value": "community.goguma.chat",
+        "value": "community.yaongi.chat",
         "description": "Share stories, vote on features, and meet other hosts."
       }
     }
   },
   "Support": {
     "metadata": {
-      "title": "Support | Goguma Chat",
-      "description": "Choose how much help you want from the Goguma crew."
+      "title": "Support | Yaong-i Chat",
+      "description": "Choose how much help you want from the Yaong-i crew."
     },
     "title": "Support options",
     "description": "From casual questions to community-sized events, we’ve got you.",
@@ -259,8 +259,8 @@
   },
   "Terms": {
     "metadata": {
-      "title": "Terms of Service | Goguma Chat",
-      "description": "Understand the ground rules for keeping Goguma safe and friendly."
+      "title": "Terms of Service | Yaong-i Chat",
+      "description": "Understand the ground rules for keeping Yaong-i safe and friendly."
     },
     "title": "Terms of Service",
     "description": "Plain-language promises about availability, data ownership, and respectful behavior.",
@@ -271,20 +271,20 @@
   },
   "Privacy": {
     "metadata": {
-      "title": "Privacy Policy | Goguma Chat",
-      "description": "See how Goguma Chat protects and processes your data."
+      "title": "Privacy Policy | Yaong-i Chat",
+      "description": "See how Yaong-i Chat protects and processes your data."
     },
     "title": "Privacy Policy",
     "description": "We encrypt, minimize, and guard the conversations entrusted to us.",
     "body": {
-      "storage": "Goguma stores messages in region-specific clusters with envelope encryption and strict access controls. You can request exports or deletion anytime, and we honor data requests within 72 hours.",
+      "storage": "Yaong-i stores messages in region-specific clusters with envelope encryption and strict access controls. You can request exports or deletion anytime, and we honor data requests within 72 hours.",
       "contact": "Contact"
     }
   },
   "Status": {
     "metadata": {
-      "title": "Status | Goguma Chat",
-      "description": "Live view into Goguma Chat uptime and maintenance windows."
+      "title": "Status | Yaong-i Chat",
+      "description": "Live view into Yaong-i Chat uptime and maintenance windows."
     },
     "title": "Service status",
     "description": "Snapshots refresh every 60 seconds. Subscribe for push or email updates.",
@@ -313,17 +313,17 @@
   },
   "Integrations": {
     "metadata": {
-      "title": "Integrations | Goguma Chat",
+      "title": "Integrations | Yaong-i Chat",
       "description": "Connect music, games, and creative tools that make every chat feel alive."
     },
     "title": "Integrations",
-    "description": "A few fan-favorite add-ons Goguma hosts plug into their rooms.",
+    "description": "A few cat-approved add-ons Yaong-i hosts plug into their rooms.",
     "items": {
       "bevy": {
-        "description": "Stream shared gaming sessions or watch parties directly inside Goguma with low-latency previews."
+        "description": "Stream shared gaming sessions or watch parties directly inside Yaong-i with low-latency previews."
       },
       "motion": {
-        "description": "Trigger smooth ambient animations that react when the room hits new streaks or milestones."
+        "description": "Trigger smooth ambient animations that react when the room hits new streaks, meows, or milestones."
       },
       "faker": {
         "description": "Spin up playful sample profiles for testing layouts or onboarding friends without exposing real info."
@@ -338,14 +338,14 @@
   },
   "AdminHome": {
     "metadata": {
-      "title": "Host Console | Goguma Chat"
+      "title": "Host Console | Yaong-i Chat"
     },
     "title": "Host console",
     "description": "Pick a panel to check room health, drop announcements, or invite new moderators."
   },
   "AdminPush": {
     "metadata": {
-      "title": "Hosts · Announcements | Goguma Chat"
+      "title": "Hosts · Announcements | Yaong-i Chat"
     },
     "title": "Send announcements",
     "description": "Schedule monochrome toasts or long-form updates for your community.",
@@ -365,7 +365,7 @@
   },
   "AdminUsers": {
     "metadata": {
-      "title": "Hosts · People | Goguma Chat"
+      "title": "Hosts · People | Yaong-i Chat"
     },
     "title": "Moderator roster",
     "description": "Manage who can help run your rooms and adjust their permissions.",
@@ -387,11 +387,11 @@
   },
   "WorkspaceContacts": {
     "metadata": {
-      "title": "Contacts | Goguma Chat"
+      "title": "Contacts | Yaong-i Chat"
     },
     "title": "Contacts live inside chat threads",
     "description": "Profiles stay beside every message so the story never leaves the chat.",
-    "body": "Jump into the <link>chat lounge</link> to browse friends, invite new members, and pin favorite people."
+    "body": "Jump into the <link>cat lounge</link> to browse friends, invite new members, and pin favorite people."
   },
   "Dashboard": {
     "metrics": {
@@ -523,8 +523,8 @@
   },
   "Profile": {
     "metadata": {
-      "title": "Profile | Goguma Chat",
-      "description": "Review your identity and presence settings inside Goguma Chat."
+      "title": "Profile | Yaong-i Chat",
+      "description": "Review your identity and presence settings inside Yaong-i Chat."
     },
     "title": "Your profile",
     "description": "Control how friends and followers see you across chats.",

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import type { ComponentType, RefObject } from "react";
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
@@ -161,6 +161,116 @@ const localeDisplayNames: Record<Locale, string> = {
   en: "English",
   ko: "한국어",
 };
+
+type ContrastTheme = "light" | "dark";
+
+type RGBColor = {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+};
+
+const parseRGBColor = (value: string): RGBColor | null => {
+  const match = value.match(/rgba?\(([^)]+)\)/i);
+  if (!match) return null;
+  const parts = match[1].split(",").map((part) => part.trim());
+  if (parts.length < 3) return null;
+  const toChannel = (channel: string) => {
+    if (channel.endsWith("%")) {
+      const numeric = Number.parseFloat(channel);
+      return Number.isNaN(numeric) ? 0 : (numeric / 100) * 255;
+    }
+    const numeric = Number.parseFloat(channel);
+    return Number.isNaN(numeric) ? 0 : numeric;
+  };
+  const [r, g, b, alpha] = parts;
+  return {
+    r: Math.min(255, Math.max(0, toChannel(r))),
+    g: Math.min(255, Math.max(0, toChannel(g))),
+    b: Math.min(255, Math.max(0, toChannel(b))),
+    a: alpha !== undefined ? Math.min(1, Math.max(0, Number.parseFloat(alpha))) : 1,
+  };
+};
+
+const relativeLuminance = (color: RGBColor) => {
+  const channel = (value: number) => {
+    const normalized = value / 255;
+    return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  };
+  const r = channel(color.r);
+  const g = channel(color.g);
+  const b = channel(color.b);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const getEffectiveBackgroundColor = (node: Element | null): RGBColor | null => {
+  if (typeof window === "undefined" || typeof document === "undefined") return null;
+  let current: Element | null = node;
+  while (current && current instanceof HTMLElement) {
+    const computed = window.getComputedStyle(current);
+    const parsed = parseRGBColor(computed.backgroundColor);
+    if (parsed && parsed.a > 0.05) {
+      return parsed;
+    }
+    current = current.parentElement;
+  }
+  const bodyColor = window.getComputedStyle(document.body).backgroundColor;
+  return parseRGBColor(bodyColor);
+};
+
+function useDockContrast(ref: RefObject<HTMLElement>, enabled: boolean): ContrastTheme {
+  const [tone, setTone] = useState<ContrastTheme>("dark");
+
+  useEffect(() => {
+    if (!enabled) {
+      setTone("light");
+      return;
+    }
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    if (!ref.current) return;
+
+    let frame: number | null = null;
+    let scheduled = false;
+
+    const sample = () => {
+      scheduled = false;
+      if (!ref.current) return;
+      const targetElement = ref.current;
+      const rect = targetElement.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
+      const previousPointerEvents = targetElement.style.pointerEvents;
+      targetElement.style.pointerEvents = "none";
+      const underneath = document.elementFromPoint(x, y) as HTMLElement | null;
+      targetElement.style.pointerEvents = previousPointerEvents;
+      const backgroundColor = getEffectiveBackgroundColor(underneath ?? document.body);
+      if (!backgroundColor) return;
+      const luminance = relativeLuminance(backgroundColor);
+      const nextTone: ContrastTheme = luminance > 0.55 ? "dark" : "light";
+      setTone((prev) => (prev === nextTone ? prev : nextTone));
+    };
+
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      frame = window.requestAnimationFrame(() => {
+        sample();
+      });
+    };
+
+    schedule();
+    const events: Array<keyof WindowEventMap> = ["scroll", "resize", "pointermove"];
+    events.forEach((event) => window.addEventListener(event, schedule, { passive: true }));
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, schedule));
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [enabled, ref]);
+
+  return tone;
+}
 
 type DisplaySettings = {
   magnify: boolean;
@@ -423,7 +533,11 @@ export default function SiteDock() {
       return defaults;
     }
   });
-  const isLightTheme = displaySettings.theme === "light";
+  const userPrefersLightTheme = displaySettings.theme === "light";
+  const dockPanelRef = useRef<HTMLDivElement | null>(null);
+  const adaptiveContrast = useDockContrast(dockPanelRef, !userPrefersLightTheme);
+  const panelTheme: ContrastTheme = userPrefersLightTheme ? "light" : adaptiveContrast;
+  const isLightTheme = panelTheme === "light";
   const panelTitle = dockT("panel.title");
   const closeLabel = dockT("panel.close");
   const preferenceCopy = {
@@ -475,7 +589,7 @@ export default function SiteDock() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    if (isLightTheme) {
+    if (userPrefersLightTheme) {
       document.body.classList.add("theme-light");
     } else {
       document.body.classList.remove("theme-light");
@@ -484,7 +598,7 @@ export default function SiteDock() {
     return () => {
       document.body.classList.remove("theme-light");
     };
-  }, [isLightTheme]);
+  }, [userPrefersLightTheme]);
 
   useEffect(() => {
     if (!preferencesOpen) return;
@@ -674,6 +788,8 @@ export default function SiteDock() {
                   mouseX.set(Infinity);
                 }}
                 onMouseEnter={() => hover.set(1)}
+                ref={dockPanelRef}
+                data-contrast-theme={panelTheme}
                 className="dock-panel before:absolute relative before:inset-px flex items-end gap-4 bg-white/12 before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl px-4 py-4 border border-white/15 rounded-[32px] before:rounded-[30px] before:content-[''] before:pointer-events-none"
                 style={{ height: panelHeight }}
                 role="toolbar"
@@ -698,7 +814,7 @@ export default function SiteDock() {
                         range={range}
                         active={activeMatcher(item)}
                         tooltipsEnabled={displaySettings.showLabels}
-                        theme={displaySettings.theme}
+                        theme={panelTheme}
                       />
                       {isPreferences && (
                         <AnimatePresence>
@@ -733,7 +849,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.magnify.label}
                                   description={preferenceCopy.magnify.description}
                                   value={displaySettings.magnify}
-                                  theme={displaySettings.theme}
+                                  theme={panelTheme}
                                   onChange={(value) =>
                                     setDisplaySettings((prev) => ({ ...prev, magnify: value }))
                                   }
@@ -742,7 +858,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.labels.label}
                                   description={preferenceCopy.labels.description}
                                   value={displaySettings.showLabels}
-                                  theme={displaySettings.theme}
+                                  theme={panelTheme}
                                   onChange={(value) =>
                                     setDisplaySettings((prev) => ({ ...prev, showLabels: value }))
                                   }
@@ -751,7 +867,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.theme.label}
                                   description={preferenceCopy.theme.description}
                                   value={displaySettings.theme === "light"}
-                                  theme={displaySettings.theme}
+                                  theme={panelTheme}
                                   onChange={(enabled) =>
                                     setDisplaySettings((prev) => ({
                                       ...prev,
@@ -763,7 +879,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.language.label}
                                   description={preferenceCopy.language.description}
                                   value={localeToggleValue}
-                                  theme={displaySettings.theme}
+                                  theme={panelTheme}
                                   onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
                                 />
                               </div>
