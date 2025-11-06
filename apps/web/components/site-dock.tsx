@@ -679,8 +679,8 @@ export default function SiteDock() {
     },
   };
   const popoverToneClasses = isLightTheme
-    ? "border-slate-200 bg-white text-slate-900 shadow-[0_30px_70px_rgba(148,163,184,0.35)]"
-    : "border-white/12 bg-black/85 text-white shadow-[0_30px_80px_rgba(0,0,0,0.55)]";
+    ? "border-white/50 text-slate-900"
+    : "border-white/15 text-white";
   const preferencesRef = useRef<HTMLDivElement | null>(null);
   const previousPathnameRef = useRef(pathname);
   const { setDirection } = useTransitionDirection();
@@ -944,7 +944,7 @@ export default function SiteDock() {
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 12, scale: 0.95 }}
                               transition={{ type: "spring", stiffness: 280, damping: 26 }}
-                              className={`dock-popover pointer-events-auto absolute bottom-full left-1/2 z-50 w-64 -translate-x-1/2 rounded-2xl border p-4 backdrop-blur-2xl ${popoverToneClasses}`}
+                              className={`dock-popover pointer-events-auto absolute bottom-full left-1/2 z-50 w-64 -translate-x-1/2 rounded-2xl border p-4 ${popoverToneClasses}`}
                             >
                               <div className="mb-2 flex items-center justify-between">
                                 <span
