@@ -245,6 +245,45 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
     listeners.forEach((listener) => listener());
   };
 
+  const getUnderlayColor = (x: number, y: number): RGBColor | null => {
+    const targetElement = ref.current;
+    const isDockElement = (element: HTMLElement | null) => {
+      if (!element || !targetElement) return false;
+      return (
+        element === targetElement ||
+        targetElement.contains(element) ||
+        element.contains(targetElement)
+      );
+    };
+
+    if (typeof document.elementsFromPoint === "function") {
+      const elements = document.elementsFromPoint(x, y) as HTMLElement[];
+      const underneath = elements.find((element) => !isDockElement(element));
+      if (underneath) {
+        return getEffectiveBackgroundColor(underneath);
+      }
+    }
+
+    if (!targetElement) {
+      const fallback = document.elementFromPoint(x, y) as HTMLElement | null;
+      return getEffectiveBackgroundColor(fallback ?? document.body);
+    }
+
+    const previousPointerEvents = targetElement.style.pointerEvents;
+    targetElement.style.pointerEvents = "none";
+    let underneath: HTMLElement | null = null;
+    try {
+      underneath = document.elementFromPoint(x, y) as HTMLElement | null;
+      if (underneath && isDockElement(underneath)) {
+        underneath = null;
+      }
+    } finally {
+      targetElement.style.pointerEvents = previousPointerEvents;
+    }
+
+    return getEffectiveBackgroundColor(underneath ?? document.body);
+  };
+
   const sample = () => {
     frame = null;
     if (!enabled) return;
@@ -252,16 +291,27 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
     const targetElement = ref.current;
     if (!targetElement) return;
     const rect = targetElement.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
-    const previousPointerEvents = targetElement.style.pointerEvents;
-    targetElement.style.pointerEvents = "none";
-    const underneath = document.elementFromPoint(x, y) as HTMLElement | null;
-    targetElement.style.pointerEvents = previousPointerEvents;
-    const backgroundColor = getEffectiveBackgroundColor(underneath ?? document.body);
-    if (!backgroundColor) return;
-    const luminance = relativeLuminance(backgroundColor);
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    if (centerX < 0 || centerY < 0 || centerX > window.innerWidth || centerY > window.innerHeight) {
+      return;
+    }
+
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const samplePoints: Array<[number, number]> = [
+      [centerX, centerY],
+      [centerX, clamp(rect.bottom - rect.height / 4, 0, window.innerHeight - 1)],
+      [centerX, clamp(rect.top + rect.height / 4, 0, window.innerHeight - 1)],
+    ];
+
+    const colors = samplePoints
+      .map(([x, y]) => getUnderlayColor(x, y))
+      .filter((color): color is RGBColor => Boolean(color));
+
+    if (colors.length === 0) return;
+
+    const luminance =
+      colors.reduce((total, color) => total + relativeLuminance(color), 0) / colors.length;
     const nextTone: ContrastTheme = luminance > 0.55 ? "dark" : "light";
     if (nextTone !== tone) {
       tone = nextTone;
@@ -277,14 +327,16 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
   };
 
   const attach = () => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
     events.forEach((event) => window.addEventListener(event, schedule, { passive: true }));
+    document.addEventListener("scroll", schedule, { passive: true, capture: true });
     schedule();
   };
 
   const detach = () => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
     events.forEach((event) => window.removeEventListener(event, schedule));
+    document.removeEventListener("scroll", schedule, { capture: true });
     if (frame !== null) {
       window.cancelAnimationFrame(frame);
       frame = null;
@@ -604,7 +656,7 @@ export default function SiteDock() {
   const userPrefersLightTheme = displaySettings.theme === "light";
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
   const adaptiveContrast = useDockContrast(dockPanelRef, !userPrefersLightTheme);
-  const panelTheme: ContrastTheme = userPrefersLightTheme ? "light" : adaptiveContrast;
+  const panelTheme: ContrastTheme = userPrefersLightTheme ? "dark" : adaptiveContrast;
   const isLightTheme = panelTheme === "light";
   const panelTitle = dockT("panel.title");
   const closeLabel = dockT("panel.close");

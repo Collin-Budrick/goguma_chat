@@ -123,27 +123,27 @@ body {
 }
 
 .dock-panel[data-contrast-theme="dark"] {
-  background: rgba(15, 23, 42, 0.92) !important;
-  border-color: rgba(15, 23, 42, 0.45) !important;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55) !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  border-color: rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5) !important;
   color: #fff;
 }
 
 .dock-panel[data-contrast-theme="dark"]::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.35));
-  opacity: 0.9;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.4));
+  opacity: 0.85;
 }
 
 .dock-panel[data-contrast-theme="light"] {
-  background: rgba(255, 255, 255, 0.94) !important;
-  border-color: rgba(148, 163, 184, 0.35) !important;
-  box-shadow: 0 26px 70px rgba(148, 163, 184, 0.35) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+  box-shadow: 0 26px 70px rgba(148, 163, 184, 0.25) !important;
   color: #0f172a;
 }
 
 .dock-panel[data-contrast-theme="light"]::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(226, 232, 240, 0.65));
-  opacity: 0.95;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(226, 232, 240, 0.45));
+  opacity: 0.85;
 }
 
 .dock-popover {
