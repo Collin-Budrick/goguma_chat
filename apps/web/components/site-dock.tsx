@@ -1,7 +1,15 @@
 "use client";
 
 import type { ComponentType, RefObject } from "react";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   AnimatePresence,
   motion,
@@ -219,57 +227,117 @@ const getEffectiveBackgroundColor = (node: Element | null): RGBColor | null => {
   return parseRGBColor(bodyColor);
 };
 
+type ContrastSampler = {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => ContrastTheme;
+  getServerSnapshot: () => ContrastTheme;
+  setEnabled: (value: boolean) => void;
+};
+
+const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => {
+  const listeners = new Set<() => void>();
+  const events: Array<keyof WindowEventMap> = ["scroll", "resize", "pointermove"];
+  let tone: ContrastTheme = "dark";
+  let enabled = false;
+  let frame: number | null = null;
+
+  const notify = () => {
+    listeners.forEach((listener) => listener());
+  };
+
+  const sample = () => {
+    frame = null;
+    if (!enabled) return;
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const targetElement = ref.current;
+    if (!targetElement) return;
+    const rect = targetElement.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
+    const previousPointerEvents = targetElement.style.pointerEvents;
+    targetElement.style.pointerEvents = "none";
+    const underneath = document.elementFromPoint(x, y) as HTMLElement | null;
+    targetElement.style.pointerEvents = previousPointerEvents;
+    const backgroundColor = getEffectiveBackgroundColor(underneath ?? document.body);
+    if (!backgroundColor) return;
+    const luminance = relativeLuminance(backgroundColor);
+    const nextTone: ContrastTheme = luminance > 0.55 ? "dark" : "light";
+    if (nextTone !== tone) {
+      tone = nextTone;
+      notify();
+    }
+  };
+
+  const schedule = () => {
+    if (!enabled) return;
+    if (typeof window === "undefined") return;
+    if (frame !== null) return;
+    frame = window.requestAnimationFrame(sample);
+  };
+
+  const attach = () => {
+    if (typeof window === "undefined") return;
+    events.forEach((event) => window.addEventListener(event, schedule, { passive: true }));
+    schedule();
+  };
+
+  const detach = () => {
+    if (typeof window === "undefined") return;
+    events.forEach((event) => window.removeEventListener(event, schedule));
+    if (frame !== null) {
+      window.cancelAnimationFrame(frame);
+      frame = null;
+    }
+  };
+
+  return {
+    subscribe(listener) {
+      listeners.add(listener);
+      if (listeners.size === 1 && enabled) {
+        attach();
+      }
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0) {
+          detach();
+        }
+      };
+    },
+    getSnapshot() {
+      return enabled ? tone : "light";
+    },
+    getServerSnapshot() {
+      return "dark";
+    },
+    setEnabled(value: boolean) {
+      if (enabled === value) return;
+      enabled = value;
+      if (listeners.size === 0) return;
+      if (enabled) {
+        attach();
+      } else {
+        detach();
+      }
+    },
+  };
+};
+
 function useDockContrast(ref: RefObject<HTMLElement>, enabled: boolean): ContrastTheme {
-  const [tone, setTone] = useState<ContrastTheme>("dark");
+  const [sampler] = useState(() => createContrastSampler(ref));
 
   useEffect(() => {
-    if (!enabled) {
-      setTone("light");
-      return;
-    }
-    if (typeof window === "undefined" || typeof document === "undefined") return;
-    if (!ref.current) return;
-
-    let frame: number | null = null;
-    let scheduled = false;
-
-    const sample = () => {
-      scheduled = false;
-      if (!ref.current) return;
-      const targetElement = ref.current;
-      const rect = targetElement.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height / 2;
-      if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
-      const previousPointerEvents = targetElement.style.pointerEvents;
-      targetElement.style.pointerEvents = "none";
-      const underneath = document.elementFromPoint(x, y) as HTMLElement | null;
-      targetElement.style.pointerEvents = previousPointerEvents;
-      const backgroundColor = getEffectiveBackgroundColor(underneath ?? document.body);
-      if (!backgroundColor) return;
-      const luminance = relativeLuminance(backgroundColor);
-      const nextTone: ContrastTheme = luminance > 0.55 ? "dark" : "light";
-      setTone((prev) => (prev === nextTone ? prev : nextTone));
-    };
-
-    const schedule = () => {
-      if (scheduled) return;
-      scheduled = true;
-      frame = window.requestAnimationFrame(() => {
-        sample();
-      });
-    };
-
-    schedule();
-    const events: Array<keyof WindowEventMap> = ["scroll", "resize", "pointermove"];
-    events.forEach((event) => window.addEventListener(event, schedule, { passive: true }));
+    sampler.setEnabled(enabled);
     return () => {
-      events.forEach((event) => window.removeEventListener(event, schedule));
-      if (frame) window.cancelAnimationFrame(frame);
+      sampler.setEnabled(false);
     };
-  }, [enabled, ref]);
+  }, [enabled, sampler]);
 
-  return tone;
+  return useSyncExternalStore(
+    sampler.subscribe,
+    sampler.getSnapshot,
+    sampler.getServerSnapshot,
+  );
 }
 
 type DisplaySettings = {

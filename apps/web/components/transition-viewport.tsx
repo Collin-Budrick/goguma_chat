@@ -2,13 +2,7 @@
 
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { usePathname } from "next/navigation";
-import {
-  type PropsWithChildren,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type PropsWithChildren, useMemo } from "react";
 import { useTransitionDirection } from "./transition-context";
 
 type SlideContext = {
@@ -57,11 +51,6 @@ const slideVariants: Variants = {
   },
 };
 
-type PageInstance = {
-  key: string;
-  node: ReactNode;
-};
-
 export default function TransitionViewport({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { direction } = useTransitionDirection();
@@ -69,50 +58,26 @@ export default function TransitionViewport({ children }: PropsWithChildren) {
     () => ({ direction }),
     [direction],
   );
-  const [pages, setPages] = useState<PageInstance[]>(() => [
-    { key: pathname, node: children },
-  ]);
-
-  useEffect(() => {
-    setPages((current) => {
-      const exists = current.some((page) => page.key === pathname);
-      if (exists) {
-        return current.map((page) =>
-          page.key === pathname ? { ...page, node: children } : page,
-        );
-      }
-      return [...current, { key: pathname, node: children }];
-    });
-  }, [children, pathname]);
 
   return (
     <div className="relative flex-1 overflow-hidden">
       <AnimatePresence custom={transitionContext} mode="sync" initial={false}>
-        {pages.map((page) => (
-          <motion.div
-            key={page.key}
-            custom={transitionContext}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              type: "spring",
-              stiffness: 220,
-              damping: 26,
-            }}
-            className="w-full"
-            onAnimationComplete={(definition) => {
-              if (definition === "exit") {
-                setPages((current) =>
-                  current.filter((entry) => entry.key !== page.key),
-                );
-              }
-            }}
-          >
-            {page.node}
-          </motion.div>
-        ))}
+        <motion.div
+          key={pathname}
+          custom={transitionContext}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{
+            type: "spring",
+            stiffness: 220,
+            damping: 26,
+          }}
+          className="w-full"
+        >
+          {children}
+        </motion.div>
       </AnimatePresence>
     </div>
   );
