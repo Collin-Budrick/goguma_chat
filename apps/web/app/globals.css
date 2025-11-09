@@ -263,44 +263,83 @@ body.theme-light .text-white\/50 {
   color: rgba(15, 23, 42, 0.48) !important;
 }
 
-body.theme-light .border-white\/40 {
+body.theme-light :is(.border-white\/40):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   border-color: var(--border-strong) !important;
 }
 
-body.theme-light .border-white\/30,
-body.theme-light .border-white\/25,
-body.theme-light .border-white\/20,
-body.theme-light .border-white\/15,
-body.theme-light .border-white\/10,
-body.theme-light .border-white\/5 {
+body.theme-light :is(
+    .border-white\/30,
+    .border-white\/25,
+    .border-white\/20,
+    .border-white\/15,
+    .border-white\/10,
+    .border-white\/5
+  ):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   border-color: var(--border-soft) !important;
 }
 
-body.theme-light .bg-black,
-body.theme-light .bg-black\/90,
-body.theme-light .bg-black\/80,
-body.theme-light .bg-black\/70,
-body.theme-light .bg-black\/60,
-body.theme-light .bg-slate-950,
-body.theme-light .bg-neutral-950,
-body.theme-light .bg-white\/12,
-body.theme-light .bg-white\/10,
-body.theme-light .bg-white\/8,
-body.theme-light .bg-white\/5,
-body.theme-light .bg-white\/4,
-body.theme-light .bg-white\/3 {
+body.theme-light :is(
+    .bg-black,
+    .bg-black\/90,
+    .bg-black\/80,
+    .bg-black\/70,
+    .bg-black\/60,
+    .bg-slate-950,
+    .bg-neutral-950,
+    .bg-white\/12,
+    .bg-white\/10,
+    .bg-white\/8,
+    .bg-white\/5,
+    .bg-white\/4,
+    .bg-white\/3
+  ):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   background-color: var(--surface) !important;
 }
 
-body.theme-light .bg-white\/18,
-body.theme-light .bg-white\/25,
-body.theme-light .bg-white\/30 {
+body.theme-light :is(.bg-white\/18, .bg-white\/25, .bg-white\/30):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   background-color: var(--glass-strong) !important;
 }
 
-body.theme-light [class~="shadow-[0_26px_70px_rgba(0,0,0,0.45)]"],
-body.theme-light [class~="shadow-[0_30px_80px_rgba(0,0,0,0.55)]"],
-body.theme-light [class~="shadow-[0_12px_24px_rgba(0,0,0,0.5)]"] {
+body.theme-light :is(
+    [class~="shadow-[0_26px_70px_rgba(0,0,0,0.45)]"],
+    [class~="shadow-[0_30px_80px_rgba(0,0,0,0.55)]"],
+    [class~="shadow-[0_12px_24px_rgba(0,0,0,0.5)]"]
+  ):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   box-shadow: var(--shadow-soft) !important;
 }
 
@@ -314,7 +353,14 @@ body.theme-light .text-black {
   color: #0a0a0a !important;
 }
 
-body.theme-light .bg-white {
+body.theme-light :is(.bg-white):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   background-color: #ffffff !important;
 }
 
