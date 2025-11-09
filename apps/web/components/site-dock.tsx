@@ -375,15 +375,15 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
   };
 };
 
-function useDockContrast(ref: RefObject<HTMLElement>, enabled: boolean): ContrastTheme {
+function useDockContrast(ref: RefObject<HTMLElement>): ContrastTheme {
   const [sampler] = useState(() => createContrastSampler(ref));
 
   useEffect(() => {
-    sampler.setEnabled(enabled);
+    sampler.setEnabled(true);
     return () => {
       sampler.setEnabled(false);
     };
-  }, [enabled, sampler]);
+  }, [sampler]);
 
   return useSyncExternalStore(
     sampler.subscribe,
@@ -657,8 +657,7 @@ export default function SiteDock() {
   });
   const userPrefersLightTheme = displaySettings.theme === "light";
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
-  const adaptiveContrast = useDockContrast(dockPanelRef, !userPrefersLightTheme);
-  const panelTheme: ContrastTheme = userPrefersLightTheme ? "dark" : adaptiveContrast;
+  const panelTheme = useDockContrast(dockPanelRef);
   const isLightTheme = panelTheme === "light";
   const panelTitle = dockT("panel.title");
   const closeLabel = dockT("panel.close");
