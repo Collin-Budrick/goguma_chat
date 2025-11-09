@@ -234,11 +234,6 @@ body.theme-light {
   color-scheme: light;
 }
 
-body.theme-light .dock-panel::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(226, 232, 240, 0.75));
-  opacity: 0.75;
-}
-
 body.theme-light :is(.text-white):not(:is(
     .dock-panel,
     .dock-panel *,
