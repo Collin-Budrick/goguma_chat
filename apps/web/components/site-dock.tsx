@@ -240,6 +240,18 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
   let tone: ContrastTheme = "dark";
   let enabled = false;
   let frame: number | null = null;
+  const luminanceSamples: number[] = [];
+  const getSmoothedLuminance = (value: number) => {
+    luminanceSamples.push(value);
+    if (luminanceSamples.length > 5) {
+      luminanceSamples.shift();
+    }
+    return (
+      luminanceSamples.reduce((total, sample) => total + sample, 0) / luminanceSamples.length
+    );
+  };
+  const BRIGHT_BACKGROUND_THRESHOLD = 0.62;
+  const DARK_BACKGROUND_THRESHOLD = 0.48;
 
   const notify = () => {
     listeners.forEach((listener) => listener());
@@ -312,7 +324,15 @@ const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => 
 
     const luminance =
       colors.reduce((total, color) => total + relativeLuminance(color), 0) / colors.length;
-    const nextTone: ContrastTheme = luminance > 0.55 ? "dark" : "light";
+    const smoothedLuminance = getSmoothedLuminance(luminance);
+
+    let nextTone: ContrastTheme = tone;
+    if (tone === "light" && smoothedLuminance >= BRIGHT_BACKGROUND_THRESHOLD) {
+      nextTone = "dark";
+    } else if (tone === "dark" && smoothedLuminance <= DARK_BACKGROUND_THRESHOLD) {
+      nextTone = "light";
+    }
+
     if (nextTone !== tone) {
       tone = nextTone;
       notify();

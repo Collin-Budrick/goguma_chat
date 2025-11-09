@@ -239,27 +239,69 @@ body.theme-light .dock-panel::before {
   opacity: 0.75;
 }
 
-body.theme-light .text-white {
+body.theme-light :is(.text-white):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: var(--foreground) !important;
 }
 
-body.theme-light .text-white\/90 {
+body.theme-light :is(.text-white\/90):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: rgba(15, 23, 42, 0.9) !important;
 }
 
-body.theme-light .text-white\/80 {
+body.theme-light :is(.text-white\/80):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: rgba(15, 23, 42, 0.78) !important;
 }
 
-body.theme-light .text-white\/70 {
+body.theme-light :is(.text-white\/70):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: var(--text-muted) !important;
 }
 
-body.theme-light .text-white\/60 {
+body.theme-light :is(.text-white\/60):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: var(--text-subtle) !important;
 }
 
-body.theme-light .text-white\/50 {
+body.theme-light :is(.text-white\/50):not(:is(
+    .dock-panel,
+    .dock-panel *,
+    .dock-button,
+    .dock-button *,
+    .dock-tooltip,
+    .dock-tooltip *
+  )) {
   color: rgba(15, 23, 42, 0.48) !important;
 }
 
