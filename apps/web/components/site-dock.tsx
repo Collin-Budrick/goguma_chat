@@ -487,6 +487,8 @@ function DockItem({
       onFocus={() => hover.set(1)}
       onBlur={() => hover.set(0)}
       onClick={() => onSelect(item)}
+      data-contrast-theme={theme}
+      data-state={active ? "active" : undefined}
       className={`dock-button relative isolate flex items-center justify-center rounded-2xl border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 ${isLightTheme ? "focus-visible:ring-slate-900/30 focus-visible:ring-offset-white" : "focus-visible:ring-white/70 focus-visible:ring-offset-black"} ${buttonStateClasses}`}
       type="button"
       aria-label={item.label}
