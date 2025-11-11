@@ -1,8 +1,17 @@
+export type LinkVariant = "primary" | "secondary";
+
 export type LinkTarget = {
   title: string;
-  description?: string;
   href: string;
-  variant?: "primary" | "secondary";
+  description?: string;
+};
+
+export type ActionTarget = LinkTarget & {
+  variant: LinkVariant;
+};
+
+export type ResourceTarget = LinkTarget & {
+  description: string;
 };
 
 export type Highlight = {
@@ -10,13 +19,15 @@ export type Highlight = {
   description: string;
 };
 
+export type ChatAuthor = "guest" | "guide";
+
 export type ChatMessage = {
   id: string;
-  from: "guest" | "guide";
+  from: ChatAuthor;
   text: string;
 };
 
-export const ACTIONS: LinkTarget[] = [
+export const ACTIONS: ActionTarget[] = [
   {
     title: "Start the demo",
     href: "https://goguma.chat/demo",
@@ -47,7 +58,7 @@ export const HIGHLIGHTS: Highlight[] = [
   },
 ];
 
-export const RESOURCES: LinkTarget[] = [
+export const RESOURCES: ResourceTarget[] = [
   {
     title: "Product walkthrough",
     description:
