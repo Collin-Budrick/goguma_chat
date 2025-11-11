@@ -1,22 +1,13 @@
-import {
-  Linking,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleProp,
-  Text,
-  View,
-  ViewStyle,
-} from "react-native";
+import { Linking, SafeAreaView, ScrollView, Text, View } from "react-native";
 
 import {
   ACTIONS,
   CHAT_PREVIEW,
   HIGHLIGHTS,
   RESOURCES,
-  type ChatMessage,
   type LinkTarget,
 } from "./home-screen.data";
+import { ActionButton, MessageBubble, ResourceCard } from "./home-screen";
 import styles from "./home-screen.styles";
 
 async function openLink(target: LinkTarget) {
@@ -28,87 +19,6 @@ async function openLink(target: LinkTarget) {
   } catch (error) {
     console.warn(`Failed to open link ${target.href}`, error);
   }
-}
-
-function ActionButton({
-  target,
-  style,
-}: {
-  target: LinkTarget;
-  style?: StyleProp<ViewStyle>;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="link"
-      onPress={() => openLink(target)}
-      style={({ pressed }) => [
-        styles.actionButton,
-        style,
-        target.variant === "secondary"
-          ? styles.actionButtonSecondary
-          : styles.actionButtonPrimary,
-        pressed && styles.actionButtonPressed,
-      ]}
-    >
-      <Text
-        style={[
-          styles.actionLabel,
-          target.variant === "secondary"
-            ? styles.actionLabelSecondary
-            : styles.actionLabelPrimary,
-        ]}
-      >
-        {target.title}
-      </Text>
-    </Pressable>
-  );
-}
-
-function ResourceCard({
-  target,
-  style,
-}: {
-  target: LinkTarget;
-  style?: StyleProp<ViewStyle>;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="link"
-      onPress={() => openLink(target)}
-      style={({ pressed }) => [
-        styles.resourceCard,
-        style,
-        pressed && styles.resourceCardPressed,
-      ]}
-    >
-      <Text style={styles.resourceTitle}>{target.title}</Text>
-      {!!target.description && (
-        <Text style={styles.resourceDescription}>{target.description}</Text>
-      )}
-      <Text style={styles.resourceHint}>Tap to learn more →</Text>
-    </Pressable>
-  );
-}
-
-function MessageBubble({ message }: { message: ChatMessage }) {
-  const isGuide = message.from === "guide";
-  return (
-    <View
-      style={[
-        styles.messageBubble,
-        isGuide ? styles.messageBubbleGuide : styles.messageBubbleGuest,
-      ]}
-    >
-      <Text
-        style={[
-          styles.messageText,
-          isGuide ? styles.messageTextDark : styles.messageTextLight,
-        ]}
-      >
-        {message.text}
-      </Text>
-    </View>
-  );
 }
 
 export function HomeScreen() {
@@ -131,6 +41,7 @@ export function HomeScreen() {
                 <ActionButton
                   key={action.href}
                   target={action}
+                  onPress={openLink}
                   style={index === 0 ? undefined : styles.actionButtonSpacing}
                 />
               ))}
@@ -177,6 +88,7 @@ export function HomeScreen() {
                 <ResourceCard
                   key={resource.href}
                   target={resource}
+                  onPress={openLink}
                   style={
                     index === RESOURCES.length - 1
                       ? undefined
@@ -191,4 +103,6 @@ export function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+export { ActionButton, MessageBubble, ResourceCard } from "./home-screen";
 
