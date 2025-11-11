@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type AdapterAccount } from "next-auth/adapters";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   integer,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -102,12 +105,88 @@ export const authenticators = pgTable(
   }),
 );
 
-export const authSchema = {
+export const friendRequestStatusEnum = pgEnum("friend_request_status", [
+  "pending",
+  "accepted",
+  "declined",
+  "cancelled",
+]);
+
+export const friendRequests = pgTable(
+  "friend_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: friendRequestStatusEnum("status")
+      .notNull()
+      .default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+  },
+  (table) => ({
+    senderRecipientCheck: check(
+      "friend_requests_sender_recipient_check",
+      sql`${table.senderId} <> ${table.recipientId}`,
+    ),
+    pendingUnique: uniqueIndex("friend_requests_pending_unique")
+      .on(
+        sql`LEAST(${table.senderId}, ${table.recipientId})`,
+        sql`GREATEST(${table.senderId}, ${table.recipientId})`,
+      )
+      .where(sql`${table.status} = 'pending'`),
+  }),
+);
+
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    friendId: text("friend_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userFriendCheck: check(
+      "friendships_user_friend_check",
+      sql`${table.userId} <> ${table.friendId}`,
+    ),
+    uniqueFriendPair: uniqueIndex("friendships_unique_pair").on(
+      sql`LEAST(${table.userId}, ${table.friendId})`,
+      sql`GREATEST(${table.userId}, ${table.friendId})`,
+      sql`(${table.userId} < ${table.friendId})`,
+    ),
+  }),
+);
+
+export const appSchema = {
   users,
   accounts,
   sessions,
   verificationTokens,
   authenticators,
+  friendRequests,
+  friendships,
 };
 
 export const authAdapterTables = {
