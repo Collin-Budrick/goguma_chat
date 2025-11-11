@@ -22,13 +22,8 @@ import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
 import { isLinkItem, resolveDock, type DockNavItem } from "./site-dock/navigation";
-import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
 import { PreferenceToggle, type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
-import {
-  useDockContrast,
-  type ContrastTheme,
-} from "./site-dock/use-dock-contrast";
 import {
   DisplaySettings,
   DISPLAY_SETTINGS_EVENT,
@@ -36,39 +31,17 @@ import {
   loadDisplaySettings,
   persistDisplaySettings,
 } from "@/lib/display-settings";
+import {
+  LocaleFlipOverlay,
+  getStoredLocaleTransition,
+  scheduleLocaleTransition,
+} from "./site-dock/locale-transition";
+import {
+  useDockContrast,
+  type ContrastTheme,
+} from "./site-dock/use-dock-contrast";
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
-
-const LOCALE_TRANSITION_STORAGE_KEY = "site-locale-transition";
-
-type LocaleTransitionPayload = {
-  locale?: Locale;
-  words?: string[];
-  timestamp?: number;
-};
-
-const getStoredLocaleTransition = (): {
-  locale: Locale | null;
-  words: string[] | null;
-} | null => {
-  if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(LOCALE_TRANSITION_STORAGE_KEY);
-  if (!raw) return null;
-  window.sessionStorage.removeItem(LOCALE_TRANSITION_STORAGE_KEY);
-  try {
-    const parsed = JSON.parse(raw) as LocaleTransitionPayload;
-    if (!parsed.locale || !parsed.words || parsed.words.length === 0) return null;
-    if (!parsed.timestamp || Date.now() - parsed.timestamp > 2000) return null;
-    return { locale: parsed.locale, words: parsed.words };
-  } catch {
-    return null;
-  }
-};
-
-const localeDisplayNames: Record<Locale, string> = {
-  en: "English",
-  ko: "한국어",
-};
 
 function DockItem({
   item,
@@ -180,44 +153,6 @@ function DockItem({
         )}
       </AnimatePresence>
     </motion.button>
-  );
-}
-
-function LocaleFlipOverlay({
-  words,
-  theme,
-  onComplete,
-  ariaLabel,
-}: {
-  words: string[];
-  theme: ContrastTheme;
-  onComplete: () => void;
-  ariaLabel: string;
-}) {
-  const isLight = theme === "light";
-  const surfaceClasses = isLight
-    ? "bg-white/85 text-slate-900"
-    : "bg-black/85 text-white";
-
-  return (
-    <motion.div
-      key="locale-flip-overlay"
-      initial={{ opacity: 1 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
-      className={`fixed inset-0 z-[120] flex items-center justify-center backdrop-blur-3xl ${surfaceClasses}`}
-      aria-live="assertive"
-      aria-label={ariaLabel}
-    >
-      <FlipWords
-        words={words}
-        loop={false}
-        duration={900}
-        className="text-4xl font-semibold uppercase tracking-[0.3em]"
-        onCycleComplete={onComplete}
-      />
-    </motion.div>
   );
 }
 
@@ -411,23 +346,8 @@ export default function SiteDock() {
       if (pendingLocale) return;
       setPendingLocale(targetLocale);
       setDirection(0);
-      if (typeof window !== "undefined") {
-        try {
-          window.sessionStorage.setItem(
-            LOCALE_TRANSITION_STORAGE_KEY,
-            JSON.stringify({
-              words: [
-                localeDisplayNames[locale] ?? locale,
-                localeDisplayNames[targetLocale] ?? targetLocale,
-              ],
-              locale: targetLocale,
-              timestamp: Date.now(),
-            }),
-          );
-        } catch {
-          // ignore storage errors (private browsing, etc.)
-        }
-      }
+      const words = scheduleLocaleTransition(locale, targetLocale);
+      setLocaleTransitionWords(words);
       startTransition(() => {
         router.push(pathname, { locale: targetLocale, scroll: false });
       });
