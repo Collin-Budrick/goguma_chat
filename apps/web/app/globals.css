@@ -465,3 +465,20 @@ body.theme-light :is(.bg-white):not(:is(
 body.theme-light .preference-toggle-track.bg-slate-900 {
   background-color: #0f172a !important;
 }
+
+/* Ensure light-theme preference cards look active when toggled on */
+body.theme-light .preference-toggle--active {
+  background-color: #050505 !important;
+  border-color: rgba(15, 23, 42, 0.85) !important;
+  color: #fff !important;
+}
+body.theme-light .preference-toggle--active:hover {
+  background-color: #000 !important;
+  border-color: rgba(15, 23, 42, 0.95) !important;
+}
+body.theme-light .preference-toggle--active .preference-toggle__label {
+  color: #fff !important;
+}
+body.theme-light .preference-toggle--active .preference-toggle__description {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
