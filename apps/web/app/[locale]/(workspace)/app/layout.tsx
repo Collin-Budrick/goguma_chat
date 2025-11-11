@@ -9,7 +9,7 @@ export const metadata = {
   title: "Workspace | Goguma Chat",
 };
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export default function AppLayout({ children }: PropsWithChildren) {
   return (

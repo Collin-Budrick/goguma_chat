@@ -24,6 +24,14 @@ const AUTH_ROUTE_PATTERNS = [/^\/login(\/.*)?$/, /^\/signup(\/.*)?$/];
 
 const intlMiddleware = createMiddleware(routing);
 
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ?? "goguma-development-secret";
+const SESSION_COOKIE_NAMES = [
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+  "__Host-next-auth.session-token",
+];
+const SESSION_COOKIE_REGEX = /(?:__Secure-|__Host-)?next-auth\.session-token=/;
+
 function getLocaleFromPathname(pathname: string): { locale: Locale; pathname: string } {
   const segments = pathname.split("/").filter(Boolean);
   const potentialLocale = segments[0] as Locale | undefined;
@@ -67,6 +75,10 @@ function isMatch(pathname: string, patterns: RegExp[]) {
 }
 
 export default async function proxy(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
   const intlResponse = intlMiddleware(req);
 
   if (!intlResponse.headers.get("x-middleware-next")) {
@@ -74,8 +86,17 @@ export default async function proxy(req: NextRequest) {
   }
 
   const { locale, pathname } = getLocaleFromPathname(req.nextUrl.pathname);
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const isAuthenticated = Boolean(token);
+  let token;
+  try {
+    token = await getToken({ req, secret: NEXTAUTH_SECRET });
+  } catch (error) {
+    console.warn("Failed to read auth token:", error);
+  }
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const hasSessionCookie =
+    SESSION_COOKIE_NAMES.some((name) => Boolean(req.cookies.get(name)?.value)) ||
+    SESSION_COOKIE_REGEX.test(cookieHeader);
+  const isAuthenticated = Boolean(token) || hasSessionCookie;
 
   if (isMatch(pathname, PUBLIC_ROUTE_PATTERNS)) {
     if (isAuthenticated && isMatch(pathname, AUTH_ROUTE_PATTERNS)) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
@@ -11,20 +11,29 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/app/dashboard";
   const t = useTranslations("Auth.form");
   const isLogin = mode === "login";
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const baseFieldId = useMemo(() => {
+    const sanitized =
+      pathname?.replace(/[^a-z0-9]/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") ??
+      "auth";
+    return `${sanitized || "auth"}-${mode}`;
+  }, [pathname, mode]);
+  const emailId = `${baseFieldId}-email`;
+  const passwordId = `${baseFieldId}-password`;
+  const firstNameId = `${baseFieldId}-first-name`;
+  const lastNameId = `${baseFieldId}-last-name`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = (formData.get("email") as string | null)?.trim();
-    const password = isLogin
-      ? (formData.get("password") as string | null)?.trim()
-      : null;
+    const password = (formData.get("password") as string | null)?.trim() ?? null;
     const firstName = !isLogin
       ? (formData.get("firstName") as string | null)?.trim()
       : null;
@@ -36,7 +45,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       setError(t("errors.emailRequired"));
       return;
     }
-    if (isLogin && !password) {
+    if (!password) {
       setError(t("errors.passwordRequired"));
       return;
     }
@@ -49,9 +58,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
       redirect: false,
       callbackUrl,
     };
-    if (isLogin) {
-      signInPayload.password = password ?? undefined;
-    } else {
+    signInPayload.password = password ?? undefined;
+    if (!isLogin) {
       signInPayload.firstName = firstName ?? undefined;
       signInPayload.lastName = lastName ?? undefined;
     }
@@ -83,13 +91,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div>
         <label
-          htmlFor="email"
+          htmlFor={emailId}
           className="text-xs uppercase tracking-[0.25em] text-white/50"
         >
           {t("fields.email.label")}
         </label>
         <input
-          id="email"
+          id={emailId}
           name="email"
           type="email"
           required
@@ -98,35 +106,34 @@ export default function AuthForm({ mode }: AuthFormProps) {
           placeholder={t("fields.email.placeholder")}
         />
       </div>
-      {isLogin ? (
-        <div>
-          <label
-            htmlFor="password"
-            className="text-xs uppercase tracking-[0.25em] text-white/50"
-          >
-            {t("fields.password.label")}
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
-            placeholder={t("fields.password.placeholder")}
-          />
-        </div>
-      ) : (
+      <div>
+        <label
+          htmlFor={passwordId}
+          className="text-xs uppercase tracking-[0.25em] text-white/50"
+        >
+          {t("fields.password.label")}
+        </label>
+        <input
+          id={passwordId}
+          name="password"
+          type="password"
+          required
+          autoComplete={isLogin ? "current-password" : "new-password"}
+          className="mt-2 w-full rounded-xl border border-white/15 bg-black/80 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+          placeholder={t("fields.password.placeholder")}
+        />
+      </div>
+      {!isLogin && (
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label
-              htmlFor="firstName"
+              htmlFor={firstNameId}
               className="text-xs uppercase tracking-[0.25em] text-white/50"
             >
               {firstNameLabel}
             </label>
             <input
-              id="firstName"
+              id={firstNameId}
               name="firstName"
               type="text"
               autoComplete="given-name"
@@ -137,13 +144,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
           </div>
           <div>
             <label
-              htmlFor="lastName"
+              htmlFor={lastNameId}
               className="text-xs uppercase tracking-[0.25em] text-white/50"
             >
               {lastNameLabel}
             </label>
             <input
-              id="lastName"
+              id={lastNameId}
               name="lastName"
               type="text"
               autoComplete="family-name"

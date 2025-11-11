@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -9,9 +8,7 @@ import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import SimplePage from "@/components/simple-page";
 
-type PageProps = {
-  params: Promise<{ locale: string }>;
-};
+type PageProps = { params: Promise<{ locale: string }> };
 
 type ProfileCopy = {
   title: string;
@@ -71,20 +68,6 @@ export default async function ProfilePage({ params }: PageProps) {
     },
   };
 
-  return (
-    <Suspense fallback={<ProfilePageSkeleton copy={copy} />}>
-      <ProfileContent locale={locale} copy={copy} />
-    </Suspense>
-  );
-}
-
-async function ProfileContent({
-  locale,
-  copy,
-}: {
-  locale: string;
-  copy: ProfileCopy;
-}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -129,24 +112,6 @@ async function ProfileContent({
               {field.label}
             </dt>
             <dd className="mt-2 text-white">{field.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </SimplePage>
-  );
-}
-
-function ProfilePageSkeleton({ copy }: { copy: ProfileCopy }) {
-  return (
-    <SimplePage title={copy.title} description={copy.description}>
-      <dl className="grid gap-4 text-sm">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div
-            key={index}
-            className="space-y-2 rounded-2xl border border-white/10 p-4"
-          >
-            <div className="h-3 w-24 rounded-full bg-white/10" />
-            <div className="h-4 w-48 rounded-full bg-white/10" />
           </div>
         ))}
       </dl>

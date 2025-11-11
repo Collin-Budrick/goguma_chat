@@ -1,10 +1,16 @@
-import { randomUUID } from "node:crypto";
+import {
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+  scrypt as nodeScrypt,
+} from "node:crypto";
 import { eq } from "drizzle-orm";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import type { Session } from "next-auth";
 import type { NextRequest } from "next/server";
 import Credentials from "next-auth/providers/credentials";
+import { promisify } from "node:util";
 
 import { db } from "@/db";
 import { authAdapterTables, users } from "@/db/schema";
@@ -17,6 +23,30 @@ type AdapterSchema = Extract<
 function toNullable(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+const scrypt = promisify(nodeScrypt);
+
+const SALT_SIZE = 16;
+const KEY_LENGTH = 64;
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ?? "goguma-development-secret";
+
+async function hashPassword(value: string) {
+  const salt = randomBytes(SALT_SIZE).toString("hex");
+  const derivedKey = (await scrypt(value, salt, KEY_LENGTH)) as Buffer;
+  return `${salt}:${derivedKey.toString("hex")}`;
+}
+
+async function verifyPassword(value: string, hashed: string) {
+  const [salt, storedKey] = hashed.split(":");
+  if (!salt || !storedKey) {
+    return false;
+  }
+  const derivedKey = (await scrypt(value, salt, KEY_LENGTH)) as Buffer;
+  const storedBuffer = Buffer.from(storedKey, "hex");
+  if (storedBuffer.length !== derivedKey.length) {
+    return false;
+  }
+  return timingSafeEqual(storedBuffer, derivedKey);
 }
 
 type CredentialsUser = {
@@ -77,8 +107,12 @@ export const authConfig = {
           typeof credentials?.email === "string"
             ? toNullable(credentials.email.toLowerCase())
             : null;
+        const password =
+          typeof credentials?.password === "string"
+            ? toNullable(credentials.password)
+            : null;
 
-        if (!email) {
+        if (!email || !password) {
           return null;
         }
 
@@ -100,6 +134,7 @@ export const authConfig = {
         const now = new Date();
 
         if (!existing) {
+          const passwordHash = await hashPassword(password);
           const id = randomUUID();
           const newUser = {
             id,
@@ -107,6 +142,7 @@ export const authConfig = {
             emailVerified: now,
             firstName: requestedFirstName,
             lastName: requestedLastName,
+            passwordHash,
             createdAt: now,
             updatedAt: now,
           };
@@ -116,15 +152,37 @@ export const authConfig = {
           return {
             id,
             email,
-            name: [requestedFirstName, requestedLastName].filter(Boolean).join(" ") || email,
+            name:
+              [requestedFirstName, requestedLastName].filter(Boolean).join(" ") ||
+              email,
             firstName: requestedFirstName,
             lastName: requestedLastName,
           };
         }
 
+        if (!existing.passwordHash) {
+          const passwordHash = await hashPassword(password);
+          await db
+            .update(users)
+            .set({
+              passwordHash,
+              updatedAt: now,
+            })
+            .where(eq(users.id, existing.id));
+        } else {
+          const passwordMatches = await verifyPassword(
+            password,
+            existing.passwordHash,
+          );
+          if (!passwordMatches) {
+            return null;
+          }
+        }
+
         const updatedFirstName = requestedFirstName ?? existing.firstName;
         const updatedLastName = requestedLastName ?? existing.lastName;
-        const updatedEmail = existing.email === email ? existing.email : email;
+        const updatedEmail =
+          existing.email === email ? existing.email : email;
 
         if (
           updatedFirstName !== existing.firstName ||
@@ -146,7 +204,8 @@ export const authConfig = {
           id: existing.id,
           email: updatedEmail,
           name:
-            [updatedFirstName, updatedLastName].filter(Boolean).join(" ") || updatedEmail,
+            [updatedFirstName, updatedLastName].filter(Boolean).join(" ") ||
+            updatedEmail,
           firstName: updatedFirstName,
           lastName: updatedLastName,
         };
@@ -203,7 +262,7 @@ export const authConfig = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: NEXTAUTH_SECRET,
 };
 
 const createAuth = NextAuth as unknown as (config: typeof authConfig) => CreateAuthResult;
