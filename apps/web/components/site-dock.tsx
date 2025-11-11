@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -20,6 +20,7 @@ import { useDockMounted } from "./site-dock/use-dock-mounted";
 import { useDockScrollState } from "./site-dock/use-dock-scroll-state";
 import { usePreferencePanel } from "./site-dock/use-preference-panel";
 import { useDockDisplaySettings } from "./site-dock/use-dock-display-settings";
+import { useDockHoverAnimation } from "./site-dock/use-dock-hover";
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
@@ -154,21 +155,18 @@ export default function SiteDock() {
 
   useBodyLightTheme(userPrefersLightTheme);
 
-  const mouseX = useMotionValue<number>(Infinity);
-  const hover = useMotionValue<number>(0);
-
   const baseSize = 52;
   const magnifiedSize = displaySettings.magnify ? 78 : 52;
   const range = displaySettings.magnify ? 180 : 120;
   const panelHeight = 74;
   const dockHeight = 110;
 
-  const maxHeight = useMemo(
-    () => Math.max(dockHeight, magnifiedSize + magnifiedSize / 2 + 12),
-    [dockHeight, magnifiedSize],
-  );
-  const rowHeight = useTransform(hover, [0, 1], [panelHeight, maxHeight]);
-  const height = useSpring(rowHeight, springConfig);
+  const { mouseX, height, handlers: hoverHandlers } = useDockHoverAnimation({
+    panelHeight,
+    dockHeight,
+    magnifiedSize,
+    springConfig,
+  });
 
   const stripTrailingSlash = (path: string) => {
     if (path === "/") return "/";
@@ -297,15 +295,7 @@ export default function SiteDock() {
               className="pointer-events-auto flex w-full max-w-3xl items-end justify-center"
             >
               <motion.div
-                onMouseMove={(event) => {
-                  hover.set(1);
-                  mouseX.set(event.pageX);
-                }}
-                onMouseLeave={() => {
-                  hover.set(0);
-                  mouseX.set(Infinity);
-                }}
-                onMouseEnter={() => hover.set(1)}
+                {...hoverHandlers}
                 ref={dockPanelRef}
                 data-contrast-theme={panelTheme}
                 className="dock-panel before:absolute relative before:inset-px flex items-end gap-4 bg-white/12 before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl px-4 py-4 border border-white/15 rounded-[32px] before:rounded-[30px] before:content-[''] before:pointer-events-none"
