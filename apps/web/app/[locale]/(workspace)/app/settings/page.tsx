@@ -123,6 +123,17 @@ export default function SettingsPage() {
     },
   ];
 
+  const isLightThemeEnabled = displaySettings.theme === "light";
+  const cardTone = isLightThemeEnabled
+    ? {
+        active: { container: "border-black bg-black text-white", description: "text-white/70" },
+        inactive: { container: "border-black/10 bg-white text-slate-900", description: "text-slate-500" },
+      }
+    : {
+        active: { container: "border-white/40 bg-white text-black", description: "text-black/60" },
+        inactive: { container: "border-white/10 bg-black text-white", description: "text-white/60" },
+      };
+
   return (
     <div className="space-y-8">
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
@@ -156,16 +167,13 @@ export default function SettingsPage() {
         </header>
         <div className="space-y-4">
           {displayEntries.map((entry) => {
-            const containerClasses = entry.active
-              ? "border-white/40 bg-white text-black"
-              : "border-white/10 bg-black text-white";
-            const descriptionClasses = entry.active ? "text-black/60" : "text-white/60";
+            const tone = entry.active ? cardTone.active : cardTone.inactive;
             return (
               <button
                 key={entry.id}
                 type="button"
                 onClick={entry.onToggle}
-                className={"w-full rounded-2xl border px-4 py-4 text-left transition " + containerClasses}
+                className={"w-full rounded-2xl border px-4 py-4 text-left transition " + tone.container}
               >
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>{entry.label}</span>
@@ -174,7 +182,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <p
-                  className={"mt-2 text-xs " + descriptionClasses}
+                  className={"mt-2 text-xs " + tone.description}
                 >
                   {entry.description}
                 </p>
@@ -192,6 +200,7 @@ export default function SettingsPage() {
         <div className="space-y-4">
           {preferenceCopy.map((item) => {
             const active = prefs[item.id] ?? false;
+            const tone = active ? cardTone.active : cardTone.inactive;
             return (
               <button
                 key={item.id}
@@ -199,11 +208,7 @@ export default function SettingsPage() {
                 onClick={() =>
                   setPrefs((prev) => ({ ...prev, [item.id]: !active }))
                 }
-                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
-                  active
-                    ? "border-white/40 bg-white text-black"
-                    : "border-white/10 bg-black text-white"
-                }`}
+                className={"w-full rounded-2xl border px-4 py-4 text-left transition " + tone.container}
               >
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span>{item.label}</span>
@@ -212,9 +217,7 @@ export default function SettingsPage() {
                   </span>
                 </div>
                 <p
-                  className={`mt-2 text-xs ${
-                    active ? "text-black/60" : "text-white/60"
-                  }`}
+                  className={"mt-2 text-xs " + tone.description}
                 >
                   {item.description}
                 </p>
