@@ -3,6 +3,7 @@ import { type AdapterAccount } from "next-auth/adapters";
 import {
   boolean,
   integer,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -32,6 +33,57 @@ export const users = pgTable(
   },
   (table) => ({
     emailIdx: uniqueIndex("users_email_unique").on(table.email),
+  }),
+);
+
+export const friendRequestStatusEnum = pgEnum("friend_request_status", [
+  "pending",
+  "accepted",
+  "declined",
+  "cancelled",
+]);
+
+export const friendRequests = pgTable("friend_requests", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  requesterId: text("requester_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  recipientId: text("recipient_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  status: friendRequestStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    friendId: text("friend_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    uniqueFriendship: uniqueIndex("friendships_user_friend_unique").on(
+      table.userId,
+      table.friendId,
+    ),
   }),
 );
 
@@ -108,6 +160,8 @@ export const authSchema = {
   sessions,
   verificationTokens,
   authenticators,
+  friendRequests,
+  friendships,
 };
 
 export const authAdapterTables = {
@@ -117,3 +171,6 @@ export const authAdapterTables = {
   verificationTokensTable: verificationTokens,
   authenticatorsTable: authenticators,
 };
+
+export type FriendRequestStatus =
+  (typeof friendRequestStatusEnum.enumValues)[number];
