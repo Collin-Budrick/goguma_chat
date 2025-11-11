@@ -36,6 +36,14 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
 import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
+import { PreferenceToggle } from "@/components/ui/preference-toggle";
+import {
+  DisplaySettings,
+  DISPLAY_SETTINGS_EVENT,
+  DEFAULT_DISPLAY_SETTINGS,
+  loadDisplaySettings,
+  persistDisplaySettings,
+} from "@/lib/display-settings";
 
 type DockLinkItem = {
   type: "link";
@@ -426,12 +434,6 @@ function useDockContrast(ref: RefObject<HTMLElement>): ContrastTheme {
   );
 }
 
-type DisplaySettings = {
-  magnify: boolean;
-  showLabels: boolean;
-  theme: "dark" | "light";
-};
-
 function resolveDock(
   pathname: string,
   resolveLabel: (key: string) => string,
@@ -561,60 +563,6 @@ function DockItem({
   );
 }
 
-function PreferenceToggle({
-  label,
-  description,
-  value,
-  onChange,
-  theme,
-}: {
-  label: string;
-  description: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  theme: "dark" | "light";
-}) {
-  const isLight = theme === "light";
-  const containerClasses = isLight
-    ? "border-slate-200 bg-white/90 hover:border-slate-300 hover:bg-white"
-    : "border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10";
-  const labelClasses = isLight ? "text-sm font-medium text-slate-900" : "text-sm font-medium text-white";
-  const descriptionClasses = isLight ? "text-xs text-slate-600" : "text-xs text-white/70";
-  const trackClasses = isLight
-    ? value
-      ? "bg-slate-900"
-      : "bg-slate-300"
-    : value
-      ? "bg-white"
-      : "bg-white/30";
-  const thumbClasses = isLight ? "bg-white shadow-sm" : "bg-black/90 shadow-lg";
-
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={`relative flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${containerClasses}`}
-      role="switch"
-      aria-checked={value}
-    >
-      <span className="flex flex-col">
-        <span className={labelClasses}>{label}</span>
-        <span className={descriptionClasses}>{description}</span>
-      </span>
-      <span
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${trackClasses}`}
-      >
-        <motion.span
-          layout
-          transition={{ type: "spring", stiffness: 520, damping: 32 }}
-          className={`absolute left-1 top-1 h-4 w-4 rounded-full transition-colors ${thumbClasses}`}
-          style={{ x: value ? 18 : 0 }}
-        />
-      </span>
-    </button>
-  );
-}
-
 function LocaleFlipOverlay({
   words,
   theme,
@@ -665,30 +613,7 @@ export default function SiteDock() {
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => {
-    const defaults: DisplaySettings = {
-      magnify: true,
-      showLabels: true,
-      theme: "dark",
-    };
-
-    if (typeof window === "undefined") {
-      return defaults;
-    }
-
-    try {
-      const stored = window.localStorage.getItem("site-dock-display");
-      if (!stored) return defaults;
-      const parsed = JSON.parse(stored) as Partial<DisplaySettings>;
-      return {
-        ...defaults,
-        ...parsed,
-        theme: parsed.theme === "light" ? "light" : "dark",
-      };
-    } catch {
-      return defaults;
-    }
-  });
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
   const userPrefersLightTheme = displaySettings.theme === "light";
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
   const panelTheme = useDockContrast(dockPanelRef);
@@ -713,6 +638,17 @@ export default function SiteDock() {
       description: dockT("preferences.language.description"),
     },
   };
+  const updateDisplaySettings = useCallback(
+    (updater: (prev: DisplaySettings) => DisplaySettings) => {
+      setDisplaySettings((prev) => {
+        const next = updater(prev);
+        persistDisplaySettings(next);
+        return next;
+      });
+    },
+    [],
+  );
+
   const popoverToneClasses = isLightTheme
     ? "border-white/50 text-slate-900"
     : "border-white/15 text-white";
@@ -739,8 +675,26 @@ export default function SiteDock() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("site-dock-display", JSON.stringify(displaySettings));
-  }, [displaySettings]);
+    if (typeof window === "undefined") return;
+    const stored = loadDisplaySettings();
+    setDisplaySettings(stored);
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<DisplaySettings>).detail;
+      setDisplaySettings((prev) => {
+        if (
+          prev.magnify === detail.magnify &&
+          prev.showLabels === detail.showLabels &&
+          prev.theme === detail.theme
+        ) {
+          return prev;
+        }
+        return detail;
+      });
+    };
+    window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
+    return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -1006,7 +960,7 @@ export default function SiteDock() {
                                   value={displaySettings.magnify}
                                   theme={panelTheme}
                                   onChange={(value) =>
-                                    setDisplaySettings((prev) => ({ ...prev, magnify: value }))
+                                    updateDisplaySettings((prev) => ({ ...prev, magnify: value }))
                                   }
                                 />
                                 <PreferenceToggle
@@ -1015,7 +969,7 @@ export default function SiteDock() {
                                   value={displaySettings.showLabels}
                                   theme={panelTheme}
                                   onChange={(value) =>
-                                    setDisplaySettings((prev) => ({ ...prev, showLabels: value }))
+                                    updateDisplaySettings((prev) => ({ ...prev, showLabels: value }))
                                   }
                                 />
                                 <PreferenceToggle
@@ -1024,7 +978,7 @@ export default function SiteDock() {
                                   value={displaySettings.theme === "light"}
                                   theme={panelTheme}
                                   onChange={(enabled) =>
-                                    setDisplaySettings((prev) => ({
+                                    updateDisplaySettings((prev) => ({
                                       ...prev,
                                       theme: enabled ? "light" : "dark",
                                     }))
