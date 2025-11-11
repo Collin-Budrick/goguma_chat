@@ -164,7 +164,6 @@ export default function SiteDock() {
   const { mouseX, rowHeight, height, handlers: hoverHandlers } = useDockHoverAnimation({
     panelHeight,
     dockHeight,
-    magnifiedSize,
     springConfig,
   });
 

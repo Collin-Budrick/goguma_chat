@@ -1,64 +1,66 @@
-import { type MouseEvent, useCallback, useMemo } from "react";
+
+import { type MouseEvent, useCallback, useEffect, useMemo } from "react";
 import {
   type MotionValue,
   type SpringOptions,
   useMotionValue,
   useSpring,
-  useTransform,
 } from "framer-motion";
 
 export interface DockHoverAnimationOptions {
   panelHeight: number;
   dockHeight: number;
-  magnifiedSize: number;
   springConfig: SpringOptions;
 }
 
 export interface DockHoverAnimationResult {
   mouseX: MotionValue<number>;
-  hover: MotionValue<number>;
   rowHeight: MotionValue<number>;
   height: MotionValue<number>;
   handlers: {
     onMouseMove: (event: MouseEvent<HTMLDivElement>) => void;
     onMouseLeave: () => void;
-    onMouseEnter: () => void;
+    onMouseEnter: (event: MouseEvent<HTMLDivElement>) => void;
   };
 }
 
 export function useDockHoverAnimation({
   panelHeight,
   dockHeight,
-  magnifiedSize,
   springConfig,
 }: DockHoverAnimationOptions): DockHoverAnimationResult {
   const mouseX = useMotionValue<number>(Infinity);
-  const hover = useMotionValue<number>(0);
+  const rowHeightValue = useMotionValue(panelHeight);
+  const heightValue = useMotionValue(dockHeight);
 
-  const maxHeight = useMemo(
-    () => Math.max(dockHeight, magnifiedSize + magnifiedSize / 2 + 12),
-    [dockHeight, magnifiedSize],
-  );
+  useEffect(() => {
+    rowHeightValue.set(panelHeight);
+  }, [panelHeight, rowHeightValue]);
 
-  const rowHeight = useTransform(hover, [0, 1], [panelHeight, maxHeight]);
-  const height = useSpring(rowHeight, springConfig);
+  useEffect(() => {
+    heightValue.set(dockHeight);
+  }, [dockHeight, heightValue]);
+
+  const rowHeight = useSpring(rowHeightValue, springConfig);
+  const height = useSpring(heightValue, springConfig);
 
   const handleMouseMove = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
-      hover.set(1);
       mouseX.set(event.pageX);
     },
-    [hover, mouseX],
+    [mouseX],
   );
 
   const handleMouseLeave = useCallback(() => {
-    hover.set(0);
     mouseX.set(Infinity);
-  }, [hover, mouseX]);
+  }, [mouseX]);
 
-  const handleMouseEnter = useCallback(() => {
-    hover.set(1);
-  }, [hover]);
+  const handleMouseEnter = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      mouseX.set(event.pageX);
+    },
+    [mouseX],
+  );
 
   const handlers = useMemo(
     () => ({
@@ -71,7 +73,6 @@ export function useDockHoverAnimation({
 
   return {
     mouseX,
-    hover,
     rowHeight,
     height,
     handlers,
