@@ -120,6 +120,19 @@ export async function listPendingRequests(userId: string) {
   };
 }
 
+export async function getFriendState(userId: string) {
+  const [friends, pending] = await Promise.all([
+    listFriends(userId),
+    listPendingRequests(userId),
+  ]);
+
+  return {
+    friends,
+    incoming: pending.incoming,
+    outgoing: pending.outgoing,
+  };
+}
+
 export async function createFriendRequest(
   senderId: string,
   recipientId: string,
