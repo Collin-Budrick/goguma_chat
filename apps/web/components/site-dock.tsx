@@ -161,7 +161,7 @@ export default function SiteDock() {
   const panelHeight = 74;
   const dockHeight = 110;
 
-  const { mouseX, height, handlers: hoverHandlers } = useDockHoverAnimation({
+  const { mouseX, rowHeight, height, handlers: hoverHandlers } = useDockHoverAnimation({
     panelHeight,
     dockHeight,
     magnifiedSize,
@@ -299,7 +299,7 @@ export default function SiteDock() {
                 ref={dockPanelRef}
                 data-contrast-theme={panelTheme}
                 className="dock-panel before:absolute relative before:inset-px flex items-end gap-4 bg-white/12 before:bg-gradient-to-br before:from-white/12 before:to-white/4 before:opacity-80 shadow-[0_26px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl px-4 py-4 border border-white/15 rounded-[32px] before:rounded-[30px] before:content-[''] before:pointer-events-none"
-                style={{ height: panelHeight }}
+                style={{ height: rowHeight }}
                 role="toolbar"
                 aria-label={dockT("aria.toolbar")}
               >

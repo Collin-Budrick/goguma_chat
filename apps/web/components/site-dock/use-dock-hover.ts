@@ -60,15 +60,20 @@ export function useDockHoverAnimation({
     hover.set(1);
   }, [hover]);
 
+  const handlers = useMemo(
+    () => ({
+      onMouseMove: handleMouseMove,
+      onMouseLeave: handleMouseLeave,
+      onMouseEnter: handleMouseEnter,
+    }),
+    [handleMouseEnter, handleMouseLeave, handleMouseMove],
+  );
+
   return {
     mouseX,
     hover,
     rowHeight,
     height,
-    handlers: {
-      onMouseMove: handleMouseMove,
-      onMouseLeave: handleMouseLeave,
-      onMouseEnter: handleMouseEnter,
-    },
+    handlers,
   };
 }
