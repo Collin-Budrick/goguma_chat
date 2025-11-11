@@ -2,7 +2,6 @@
 
 import { startTransition, useCallback, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -11,7 +10,7 @@ import { DockItem } from "./site-dock/dock-item";
 import { isLinkItem, resolveDock, type DockNavItem } from "./site-dock/navigation";
 import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
-import { PreferenceToggle } from "@/components/ui/preference-toggle";
+import { PreferencesPopover } from "./site-dock/preferences-popover";
 import { useBodyLightTheme } from "./site-dock/use-body-light-theme";
 import {
   useDockContrast,
@@ -336,75 +335,33 @@ export default function SiteDock() {
                         theme={panelTheme}
                       />
                       {isPreferences && (
-                        <AnimatePresence>
-                          {preferencesOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                              transition={{ type: "spring", stiffness: 280, damping: 26 }}
-                              className={`dock-popover pointer-events-auto absolute bottom-full left-1/2 z-50 w-64 -translate-x-1/2 rounded-2xl border p-4 ${popoverToneClasses}`}
-                            >
-                              <div className="mb-2 flex items-center justify-between">
-                                <span
-                                  className={`text-[10px] font-semibold uppercase tracking-[0.32em] ${isLightTheme ? "text-slate-500" : "text-white/60"}`}
-                                >
-                                  {panelTitle}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setPreferencesOpen(false)}
-                                  className={`rounded-full border p-1 transition ${isLightTheme
-                                      ? "border-slate-200 bg-white/80 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900"
-                                      : "border-white/10 bg-white/10 text-white/70 hover:border-white/25 hover:bg-white/20 hover:text-white"
-                                    }`}
-                                  aria-label={closeLabel}
-                                >
-                                  <X className="h-3 w-3" aria-hidden />
-                                </button>
-                              </div>
-                              <div className="flex flex-col gap-2">
-                                <PreferenceToggle
-                                  label={preferenceCopy.magnify.label}
-                                  description={preferenceCopy.magnify.description}
-                                  value={displaySettings.magnify}
-                                  theme={preferenceToggleTheme}
-                                  onChange={(value) =>
-                                    updateDisplaySettings((prev) => ({ ...prev, magnify: value }))
-                                  }
-                                />
-                                <PreferenceToggle
-                                  label={preferenceCopy.labels.label}
-                                  description={preferenceCopy.labels.description}
-                                  value={displaySettings.showLabels}
-                                  theme={preferenceToggleTheme}
-                                  onChange={(value) =>
-                                    updateDisplaySettings((prev) => ({ ...prev, showLabels: value }))
-                                  }
-                                />
-                                <PreferenceToggle
-                                  label={preferenceCopy.theme.label}
-                                  description={preferenceCopy.theme.description}
-                                  value={displaySettings.theme === "light"}
-                                  theme={preferenceToggleTheme}
-                                  onChange={(enabled) =>
-                                    updateDisplaySettings((prev) => ({
-                                      ...prev,
-                                      theme: enabled ? "light" : "dark",
-                                    }))
-                                  }
-                                />
-                                <PreferenceToggle
-                                  label={preferenceCopy.language.label}
-                                  description={preferenceCopy.language.description}
-                                  value={localeToggleValue}
-                                  theme={preferenceToggleTheme}
-                                  onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
-                                />
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <PreferencesPopover
+                          open={preferencesOpen}
+                          toneClasses={popoverToneClasses}
+                          isLightTheme={isLightTheme}
+                          panelTitle={panelTitle}
+                          closeLabel={closeLabel}
+                          preferenceCopy={preferenceCopy}
+                          preferenceToggleTheme={preferenceToggleTheme}
+                          magnifyValue={displaySettings.magnify}
+                          labelsValue={displaySettings.showLabels}
+                          lightThemeEnabled={displaySettings.theme === "light"}
+                          localeToggleValue={localeToggleValue}
+                          onClose={closePreferences}
+                          onMagnifyChange={(value) =>
+                            updateDisplaySettings((prev) => ({ ...prev, magnify: value }))
+                          }
+                          onLabelsChange={(value) =>
+                            updateDisplaySettings((prev) => ({ ...prev, showLabels: value }))
+                          }
+                          onThemeChange={(enabled) =>
+                            updateDisplaySettings((prev) => ({
+                              ...prev,
+                              theme: enabled ? "light" : "dark",
+                            }))
+                          }
+                          onLanguageChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
+                        />
                       )}
                     </div>
                   );
