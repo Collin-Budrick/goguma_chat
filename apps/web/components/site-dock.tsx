@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, RefObject } from "react";
+import type { RefObject } from "react";
 import {
   startTransition,
   useCallback,
@@ -18,22 +18,12 @@ import {
   useTransform,
   type MotionValue,
 } from "framer-motion";
-import {
-  CircleUserRound,
-  Home,
-  Layers,
-  LayoutDashboard,
-  Megaphone,
-  MessageSquare,
-  Settings2,
-  SlidersHorizontal,
-  Users,
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
+import { isLinkItem, resolveDock, type DockNavItem } from "./site-dock/navigation";
 import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
 import { PreferenceToggle, type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
@@ -44,114 +34,6 @@ import {
   loadDisplaySettings,
   persistDisplaySettings,
 } from "@/lib/display-settings";
-
-type DockLinkItem = {
-  type: "link";
-  href: string;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  match?: (path: string) => boolean;
-};
-
-type DockActionItem = {
-  type: "action";
-  id: "preferences";
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
-type DockNavItem = DockLinkItem | DockActionItem;
-
-type DockLinkDefinition = Omit<DockLinkItem, "label"> & {
-  labelKey: string;
-};
-
-type DockActionDefinition = Omit<DockActionItem, "label"> & {
-  labelKey: string;
-};
-
-type DockNavDefinition = DockLinkDefinition | DockActionDefinition;
-
-function isLinkItem(item: DockNavItem): item is DockLinkItem {
-  return item.type === "link";
-}
-
-const marketingDock: DockNavDefinition[] = [
-  {
-    type: "link",
-    href: "/",
-    labelKey: "nav.marketing.home",
-    icon: Home,
-    match: (path) => path === "/",
-  },
-  {
-    type: "link",
-    href: "/login",
-    labelKey: "nav.marketing.account",
-    icon: CircleUserRound,
-    match: (path) => path.startsWith("/login") || path.startsWith("/signup"),
-  },
-  {
-    type: "action",
-    id: "preferences",
-    labelKey: "nav.shared.display",
-    icon: Settings2,
-  },
-];
-
-const appDock: DockNavDefinition[] = [
-  {
-    type: "link",
-    href: "/app/dashboard",
-    labelKey: "nav.app.overview",
-    icon: LayoutDashboard,
-  },
-  {
-    type: "link",
-    href: "/app/chat",
-    labelKey: "nav.app.chats",
-    icon: MessageSquare,
-  },
-  {
-    type: "link",
-    href: "/app/contacts",
-    labelKey: "nav.app.contacts",
-    icon: Users,
-  },
-  {
-    type: "link",
-    href: "/app/settings",
-    labelKey: "nav.app.settings",
-    icon: Settings2,
-  },
-  {
-    type: "link",
-    href: "/profile",
-    labelKey: "nav.app.profile",
-    icon: CircleUserRound,
-  },
-];
-
-const adminDock: DockNavDefinition[] = [
-  {
-    type: "link",
-    href: "/admin",
-    labelKey: "nav.admin.console",
-    icon: LayoutDashboard,
-  },
-  {
-    type: "link",
-    href: "/admin/push",
-    labelKey: "nav.admin.broadcasts",
-    icon: Megaphone,
-  },
-  {
-    type: "link",
-    href: "/admin/users",
-    labelKey: "nav.admin.roster",
-    icon: Layers,
-  },
-];
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
@@ -426,22 +308,6 @@ function useDockContrast(ref: RefObject<HTMLElement>): ContrastTheme {
     sampler.getSnapshot,
     sampler.getServerSnapshot,
   );
-}
-
-function resolveDock(
-  pathname: string,
-  resolveLabel: (key: string) => string,
-): DockNavItem[] {
-  const hydrate = (items: DockNavDefinition[]) =>
-    items.map((item) => ({
-      ...item,
-      label: resolveLabel(item.labelKey),
-    }));
-  if (pathname.startsWith("/admin")) return hydrate(adminDock);
-  if (pathname.startsWith("/app") || pathname.startsWith("/profile")) {
-    return hydrate(appDock);
-  }
-  return hydrate(marketingDock);
 }
 
 function DockItem({
