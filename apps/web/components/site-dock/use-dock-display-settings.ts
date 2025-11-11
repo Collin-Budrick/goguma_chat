@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   DEFAULT_DISPLAY_SETTINGS,
   DISPLAY_SETTINGS_EVENT,
   loadDisplaySettings,
+  persistDisplaySettings,
   type DisplaySettings,
 } from "@/lib/display-settings";
+import { type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
 
-export function useDisplaySettingsState() {
+export function useDockDisplaySettings() {
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
     () => DEFAULT_DISPLAY_SETTINGS,
   );
@@ -37,5 +39,26 @@ export function useDisplaySettingsState() {
     return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);
   }, []);
 
-  return [displaySettings, setDisplaySettings] as const;
+  const updateDisplaySettings = useCallback(
+    (updater: (prev: DisplaySettings) => DisplaySettings) => {
+      setDisplaySettings((prev) => {
+        const next = updater(prev);
+        persistDisplaySettings(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const userPrefersLightTheme = displaySettings.theme === "light";
+  const preferenceToggleTheme: PreferenceToggleTheme = userPrefersLightTheme
+    ? "light"
+    : "dark";
+
+  return {
+    displaySettings,
+    updateDisplaySettings,
+    userPrefersLightTheme,
+    preferenceToggleTheme,
+  } as const;
 }

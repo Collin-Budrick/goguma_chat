@@ -11,17 +11,16 @@ import { DockItem } from "./site-dock/dock-item";
 import { isLinkItem, resolveDock, type DockNavItem } from "./site-dock/navigation";
 import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
-import { PreferenceToggle, type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
+import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { useBodyLightTheme } from "./site-dock/use-body-light-theme";
 import {
   useDockContrast,
   type ContrastTheme,
 } from "./site-dock/use-dock-contrast";
-import { useDisplaySettingsState } from "./site-dock/use-display-settings-state";
 import { useDockMounted } from "./site-dock/use-dock-mounted";
 import { useDockScrollState } from "./site-dock/use-dock-scroll-state";
 import { usePreferencePanel } from "./site-dock/use-preference-panel";
-import { DisplaySettings, persistDisplaySettings } from "@/lib/display-settings";
+import { useDockDisplaySettings } from "./site-dock/use-dock-display-settings";
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
@@ -106,12 +105,15 @@ export default function SiteDock() {
   const scrolled = useDockScrollState();
   const mounted = useDockMounted();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const [displaySettings, setDisplaySettings] = useDisplaySettingsState();
-  const userPrefersLightTheme = displaySettings.theme === "light";
+  const {
+    displaySettings,
+    updateDisplaySettings,
+    userPrefersLightTheme,
+    preferenceToggleTheme,
+  } = useDockDisplaySettings();
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
   const panelTheme = useDockContrast(dockPanelRef);
   const isLightTheme = panelTheme === "light";
-  const preferenceToggleTheme: PreferenceToggleTheme = displaySettings.theme === "light" ? "light" : "dark";
   const panelTitle = dockT("panel.title");
   const closeLabel = dockT("panel.close");
   const preferenceCopy = {
@@ -132,17 +134,6 @@ export default function SiteDock() {
       description: dockT("preferences.language.description"),
     },
   };
-  const updateDisplaySettings = useCallback(
-    (updater: (prev: DisplaySettings) => DisplaySettings) => {
-      setDisplaySettings((prev) => {
-        const next = updater(prev);
-        persistDisplaySettings(next);
-        return next;
-      });
-    },
-    [setDisplaySettings],
-  );
-
   const popoverToneClasses = isLightTheme
     ? "border-white/50 text-slate-900"
     : "border-white/15 text-white";
