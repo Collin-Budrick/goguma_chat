@@ -92,6 +92,8 @@
         "app": {
           "overview": "라운지",
           "chats": "채팅",
+          "contacts": "연락처",
+          "settings": "설정",
           "profile": "나"
         },
         "admin": {

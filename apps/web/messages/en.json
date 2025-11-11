@@ -92,6 +92,8 @@
         "app": {
           "overview": "Lounge",
           "chats": "Chats",
+          "contacts": "Contacts",
+          "settings": "Settings",
           "profile": "Me"
         },
         "admin": {

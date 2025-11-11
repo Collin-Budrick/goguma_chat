@@ -26,6 +26,8 @@ import {
   Megaphone,
   MessageSquare,
   Settings2,
+  SlidersHorizontal,
+  Users,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -103,10 +105,22 @@ const appDock: DockNavDefinition[] = [
     icon: MessageSquare,
   },
   {
+    type: "link",
+    href: "/app/contacts",
+    labelKey: "nav.app.contacts",
+    icon: Users,
+  },
+  {
+    type: "link",
+    href: "/app/settings",
+    labelKey: "nav.app.settings",
+    icon: Settings2,
+  },
+  {
     type: "action",
     id: "preferences",
     labelKey: "nav.shared.display",
-    icon: Settings2,
+    icon: SlidersHorizontal,
   },
   {
     type: "link",
