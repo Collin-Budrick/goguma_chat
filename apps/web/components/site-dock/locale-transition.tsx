@@ -15,7 +15,7 @@ const localeDisplayNames: Record<Locale, string> = {
   ko: "한국어",
 };
 
-type LocaleTransitionPayload = {
+export type LocaleTransitionPayload = {
   locale?: Locale;
   words?: string[];
   timestamp?: number;

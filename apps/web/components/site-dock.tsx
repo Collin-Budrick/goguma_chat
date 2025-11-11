@@ -24,22 +24,21 @@ import { useTransitionDirection } from "./transition-context";
 import { isLinkItem, resolveDock, type DockNavItem } from "./site-dock/navigation";
 import { type Locale } from "@/i18n/routing";
 import { PreferenceToggle, type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
-import {
-  DisplaySettings,
-  DISPLAY_SETTINGS_EVENT,
-  DEFAULT_DISPLAY_SETTINGS,
-  loadDisplaySettings,
-  persistDisplaySettings,
-} from "@/lib/display-settings";
+import { DisplaySettings, persistDisplaySettings } from "@/lib/display-settings";
 import {
   LocaleFlipOverlay,
   getStoredLocaleTransition,
   scheduleLocaleTransition,
 } from "./site-dock/locale-transition";
+import { useBodyLightTheme } from "./site-dock/use-body-light-theme";
 import {
   useDockContrast,
   type ContrastTheme,
 } from "./site-dock/use-dock-contrast";
+import { useDisplaySettingsState } from "./site-dock/use-display-settings-state";
+import { useDockMounted } from "./site-dock/use-dock-mounted";
+import { useDockScrollState } from "./site-dock/use-dock-scroll-state";
+import { usePreferencePanel } from "./site-dock/use-preference-panel";
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
@@ -165,10 +164,10 @@ export default function SiteDock() {
     () => resolveDock(pathname, (key) => dockT(key)),
     [pathname, dockT],
   );
-  const [scrolled, setScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const scrolled = useDockScrollState();
+  const mounted = useDockMounted();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
+  const [displaySettings, setDisplaySettings] = useDisplaySettingsState();
   const userPrefersLightTheme = displaySettings.theme === "light";
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
   const panelTheme = useDockContrast(dockPanelRef);
@@ -209,7 +208,13 @@ export default function SiteDock() {
     ? "border-white/50 text-slate-900"
     : "border-white/15 text-white";
   const preferencesRef = useRef<HTMLDivElement | null>(null);
-  const previousPathnameRef = useRef(pathname);
+  const closePreferences = useCallback(() => setPreferencesOpen(false), [setPreferencesOpen]);
+  usePreferencePanel({
+    open: preferencesOpen,
+    pathname,
+    onClose: closePreferences,
+    panelRef: preferencesRef,
+  });
   const { setDirection } = useTransitionDirection();
   const initialTransition = useMemo(() => getStoredLocaleTransition(), []);
   const [pendingLocale, setPendingLocale] = useState<Locale | null>(initialTransition?.locale ?? null);
@@ -217,89 +222,7 @@ export default function SiteDock() {
     initialTransition?.words ?? null,
   );
   const localeToggleValue = (pendingLocale ?? locale) === "ko";
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = loadDisplaySettings();
-    setDisplaySettings(stored);
-
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<DisplaySettings>).detail;
-      setDisplaySettings((prev) => {
-        if (
-          prev.magnify === detail.magnify &&
-          prev.showLabels === detail.showLabels &&
-          prev.theme === detail.theme
-        ) {
-          return prev;
-        }
-        return detail;
-      });
-    };
-    window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
-    return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (userPrefersLightTheme) {
-      document.body.classList.add("theme-light");
-    } else {
-      document.body.classList.remove("theme-light");
-    }
-
-    return () => {
-      document.body.classList.remove("theme-light");
-    };
-  }, [userPrefersLightTheme]);
-
-  useEffect(() => {
-    if (!preferencesOpen) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!preferencesRef.current) return;
-      if (!preferencesRef.current.contains(event.target as Node)) {
-        setPreferencesOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreferencesOpen(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [preferencesOpen]);
-
-  useEffect(() => {
-    if (!preferencesOpen) {
-      previousPathnameRef.current = pathname;
-      return;
-    }
-    if (previousPathnameRef.current === pathname) return;
-
-    const frame = requestAnimationFrame(() => setPreferencesOpen(false));
-    previousPathnameRef.current = pathname;
-    return () => cancelAnimationFrame(frame);
-  }, [pathname, preferencesOpen]);
+  useBodyLightTheme(userPrefersLightTheme);
 
   const mouseX = useMotionValue<number>(Infinity);
   const hover = useMotionValue<number>(0);
@@ -369,7 +292,7 @@ export default function SiteDock() {
       return;
     }
 
-    setPreferencesOpen(false);
+    closePreferences();
     const href = item.href;
     const targetIndex = indexForPath(dockItems, href);
     let dir: 1 | -1 = 1;
