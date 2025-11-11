@@ -38,7 +38,7 @@ export function PreferenceToggle({
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`relative flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition `}
+      className={`relative flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${containerClasses}`}
       role="switch"
       aria-checked={value}
     >
@@ -47,12 +47,12 @@ export function PreferenceToggle({
         <span className={descriptionClasses}>{description}</span>
       </span>
       <span
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors `}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${trackClasses}`}
       >
         <motion.span
           layout
           transition={{ type: "spring", stiffness: 520, damping: 32 }}
-          className={`absolute left-1 top-1 h-4 w-4 rounded-full transition-colors `}
+          className={`absolute left-1 top-1 h-4 w-4 rounded-full transition-colors ${thumbClasses}`}
           style={{ x: value ? 18 : 0 }}
         />
       </span>
