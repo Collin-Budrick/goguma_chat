@@ -125,12 +125,6 @@ const appDock: DockNavDefinition[] = [
     icon: Settings2,
   },
   {
-    type: "action",
-    id: "preferences",
-    labelKey: "nav.shared.display",
-    icon: SlidersHorizontal,
-  },
-  {
     type: "link",
     href: "/profile",
     labelKey: "nav.app.profile",
