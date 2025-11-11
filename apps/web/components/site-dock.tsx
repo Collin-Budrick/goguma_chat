@@ -36,7 +36,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "./transition-context";
 import { FlipWords } from "@/components/ui/flip-words";
 import { type Locale } from "@/i18n/routing";
-import { PreferenceToggle } from "@/components/ui/preference-toggle";
+import { PreferenceToggle, type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
 import {
   DisplaySettings,
   DISPLAY_SETTINGS_EVENT,
@@ -618,6 +618,7 @@ export default function SiteDock() {
   const dockPanelRef = useRef<HTMLDivElement | null>(null);
   const panelTheme = useDockContrast(dockPanelRef);
   const isLightTheme = panelTheme === "light";
+  const preferenceToggleTheme: PreferenceToggleTheme = displaySettings.theme === "light" ? "light" : "dark";
   const panelTitle = dockT("panel.title");
   const closeLabel = dockT("panel.close");
   const preferenceCopy = {
@@ -958,7 +959,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.magnify.label}
                                   description={preferenceCopy.magnify.description}
                                   value={displaySettings.magnify}
-                                  theme={panelTheme}
+                                  theme={preferenceToggleTheme}
                                   onChange={(value) =>
                                     updateDisplaySettings((prev) => ({ ...prev, magnify: value }))
                                   }
@@ -967,7 +968,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.labels.label}
                                   description={preferenceCopy.labels.description}
                                   value={displaySettings.showLabels}
-                                  theme={panelTheme}
+                                  theme={preferenceToggleTheme}
                                   onChange={(value) =>
                                     updateDisplaySettings((prev) => ({ ...prev, showLabels: value }))
                                   }
@@ -976,7 +977,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.theme.label}
                                   description={preferenceCopy.theme.description}
                                   value={displaySettings.theme === "light"}
-                                  theme={panelTheme}
+                                  theme={preferenceToggleTheme}
                                   onChange={(enabled) =>
                                     updateDisplaySettings((prev) => ({
                                       ...prev,
@@ -988,7 +989,7 @@ export default function SiteDock() {
                                   label={preferenceCopy.language.label}
                                   description={preferenceCopy.language.description}
                                   value={localeToggleValue}
-                                  theme={panelTheme}
+                                  theme={preferenceToggleTheme}
                                   onChange={(enabled) => switchLocale(enabled ? "ko" : "en")}
                                 />
                               </div>

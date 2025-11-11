@@ -460,3 +460,8 @@ body.theme-light :is(.bg-white):not(:is(
   animation: gradient-shift var(--gradient-duration, 8s) linear infinite;
   background-size: 300% 100%;
 }
+
+/* Preserve dark track color when toggles are enabled in light theme */
+body.theme-light .preference-toggle-track.bg-slate-900 {
+  background-color: #0f172a !important;
+}
