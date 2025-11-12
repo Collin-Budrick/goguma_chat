@@ -586,6 +586,12 @@
         "placeholder": "Write a message…",
         "send": "Send",
         "sending": "Sending…"
+      },
+      "presence": {
+        "readToast": "{name} read your latest messages.",
+        "deliveryToast": "Delivered to {name}.",
+        "readFallback": "Your friend",
+        "deliveryFallback": "your friend"
       }
     },
     "alerts": {
