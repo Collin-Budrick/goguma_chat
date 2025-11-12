@@ -45,6 +45,9 @@ import type {
   ChatUserProfile,
   TypingEvent,
 } from "./types";
+import { mergeMessages, toDate } from "./message-utils";
+import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
+import { usePeerConversationChannel } from "./usePeerConversationChannel";
 
 type ChatThreadProps = {
   viewerId: string;
@@ -60,11 +63,6 @@ type ApiError = {
   error?: string;
 };
 
-type MessageEventPayload = {
-  message: ChatMessage;
-  clientMessageId: string | null;
-};
-
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
 
@@ -73,11 +71,6 @@ function generateClientMessageId() {
     return `client-${crypto.randomUUID()}`;
   }
   return `client-${Math.random().toString(36).slice(2)}`;
-}
-
-function toDate(value: string) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function formatMessageTime(value: string, locale: string) {
@@ -89,21 +82,6 @@ function formatMessageTime(value: string, locale: string) {
   } catch (error) {
     return value;
   }
-}
-
-function mergeMessages(
-  existing: ChatMessage[],
-  incoming: ChatMessage[],
-): ChatMessage[] {
-  const seen = new Map(existing.map((message) => [message.id, message]));
-  for (const message of incoming) {
-    seen.set(message.id, message);
-  }
-  return Array.from(seen.values()).sort(
-    (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime(),
-  );
-}
-
 function createOptimisticMessage(
   conversationId: string,
   viewerId: string,
@@ -192,8 +170,11 @@ export default function ChatThread({
   const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
 
+  const transportHandle = useMessagingTransportHandle();
+  const { sendMessage: sendPeerMessage, subscribeMessages, loadMore, syncHistory } =
+    usePeerConversationChannel({ transport: transportHandle });
+
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const typingActiveRef = useRef(false);
   const pendingThreadControllerRef = useRef<AbortController | null>(null);
@@ -286,7 +267,6 @@ export default function ChatThread({
   useEffect(() => {
     return () => {
       pendingThreadControllerRef.current?.abort();
-      eventSourceRef.current?.close();
     };
   }, []);
 
@@ -496,6 +476,29 @@ export default function ChatThread({
     const controller = new AbortController();
     pendingThreadControllerRef.current = controller;
 
+    const hydrateWithInitial = shouldUseInitialData && initialHydratedRef.current;
+
+    if (hydrateWithInitial && initialConversation?.id) {
+      initialHydratedRef.current = false;
+      setThreadError(null);
+      setSendError(null);
+      setDraft("");
+      setTypingState({});
+      setIsThreadLoading(false);
+      void syncHistory({
+        friendId,
+        limit: MESSAGE_LIMIT,
+        signal: controller.signal,
+        initialConversation,
+        initialMessages,
+        initialCursor: initialCursor ?? null,
+      });
+
+      return () => {
+        controller.abort();
+      };
+    }
+
     setConversation(null);
     setMessages([]);
     setNextCursor(null);
@@ -505,27 +508,18 @@ export default function ChatThread({
     setTypingState({});
     setIsThreadLoading(true);
 
-    fetch("/api/conversations/direct", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ friendId, limit: MESSAGE_LIMIT }),
+    syncHistory({
+      friendId,
+      limit: MESSAGE_LIMIT,
       signal: controller.signal,
     })
-      .then(async (response) => {
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => ({}))) as ApiError;
-          throw new Error(payload.error ?? "Failed to load conversation");
+      .then((result) => {
+        if (controller.signal.aborted) {
+          return;
         }
-        return response.json() as Promise<{
-          conversation: ChatConversation;
-          messages: ChatMessage[];
-          nextCursor: string | null;
-        }>;
-      })
-      .then((payload) => {
-        setConversation(payload.conversation);
-        setMessages(payload.messages);
-        setNextCursor(payload.nextCursor ?? null);
+        setConversation(result.conversation);
+        setMessages(result.messages);
+        setNextCursor(result.nextCursor ?? null);
       })
       .catch((error) => {
         if (controller.signal.aborted) {
@@ -546,7 +540,15 @@ export default function ChatThread({
     return () => {
       controller.abort();
     };
-  }, [friendId, shouldUseInitialData, t]);
+  }, [
+    friendId,
+    shouldUseInitialData,
+    initialConversation,
+    initialMessages,
+    initialCursor,
+    syncHistory,
+    t,
+  ]);
 
   const lastMessageId =
     messages.length > 0 ? messages[messages.length - 1]?.id ?? null : null;
@@ -597,78 +599,72 @@ export default function ChatThread({
   }, [conversation?.id, lastMessageId]);
 
   useEffect(() => {
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
-
     if (!conversation?.id) {
       setTypingState({});
-      typingActiveRef.current = false;
-      if (typingTimeoutRef.current) {
-        window.clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
       return;
     }
 
-    const source = new EventSource(`/api/conversations/${conversation.id}/events`);
-    eventSourceRef.current = source;
+    typingActiveRef.current = false;
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
 
-    source.addEventListener("message", (event) => {
-      try {
-        const payload = JSON.parse(event.data) as MessageEventPayload;
+    const unsubscribe = subscribeMessages(conversation.id, (event) => {
+      if (event.type === "message") {
+        const { message, clientMessageId } = event;
         setMessages((prev) => {
-          const withoutClient = payload.clientMessageId
-            ? prev.filter((message) => message.id !== payload.clientMessageId)
+          const withoutClient = clientMessageId
+            ? prev.filter((item) => item.id !== clientMessageId)
             : prev;
-          return mergeMessages(withoutClient, [payload.message]);
+          return mergeMessages(withoutClient, [message]);
         });
         setConversation((prev) =>
-          prev ? { ...prev, updatedAt: payload.message.createdAt } : prev,
+          prev ? { ...prev, updatedAt: message.createdAt } : prev,
         );
-      } catch (error) {
-        console.error("Failed to parse message event", error);
+        setThreadError(null);
+        return;
+      }
+
+      if (event.type === "history") {
+        if (event.mode === "replace") {
+          setMessages(event.messages);
+        } else {
+          setMessages((prev) => mergeMessages(event.messages, prev));
+        }
+        setNextCursor(event.nextCursor ?? null);
+        setThreadError(null);
+        return;
+      }
+
+      if (event.type === "conversation") {
+        const nextConversation = event.conversation;
+        setConversation(nextConversation);
+        if (nextConversation) {
+          setMessagingMode((prev) =>
+            prev === nextConversation.messagingMode
+              ? prev
+              : nextConversation.messagingMode,
+          );
+        }
+        return;
+      }
+
+      if (event.type === "typing") {
+        setTypingState((prev) => ({
+          ...prev,
+          [event.typing.userId]: toDate(event.typing.expiresAt).getTime(),
+        }));
+        return;
+      }
+
+      if (event.type === "error") {
+        setThreadError(event.error.message);
       }
     });
 
-    source.addEventListener("typing", (event) => {
-      try {
-        const payload = JSON.parse(event.data) as TypingEvent;
-        setTypingState((prev) => ({ ...prev, [payload.userId]: payload.expiresAt }));
-      } catch (error) {
-        console.error("Failed to parse typing event", error);
-      }
-    });
-
-    source.addEventListener("settings", (event) => {
-      try {
-        const payload = JSON.parse(event.data) as {
-          messagingMode: MessagingMode;
-          updatedAt: string;
-          updatedBy?: string;
-        };
-
-        setConversation((prev) =>
-          prev
-            ? {
-                ...prev,
-                messagingMode: payload.messagingMode,
-                updatedAt: payload.updatedAt,
-              }
-            : prev,
-        );
-
-        setMessagingMode((prev) =>
-          prev === payload.messagingMode ? prev : payload.messagingMode,
-        );
-      } catch (error) {
-        console.error("Failed to parse settings event", error);
-      }
-    });
-
-    return () => {
-      source.close();
-    };
-  }, [conversation?.id]);
+    return unsubscribe;
+  }, [conversation?.id, subscribeMessages]);
 
   useEffect(() => {
     if (!conversation?.id) {
@@ -847,31 +843,12 @@ export default function ChatThread({
       sendTyping(false);
 
       try {
-        const response = await fetch("/api/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId,
-            body: content,
-            clientMessageId,
-          }),
+        await sendPeerMessage({
+          conversationId,
+          body: content,
+          clientMessageId,
+          optimisticMessage: optimistic,
         });
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => ({}))) as ApiError;
-          throw new Error(payload.error ?? t("alerts.send"));
-        }
-
-        const payload = (await response.json()) as { message: ChatMessage };
-        setMessages((prev) => {
-          const withoutClient = prev.filter(
-            (message) => message.id !== clientMessageId,
-          );
-          return mergeMessages(withoutClient, [payload.message]);
-        });
-        setConversation((prev) =>
-          prev ? { ...prev, updatedAt: payload.message.createdAt } : prev,
-        );
       } catch (error) {
         console.error("Failed to send message", error);
         setMessages((prev) =>
@@ -883,7 +860,16 @@ export default function ChatThread({
         setIsSending(false);
       }
     },
-    [conversation, conversationId, draft, sendTyping, t, viewerId, viewerParticipant],
+    [
+      conversation,
+      conversationId,
+      draft,
+      sendPeerMessage,
+      sendTyping,
+      t,
+      viewerId,
+      viewerParticipant,
+    ],
   );
 
   const handleLoadMore = useCallback(async () => {
@@ -895,31 +881,20 @@ export default function ChatThread({
     setThreadError(null);
 
     try {
-      const response = await fetch(
-        `/api/conversations/${conversationId}/messages?cursor=${encodeURIComponent(
-          nextCursor,
-        )}&limit=${MESSAGE_LIMIT}`,
-      );
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as ApiError;
-        throw new Error(payload.error ?? "Failed to load messages");
-      }
-
-      const payload = (await response.json()) as {
-        messages: ChatMessage[];
-        nextCursor: string | null;
-      };
-
-      setMessages((prev) => mergeMessages(payload.messages, prev));
-      setNextCursor(payload.nextCursor ?? null);
+      const result = await loadMore({
+        conversationId,
+        cursor: nextCursor,
+        limit: MESSAGE_LIMIT,
+      });
+      setMessages((prev) => mergeMessages(result.messages, prev));
+      setNextCursor(result.nextCursor ?? null);
     } catch (error) {
       console.error("Failed to load more messages", error);
       setThreadError(t("alerts.history"));
     } finally {
       setIsFetchingMore(false);
     }
-  }, [conversationId, isFetchingMore, nextCursor, t]);
+  }, [conversationId, isFetchingMore, loadMore, nextCursor, t]);
 
   const handleSyncHistory = useCallback(async () => {
     if (!friendId || isSyncingHistory) {
@@ -930,35 +905,25 @@ export default function ChatThread({
     setThreadError(null);
 
     try {
-      const response = await fetch("/api/conversations/direct", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendId, limit: MESSAGE_LIMIT }),
+      const result = await syncHistory({
+        friendId,
+        limit: MESSAGE_LIMIT,
       });
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as ApiError;
-        throw new Error(payload.error ?? "Failed to sync conversation");
+      setConversation(result.conversation);
+      setMessages(result.messages);
+      setNextCursor(result.nextCursor ?? null);
+      if (result.conversation?.id) {
+        removeConversationClear(result.conversation.id);
+        setClearedHistoryAt(null);
       }
-
-      const payload = (await response.json()) as {
-        conversation: ChatConversation;
-        messages: ChatMessage[];
-        nextCursor: string | null;
-      };
-
-      setConversation(payload.conversation);
-      setMessages(payload.messages);
-      setNextCursor(payload.nextCursor ?? null);
-      removeConversationClear(payload.conversation.id);
-      setClearedHistoryAt(null);
     } catch (error) {
       console.error("Failed to sync chat history", error);
       setThreadError(t("thread.settings.local.options.syncHistory.error"));
     } finally {
       setIsSyncingHistory(false);
     }
-  }, [friendId, isSyncingHistory, t]);
+  }, [friendId, isSyncingHistory, syncHistory, t]);
 
   const handleClearHistory = useCallback(() => {
     if (!conversationId) {
