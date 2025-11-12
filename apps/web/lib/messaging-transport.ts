@@ -637,6 +637,12 @@ export const createPeerSignalingController = (
     pendingHandshakes.delete(key);
   };
 
+  const isBootstrappingSendError = (error: unknown) => {
+    const normalized = normalizeError(error);
+    const message = typeof normalized.message === "string" ? normalized.message : "";
+    return message.toLowerCase().includes("not connected");
+  };
+
   const attemptHandshakeSend = async (key: string) => {
     const entry = pendingHandshakes.get(key);
     if (!entry) return;
@@ -655,6 +661,16 @@ export const createPeerSignalingController = (
       return;
     }
 
+    const scheduleRetry = (delay: number) => {
+      if (entry.stop()) {
+        clearHandshakeEntry(key);
+        return;
+      }
+      entry.timeoutId = setTimeout(() => {
+        void attemptHandshakeSend(key);
+      }, delay);
+    };
+
     try {
       const frame: PeerHandshakeFrame = {
         type: "handshake",
@@ -662,6 +678,12 @@ export const createPeerSignalingController = (
       };
       await transport.send(JSON.stringify(frame));
     } catch (error) {
+      const initializingState =
+        transport.state === "connecting" || transport.state === "recovering";
+      if (initializingState || isBootstrappingSendError(error)) {
+        scheduleRetry(0);
+        return;
+      }
       console.error("Failed to send peer handshake frame", error);
     }
 
@@ -672,9 +694,7 @@ export const createPeerSignalingController = (
       return;
     }
 
-    entry.timeoutId = setTimeout(() => {
-      void attemptHandshakeSend(key);
-    }, HANDSHAKE_RETRY_INTERVAL_MS);
+    scheduleRetry(HANDSHAKE_RETRY_INTERVAL_MS);
   };
 
   const evaluateHandshakeQueue = () => {

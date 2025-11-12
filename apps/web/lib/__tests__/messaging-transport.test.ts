@@ -530,4 +530,133 @@ describe("initializeMessagingTransport", () => {
     await controller.teardown();
     signalingController.setActiveTransport(null);
   });
+
+  it(
+    "retries handshake frames when the transport send rejects during bootstrap",
+    async () => {
+      const signalingController = createPeerSignalingController();
+      signalingController.setRole("host");
+      const manualDependencies = signalingController.createDependencies();
+
+      const handshakeFrames: PeerHandshakeFrame["handshake"][] = [];
+      let currentHandle: TransportHandle | null = null;
+
+      let bootstrapFailures = 1;
+
+      const dependencies: TransportDependencies = {
+        signaling: manualDependencies.signaling,
+        async createWebRTC({ emitMessage, signal, options }) {
+          const sessionId =
+            typeof options?.metadata?.peerSessionId === "string"
+              ? options.metadata.peerSessionId
+              : "default-peer-session";
+
+          const remoteSession = await createPeerCryptoSession({
+            sessionId,
+            onPlaintext: (payload) => {
+              if (typeof payload === "string") {
+                try {
+                  const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+                  if (parsed?.type === "handshake") {
+                    handshakeFrames.push(parsed.handshake);
+                  }
+                } catch {
+                  // Ignore parse failures
+                }
+              }
+              emitMessage(payload);
+            },
+          });
+
+          remoteSession.attachTransmitter(async (payload) => {
+            emitMessage(payload);
+          });
+
+          const abortHandler = () => {
+            void remoteSession.teardown();
+          };
+
+          signal.addEventListener("abort", abortHandler, { once: true });
+
+          void manualDependencies.signaling?.negotiate(
+            { type: "offer", sdp: "bootstrap-offer" },
+            options,
+          );
+
+          void remoteSession
+            .whenReady()
+            .then(() => {
+              signal.removeEventListener("abort", abortHandler);
+              return remoteSession.send("connected");
+            })
+            .catch(() => undefined);
+
+          return {
+            async send(payload) {
+              if (typeof payload === "string") {
+                try {
+                  const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+                  if (parsed?.type === "handshake") {
+                    if (bootstrapFailures > 0) {
+                      bootstrapFailures -= 1;
+                      throw new Error("Transport is not connected");
+                    }
+                    return;
+                  }
+                } catch {
+                  // Ignore parse failures
+                }
+              }
+
+              await remoteSession.receive(payload);
+            },
+            async close() {
+              signal.removeEventListener("abort", abortHandler);
+              await remoteSession.teardown();
+            },
+          };
+        },
+      };
+
+      const controller = initializeMessagingTransport({
+        dependencies,
+        connectOptions: { metadata: { peerSessionId: "bootstrap-session" } },
+      });
+
+      await Promise.resolve();
+      currentHandle = controller.transport;
+      expect(currentHandle).not.toBeNull();
+
+      if (!currentHandle) {
+        throw new Error("Transport handle was not created");
+      }
+
+      signalingController.setActiveTransport(currentHandle);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Handshake frame was not delivered"));
+        }, 7_000);
+
+        const verify = () => {
+          if (handshakeFrames.length > 0 && currentHandle?.state === "connected") {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 25);
+        };
+
+        verify();
+      });
+
+      expect(handshakeFrames.length).toBeGreaterThan(0);
+      expect(bootstrapFailures).toBe(0);
+      expect(currentHandle.state).toBe("connected");
+
+      await controller.teardown();
+      signalingController.setActiveTransport(null);
+    },
+    10_000,
+  );
 });
