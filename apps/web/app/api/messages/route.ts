@@ -17,7 +17,17 @@ type SendMessagePayload = {
   clientMessageId?: string;
 };
 
+const LEGACY_MESSAGES_DISABLED = process.env.NODE_ENV === "production";
+
 export async function POST(request: Request) {
+  if (LEGACY_MESSAGES_DISABLED) {
+    throw new Error("Legacy /api/messages route is disabled in production builds.");
+  }
+
+  return handlePost(request);
+}
+
+async function handlePost(request: Request) {
   const session = await auth();
 
   if (!session?.user?.id) {
