@@ -858,7 +858,13 @@ export const createPeerSignalingController = (
       });
     },
     markConnected() {
-      commitState({ connected: true, error: null, lastUpdated: now() });
+      commitState({
+        connected: true,
+        error: null,
+        inviteExpiresAt: null,
+        answerExpiresAt: null,
+        lastUpdated: now(),
+      });
     },
     markDisconnected() {
       commitState({ connected: false, lastUpdated: now() });
@@ -875,6 +881,9 @@ export const createPeerSignalingController = (
     createDependencies,
     decodeToken: (token) => deserializePeerToken(token),
     expireLocalInvite() {
+      if (currentState.connected) {
+        return;
+      }
       if (currentState.localInvite) {
         resetNegotiation(new Error("Peer invite expired"));
       }
@@ -888,6 +897,9 @@ export const createPeerSignalingController = (
       });
     },
     expireLocalAnswer() {
+      if (currentState.connected) {
+        return;
+      }
       commitState({
         localAnswer: null,
         answerExpiresAt: null,
