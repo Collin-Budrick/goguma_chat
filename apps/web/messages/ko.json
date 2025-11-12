@@ -504,40 +504,41 @@
     }
   },
   "Chat": {
-    "sidebar": {
-      "title": "방",
-      "new": "새 방"
+    "roster": {
+      "title": "대화 목록",
+      "new": "새 채팅",
+      "searchPlaceholder": "친구 검색…",
+      "createHint": "친구를 선택해 1:1 채팅을 시작하세요.",
+      "empty": "연락처에서 친구를 추가하면 바로 채팅을 시작할 수 있어요.",
+      "emptyPreview": "아직 메시지가 없어요",
+      "lastActive": "최근 활동 {time}"
     },
-    "threads": {
-      "shipping": {
-        "preview": "야식 라면 모임?",
-        "time": "2분 전"
+    "thread": {
+      "header": "1:1 채팅",
+      "directWith": "{name}님과의 대화",
+      "me": "나",
+      "loading": "대화를 불러오는 중…",
+      "empty": "첫 메시지를 보내 대화를 시작해 보세요.",
+      "placeholder": {
+        "title": "대화를 선택하세요",
+        "body": "목록에서 친구를 선택하면 메시지가 열려요."
       },
-      "webhook": {
-        "preview": "도쿄 사진 공유해!!",
-        "time": "7분 전"
+      "transport": {
+        "label": "전송 방식",
+        "mode": {
+          "progressive": "Progressive",
+          "udp": "UDP"
+        }
       },
-      "handoff": {
-        "preview": "게임 큐 10분 뒤?",
-        "time": "12분 전"
+      "composer": {
+        "placeholder": "메시지를 작성해 보세요…",
+        "send": "보내기",
+        "sending": "보내는 중…"
       }
     },
-    "activeThread": {
-      "participant": "에이브리",
-      "topic": "오사카 봄 여행 계획",
-      "badges": {
-        "transcript": "대화록",
-        "macros": "매크로"
-      }
-    },
-    "messages": {
-      "customerGreeting": "도톤보리 근처 심야 빙수 카페 찾았는데 갈 사람?",
-      "agentUpdate": "좋아!! 미나도 먹을 수 있는 비건 옵션 있나? 자리 여섯 개 예약할 수 있을까?",
-      "customerThanks": "메뉴 보니 있고 전화하면 룸 예약도 가능래. 번호 넣을게!"
-    },
-    "composer": {
-      "placeholder": "메시지를 남겨 보세요…",
-      "send": "보내기"
+    "alerts": {
+      "history": "대화를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "send": "메시지를 보내지 못했어요. 다시 시도해 주세요."
     }
   },
   "Settings": {
