@@ -14,6 +14,7 @@ import {
 } from "@/lib/display-settings";
 import {
   type MessagingMode,
+  DEFAULT_MESSAGING_MODE,
   MESSAGING_MODE_EVENT,
   loadMessagingMode,
   persistMessagingMode,
@@ -30,7 +31,9 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setDirection } = useTransitionDirection();
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
-  const [messagingMode, setMessagingMode] = useState<MessagingMode>(() => loadMessagingMode());
+  const [messagingMode, setMessagingMode] = useState<MessagingMode>(
+    () => DEFAULT_MESSAGING_MODE,
+  );
 
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [motion, setMotion] = useState(true);
@@ -78,6 +81,9 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    const stored = loadMessagingMode();
+    setMessagingMode((prev) => (prev === stored ? prev : stored));
 
     const handler = (event: Event) => {
       const next = (event as CustomEvent<MessagingMode>).detail;
