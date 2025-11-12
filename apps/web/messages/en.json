@@ -587,13 +587,20 @@
         "send": "Send",
         "sending": "Sending…"
       },
-      "presence": {
-        "readToast": "{name} read your latest messages.",
-        "deliveryToast": "Delivered to {name}.",
-        "readFallback": "Your friend",
-        "deliveryFallback": "your friend"
-      }
+    "presence": {
+      "readToast": "{name} read your latest messages.",
+      "deliveryToast": "Delivered to {name}.",
+      "readFallback": "Your friend",
+      "deliveryFallback": "your friend"
     },
+    "connection": {
+      "degraded": "We’re having trouble reaching your peer. Trying to reconnect…",
+      "recovering": "Re-establishing the channel…",
+      "reconnecting": "Connection lost. Attempting to reconnect…",
+      "restored": "Connection restored.",
+      "failed": "The peer connection dropped. We’ll keep retrying."
+    }
+  },
     "alerts": {
       "history": "We couldn’t load that conversation. Try again in a moment.",
       "send": "We couldn’t send that message. Try again.",

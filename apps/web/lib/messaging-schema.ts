@@ -127,6 +127,16 @@ export type PeerPresenceFrame = {
 };
 
 /**
+ * Lightweight keepalive frame exchanged periodically so peers can detect
+ * stalled transports and trigger reconnection flows.
+ */
+export type PeerHeartbeatFrame = {
+  type: "heartbeat";
+  kind: "ping" | "pong";
+  timestamp: number;
+};
+
+/**
  * Union describing all frames that can be received over the peer transport
  * channel.
  */
@@ -138,4 +148,5 @@ export type PeerTransportIncomingFrame =
   | PeerConversationFrame
   | PeerPresenceFrame
   | PeerLegacyTypingFrame
-  | PeerErrorFrame;
+  | PeerErrorFrame
+  | PeerHeartbeatFrame;

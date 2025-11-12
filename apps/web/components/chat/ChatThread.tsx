@@ -172,15 +172,29 @@ export default function ChatThread({
   const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
   const [presenceToast, setPresenceToast] = useState<string | null>(null);
+  const [connectionNotice, setConnectionNotice] = useState<
+    | { tone: "warning" | "success" | "error"; message: string }
+    | null
+  >(null);
 
-  const transportHandle = useMessagingTransportHandle();
+  const {
+    transport: transportHandle,
+    state: transportState,
+    lastDegradedAt: transportDegradedAt,
+    lastRecoveredAt: transportRecoveredAt,
+    lastError: transportError,
+    restart: restartTransport,
+  } = useMessagingTransportHandle();
   const {
     sendMessage: sendPeerMessage,
     subscribeMessages,
     loadMore,
     syncHistory,
     presence,
-  } = usePeerConversationChannel({ transport: transportHandle });
+  } = usePeerConversationChannel({
+    transport: transportHandle,
+    onHeartbeatTimeout: restartTransport,
+  });
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -195,6 +209,7 @@ export default function ChatThread({
   const lastConversationReadKeyRef = useRef<string | null>(null);
   const settingsPanelRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const connectionNoticeTimeoutRef = useRef<number | null>(null);
 
   const playPresenceChime = useCallback(() => {
     if (typeof window === "undefined") {
@@ -833,6 +848,77 @@ export default function ChatThread({
     };
   }, [presenceToast]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return () => undefined;
+    }
+
+    if (connectionNoticeTimeoutRef.current !== null) {
+      window.clearTimeout(connectionNoticeTimeoutRef.current);
+      connectionNoticeTimeoutRef.current = null;
+    }
+
+    let timeout: number | null = null;
+
+    const clearPending = () => {
+      if (timeout !== null) {
+        window.clearTimeout(timeout);
+        timeout = null;
+      }
+      if (connectionNoticeTimeoutRef.current !== null) {
+        window.clearTimeout(connectionNoticeTimeoutRef.current);
+        connectionNoticeTimeoutRef.current = null;
+      }
+    };
+
+    if (transportState === "degraded") {
+      setConnectionNotice({
+        tone: "warning",
+        message: t("thread.connection.degraded"),
+      });
+    } else if (transportState === "recovering") {
+      setConnectionNotice({
+        tone: "warning",
+        message: t("thread.connection.recovering"),
+      });
+    } else if (transportState === "closed") {
+      setConnectionNotice({
+        tone: "warning",
+        message: t("thread.connection.reconnecting"),
+      });
+    } else if (transportState === "error") {
+      setConnectionNotice({
+        tone: "error",
+        message: transportError?.message ?? t("thread.connection.failed"),
+      });
+    } else if (transportState === "connected" && transportRecoveredAt) {
+      setConnectionNotice({
+        tone: "success",
+        message: t("thread.connection.restored"),
+      });
+      timeout = window.setTimeout(() => {
+        setConnectionNotice(null);
+        if (connectionNoticeTimeoutRef.current !== null) {
+          window.clearTimeout(connectionNoticeTimeoutRef.current);
+          connectionNoticeTimeoutRef.current = null;
+        }
+      }, 4_000);
+      connectionNoticeTimeoutRef.current = timeout;
+    } else if (!transportDegradedAt) {
+      setConnectionNotice(null);
+    }
+
+    return () => {
+      clearPending();
+    };
+  }, [
+    t,
+    transportDegradedAt,
+    transportError,
+    transportRecoveredAt,
+    transportState,
+  ]);
+
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
     [conversation, viewerId, viewerProfile],
@@ -1315,6 +1401,21 @@ export default function ChatThread({
               <p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {threadError}
               </p>
+            ) : null}
+
+            {connectionNotice ? (
+              <div
+                className={cn(
+                  "mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm",
+                  connectionNotice.tone === "warning"
+                    ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
+                    : connectionNotice.tone === "error"
+                    ? "border-red-400/40 bg-red-500/10 text-red-100"
+                    : "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
+                )}
+              >
+                {connectionNotice.message}
+              </div>
             ) : null}
 
             {presenceToast ? (
