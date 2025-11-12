@@ -254,6 +254,654 @@ export type TransportDependencies = {
   textEncoder?: () => TextEncoder;
 };
 
+export type PeerSignalingRole = "host" | "guest";
+
+export type PeerSignalingSnapshot = {
+  role: PeerSignalingRole | null;
+  sessionId: string;
+  localInvite: string | null;
+  localAnswer: string | null;
+  remoteInvite: string | null;
+  remoteAnswer: string | null;
+  awaitingOffer: boolean;
+  awaitingAnswer: boolean;
+  connected: boolean;
+  error: string | null;
+  inviteExpiresAt: number | null;
+  answerExpiresAt: number | null;
+  lastUpdated: number | null;
+};
+
+type PeerSignalingListener = (snapshot: PeerSignalingSnapshot) => void;
+
+type PeerSignalingTokenKind = "offer" | "answer";
+
+type PeerSignalingTokenPayload = {
+  type: "goguma-peer-invite";
+  kind: PeerSignalingTokenKind;
+  description: RTCSessionDescriptionInit;
+  sessionId: string;
+  roomId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: number;
+};
+
+type PeerNegotiationEntry = {
+  resolve: (description: RTCSessionDescriptionInit) => void;
+  reject: (error: Error) => void;
+};
+
+type PersistentPeerState = {
+  role: PeerSignalingRole | null;
+  sessionId: string;
+  localInvite: string | null;
+  localAnswer: string | null;
+  remoteInvite: string | null;
+  remoteAnswer: string | null;
+  connected: boolean;
+  inviteExpiresAt: number | null;
+  answerExpiresAt: number | null;
+  lastUpdated: number | null;
+};
+
+const PEER_SIGNALING_STORAGE_KEY = "peer-signaling-state";
+
+const INVITE_TTL_MS = 10 * 60 * 1000;
+
+const now = () => Date.now();
+
+const encodeBase64 = (value: string) => {
+  if (typeof window === "undefined") {
+    return Buffer.from(value, "utf-8").toString("base64");
+  }
+  return window.btoa(unescape(encodeURIComponent(value)));
+};
+
+const decodeBase64 = (value: string) => {
+  if (typeof window === "undefined") {
+    return Buffer.from(value, "base64").toString("utf-8");
+  }
+  return decodeURIComponent(escape(window.atob(value)));
+};
+
+const createSessionId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+
+const serializePeerToken = (payload: PeerSignalingTokenPayload) =>
+  encodeBase64(JSON.stringify(payload));
+
+const deserializePeerToken = (token: string): PeerSignalingTokenPayload => {
+  try {
+    const raw = decodeBase64(token.trim());
+    const parsed = JSON.parse(raw) as PeerSignalingTokenPayload;
+    if (parsed?.type !== "goguma-peer-invite") {
+      throw new Error("Invalid peer signaling token");
+    }
+    if (parsed.kind !== "offer" && parsed.kind !== "answer") {
+      throw new Error("Unsupported peer signaling token kind");
+    }
+    if (!parsed.description || typeof parsed.description.sdp !== "string") {
+      throw new Error("Peer signaling token is missing SDP");
+    }
+    return parsed;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to parse peer signaling token";
+    throw new Error(message);
+  }
+};
+
+const loadPersistentPeerState = (storageKey: string): PersistentPeerState | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as PersistentPeerState;
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      role: parsed.role ?? null,
+      sessionId: parsed.sessionId ?? createSessionId(),
+      localInvite: parsed.localInvite ?? null,
+      localAnswer: parsed.localAnswer ?? null,
+      remoteInvite: parsed.remoteInvite ?? null,
+      remoteAnswer: parsed.remoteAnswer ?? null,
+      connected: Boolean(parsed.connected),
+      inviteExpiresAt: parsed.inviteExpiresAt ?? null,
+      answerExpiresAt: parsed.answerExpiresAt ?? null,
+      lastUpdated: parsed.lastUpdated ?? null,
+    } satisfies PersistentPeerState;
+  } catch {
+    return null;
+  }
+};
+
+const persistPeerState = (storageKey: string, state: PersistentPeerState) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    // ignore storage failures
+  }
+};
+
+export type PeerSignalingController = {
+  getSnapshot: () => PeerSignalingSnapshot;
+  subscribe: (listener: PeerSignalingListener) => () => void;
+  setRole: (role: PeerSignalingRole | null) => void;
+  setRemoteInvite: (token: string) => Promise<void>;
+  setRemoteAnswer: (token: string) => Promise<void>;
+  clear: () => void;
+  markConnected: () => void;
+  markDisconnected: () => void;
+  shouldInitialize: () => boolean;
+  createDependencies: () => TransportDependencies;
+  decodeToken: (token: string) => PeerSignalingTokenPayload;
+  expireLocalInvite: () => void;
+  expireLocalAnswer: () => void;
+};
+
+export const createPeerSignalingController = (
+  storageKey: string = PEER_SIGNALING_STORAGE_KEY,
+) => {
+  const listeners = new Set<PeerSignalingListener>();
+  const persistent = loadPersistentPeerState(storageKey);
+
+  let currentState: PeerSignalingSnapshot = {
+    role: persistent?.role ?? null,
+    sessionId: persistent?.sessionId ?? createSessionId(),
+    localInvite: persistent?.localInvite ?? null,
+    localAnswer: persistent?.localAnswer ?? null,
+    remoteInvite: persistent?.remoteInvite ?? null,
+    remoteAnswer: persistent?.remoteAnswer ?? null,
+    awaitingOffer: persistent?.role === "guest" && !persistent?.remoteInvite,
+    awaitingAnswer: false,
+    connected: persistent?.connected ?? false,
+    error: null,
+    inviteExpiresAt: persistent?.inviteExpiresAt ?? null,
+    answerExpiresAt: persistent?.answerExpiresAt ?? null,
+    lastUpdated: persistent?.lastUpdated ?? null,
+  };
+
+  let pendingNegotiation: PeerNegotiationEntry | null = null;
+
+  const notify = () => {
+    listeners.forEach((listener) => {
+      try {
+        listener(currentState);
+      } catch (error) {
+        console.error("Peer signaling listener failed", error);
+      }
+    });
+  };
+
+  const commitState = (update: Partial<PeerSignalingSnapshot>) => {
+    currentState = { ...currentState, ...update };
+    const nextPersistent: PersistentPeerState = {
+      role: currentState.role,
+      sessionId: currentState.sessionId,
+      localInvite: currentState.localInvite,
+      localAnswer: currentState.localAnswer,
+      remoteInvite: currentState.remoteInvite,
+      remoteAnswer: currentState.remoteAnswer,
+      connected: currentState.connected,
+      inviteExpiresAt: currentState.inviteExpiresAt,
+      answerExpiresAt: currentState.answerExpiresAt,
+      lastUpdated: currentState.lastUpdated,
+    };
+    persistPeerState(storageKey, nextPersistent);
+    notify();
+  };
+
+  const resetNegotiation = (error?: Error) => {
+    if (pendingNegotiation) {
+      if (error) {
+        pendingNegotiation.reject(error);
+      } else {
+        pendingNegotiation.reject(
+          new Error("Peer signaling negotiation cancelled before completion"),
+        );
+      }
+    }
+    pendingNegotiation = null;
+  };
+
+  const ensureSession = () => {
+    if (!currentState.sessionId) {
+      commitState({ sessionId: createSessionId() });
+    }
+  };
+
+  const handleOfferCreated = (
+    description: RTCSessionDescriptionInit,
+    connectOptions?: TransportConnectOptions,
+  ) => {
+    ensureSession();
+    const token = serializePeerToken({
+      type: "goguma-peer-invite",
+      kind: "offer",
+      description,
+      sessionId: currentState.sessionId,
+      roomId:
+        typeof connectOptions?.roomId === "string" ? connectOptions.roomId : undefined,
+      metadata: connectOptions?.metadata,
+      createdAt: now(),
+    });
+
+    commitState({
+      localInvite: token,
+      awaitingAnswer: true,
+      inviteExpiresAt: now() + INVITE_TTL_MS,
+      lastUpdated: now(),
+      connected: false,
+      error: null,
+    });
+  };
+
+  const handleAnswerGenerated = (description: RTCSessionDescriptionInit) => {
+    ensureSession();
+    const token = serializePeerToken({
+      type: "goguma-peer-invite",
+      kind: "answer",
+      description,
+      sessionId: currentState.sessionId,
+      roomId: undefined,
+      metadata: undefined,
+      createdAt: now(),
+    });
+
+    commitState({
+      localAnswer: token,
+      awaitingOffer: false,
+      answerExpiresAt: now() + INVITE_TTL_MS,
+      lastUpdated: now(),
+      error: null,
+    });
+  };
+
+  const negotiate = async (
+    offer: RTCSessionDescriptionInit,
+    connectOptions?: TransportConnectOptions,
+  ): Promise<RTCSessionDescriptionInit> => {
+    handleOfferCreated(offer, connectOptions);
+
+    if (currentState.remoteAnswer) {
+      try {
+        const payload = deserializePeerToken(currentState.remoteAnswer);
+        if (payload.kind === "answer") {
+          commitState({ awaitingAnswer: false, error: null });
+          pendingNegotiation = null;
+          return payload.description;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to parse stored answer";
+        commitState({ error: message });
+      }
+    }
+
+    return await new Promise<RTCSessionDescriptionInit>((resolve, reject) => {
+      pendingNegotiation = { resolve, reject };
+    });
+  };
+
+  let controller: PeerSignalingController;
+
+  const createDependencies = (): TransportDependencies => {
+    const createManualWebRTC: NonNullable<TransportDependencies["createWebRTC"]> = async (
+      startOptions,
+    ) => {
+      const { signal, emitMessage, emitError } = startOptions;
+
+      if (typeof RTCPeerConnection !== "function") {
+        throw new TransportUnavailableError("WebRTC is not supported in this environment");
+      }
+
+      const snapshot = controller.getSnapshot();
+      const role = snapshot.role ?? "host";
+      const peer = new RTCPeerConnection({ iceServers: [] });
+
+      const normalize = (value: unknown): Error =>
+        value instanceof Error ? value : new Error(String(value));
+
+      const attachChannel = (channel: RTCDataChannel) => {
+        channel.binaryType = "arraybuffer";
+        channel.addEventListener("message", (event) => emitMessage(event.data));
+        channel.addEventListener("error", (event) => {
+          const errorEvent = event as ErrorEvent;
+          emitError(normalize(errorEvent.error ?? new Error("WebRTC data channel error")));
+        });
+      };
+
+      if (role === "guest") {
+        const state = controller.getSnapshot();
+        if (!state.remoteInvite) {
+          throw new TransportUnavailableError("Missing remote invite for peer signaling");
+        }
+
+        const offerPayload = controller.decodeToken(state.remoteInvite);
+        if (offerPayload.kind !== "offer") {
+          throw new TransportUnavailableError("Remote invite token is not an offer");
+        }
+
+        await peer.setRemoteDescription(offerPayload.description);
+
+        const channelPromise = new Promise<RTCDataChannel>((resolve, reject) => {
+          const handleAbort = () => {
+            peer.ondatachannel = null;
+            reject(createAbortError());
+          };
+
+          signal.addEventListener("abort", handleAbort, { once: true });
+
+          peer.ondatachannel = (event) => {
+            signal.removeEventListener("abort", handleAbort);
+            const channel = event.channel;
+            attachChannel(channel);
+            resolve(channel);
+          };
+        });
+
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        handleAnswerGenerated(answer);
+
+        const channel = await channelPromise;
+
+        await new Promise<void>((resolve, reject) => {
+          if (channel.readyState === "open") {
+            resolve();
+            return;
+          }
+
+          const cleanup = () => {
+            channel.removeEventListener("open", handleOpen);
+            channel.removeEventListener("error", handleError);
+            signal.removeEventListener("abort", handleAbort);
+          };
+
+          const handleOpen = () => {
+            cleanup();
+            resolve();
+          };
+
+          const handleError = (event: Event) => {
+            cleanup();
+            reject(
+              event instanceof ErrorEvent
+                ? event.error ?? new Error("Failed to open WebRTC data channel")
+                : new Error("Failed to open WebRTC data channel"),
+            );
+          };
+
+          const handleAbort = () => {
+            cleanup();
+            reject(createAbortError());
+          };
+
+          channel.addEventListener("open", handleOpen, { once: true });
+          channel.addEventListener("error", handleError, { once: true });
+          signal.addEventListener("abort", handleAbort, { once: true });
+        });
+
+        signal.addEventListener(
+          "abort",
+          () => {
+            try {
+              channel.close();
+            } finally {
+              peer.close();
+            }
+          },
+          { once: true },
+        );
+
+        return {
+          async send(payload) {
+            if (channel.readyState !== "open") {
+              throw new Error("WebRTC data channel is not open");
+            }
+            channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+          },
+          async close() {
+            channel.close();
+            peer.close();
+          },
+        } satisfies DriverConnection;
+      }
+
+      const channel = peer.createDataChannel(
+        typeof startOptions.options?.roomId === "string"
+          ? startOptions.options.roomId
+          : "messaging",
+        { ordered: true },
+      );
+      attachChannel(channel);
+
+      channel.addEventListener("close", () => {
+        emitError(new Error("WebRTC data channel closed"));
+      });
+
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+
+      const answer = await negotiate(offer, startOptions.options);
+      await peer.setRemoteDescription(answer);
+
+      await new Promise<void>((resolve, reject) => {
+        if (signal.aborted) {
+          reject(createAbortError());
+          return;
+        }
+
+        const cleanup = () => {
+          channel.removeEventListener("open", handleOpen);
+          channel.removeEventListener("error", handleError);
+          signal.removeEventListener("abort", handleAbort);
+        };
+
+        const handleOpen = () => {
+          cleanup();
+          resolve();
+        };
+
+        const handleError = (event: Event) => {
+          cleanup();
+          reject(
+            event instanceof ErrorEvent
+              ? event.error ?? new Error("Failed to open WebRTC data channel")
+              : new Error("Failed to open WebRTC data channel"),
+          );
+        };
+
+        const handleAbort = () => {
+          cleanup();
+          reject(createAbortError());
+        };
+
+        if (channel.readyState === "open") {
+          cleanup();
+          resolve();
+          return;
+        }
+
+        channel.addEventListener("open", handleOpen, { once: true });
+        channel.addEventListener("error", handleError, { once: true });
+        signal.addEventListener("abort", handleAbort, { once: true });
+      });
+
+      signal.addEventListener(
+        "abort",
+        () => {
+          try {
+            channel.close();
+          } finally {
+            peer.close();
+          }
+        },
+        { once: true },
+      );
+
+      return {
+        async send(payload) {
+          if (channel.readyState !== "open") {
+            throw new Error("WebRTC data channel is not open");
+          }
+          channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+        },
+        async close() {
+          channel.close();
+          peer.close();
+        },
+      } satisfies DriverConnection;
+    };
+
+    return {
+      udpConnector: undefined,
+      createWebRTC: createManualWebRTC,
+      createWebTransport: async () => {
+        throw new TransportUnavailableError("WebTransport is disabled for peer signaling");
+      },
+      signaling: {
+        negotiate: (offer, options) => negotiate(offer, options),
+        iceServers: [],
+      },
+      webTransportEndpoint: undefined,
+      WebTransportConstructor: undefined,
+    } satisfies TransportDependencies;
+  };
+
+  controller = {
+    getSnapshot: () => currentState,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    setRole(role) {
+      resetNegotiation();
+      commitState({
+        role,
+        sessionId: createSessionId(),
+        localInvite: null,
+        localAnswer: null,
+        remoteInvite: null,
+        remoteAnswer: null,
+        awaitingOffer: role === "guest",
+        awaitingAnswer: false,
+        inviteExpiresAt: null,
+        answerExpiresAt: null,
+        connected: false,
+        error: null,
+        lastUpdated: now(),
+      });
+    },
+    async setRemoteInvite(token: string) {
+      try {
+        const payload = deserializePeerToken(token);
+        if (payload.kind !== "offer") {
+          throw new Error("Provided token is not an offer");
+        }
+        commitState({
+          remoteInvite: token.trim(),
+          awaitingOffer: false,
+          error: null,
+          lastUpdated: now(),
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid remote invite token";
+        commitState({ error: message });
+        throw new Error(message);
+      }
+    },
+    async setRemoteAnswer(token: string) {
+      try {
+        const payload = deserializePeerToken(token);
+        if (payload.kind !== "answer") {
+          throw new Error("Provided token is not an answer");
+        }
+        commitState({
+          remoteAnswer: token.trim(),
+          awaitingAnswer: false,
+          error: null,
+          answerExpiresAt: payload.createdAt + INVITE_TTL_MS,
+          lastUpdated: now(),
+        });
+        if (pendingNegotiation) {
+          pendingNegotiation.resolve(payload.description);
+          pendingNegotiation = null;
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid remote answer token";
+        commitState({ error: message });
+        throw new Error(message);
+      }
+    },
+    clear() {
+      resetNegotiation();
+      commitState({
+        localInvite: null,
+        localAnswer: null,
+        remoteInvite: null,
+        remoteAnswer: null,
+        awaitingOffer: currentState.role === "guest",
+        awaitingAnswer: false,
+        inviteExpiresAt: null,
+        answerExpiresAt: null,
+        connected: false,
+        error: null,
+        lastUpdated: now(),
+      });
+    },
+    markConnected() {
+      commitState({ connected: true, error: null, lastUpdated: now() });
+    },
+    markDisconnected() {
+      commitState({ connected: false, lastUpdated: now() });
+    },
+    shouldInitialize() {
+      if (currentState.role === "host") {
+        return true;
+      }
+      if (currentState.role === "guest") {
+        return Boolean(currentState.remoteInvite);
+      }
+      return false;
+    },
+    createDependencies,
+    decodeToken: (token) => deserializePeerToken(token),
+    expireLocalInvite() {
+      if (currentState.localInvite) {
+        resetNegotiation(new Error("Peer invite expired"));
+      }
+      commitState({
+        localInvite: null,
+        awaitingAnswer: false,
+        inviteExpiresAt: null,
+        connected: false,
+        error: "Peer invite expired. Generate a new invite to continue.",
+        lastUpdated: now(),
+      });
+    },
+    expireLocalAnswer() {
+      commitState({
+        localAnswer: null,
+        answerExpiresAt: null,
+        error: "Peer answer expired. Re-apply the remote invite to continue.",
+        lastUpdated: now(),
+      });
+    },
+  } satisfies PeerSignalingController;
+
+  return controller;
+};
+
+export const peerSignalingController = createPeerSignalingController();
+
 const getGlobalUDPConnector = (): UDPConnector | undefined => {
   const globalScope = typeof window !== "undefined" ? window : (globalThis as unknown as Record<string, unknown>);
 
