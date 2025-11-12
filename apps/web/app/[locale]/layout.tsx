@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { PropsWithChildren } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
@@ -33,10 +33,6 @@ export async function generateMetadata({
     applicationName: t("title"),
     metadataBase: new URL("https://goguma.chat"),
     manifest: "/manifest.webmanifest",
-    themeColor: [
-      { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-      { media: "(prefers-color-scheme: dark)", color: "#05010f" },
-    ],
     appleWebApp: {
       capable: true,
       title: t("title"),
@@ -54,6 +50,13 @@ export async function generateMetadata({
     },
   } satisfies Metadata;
 }
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
+    { media: "(prefers-color-scheme: dark)", color: "#05010f" },
+  ],
+};
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
