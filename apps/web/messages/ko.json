@@ -532,6 +532,45 @@
           "udp": "UDP"
         }
       },
+      "settings": {
+        "open": "채팅 설정 열기",
+        "close": "채팅 설정 닫기",
+        "panelLabel": "채팅 설정",
+        "unified": {
+          "title": "공유 채팅 설정",
+          "description": "이 대화의 모든 참가자에게 적용돼요.",
+          "transport": {
+            "options": {
+              "progressive": {
+                "label": "Progressive 전송",
+                "description": "혼잡 제어가 포함된 WebRTC/WebTransport 경로예요."
+              },
+              "udp": {
+                "label": "UDP 릴레이",
+                "description": "낮은 지연의 실험적 UDP 경로로, 패킷이 손실될 수 있어요."
+              }
+            }
+          }
+        },
+        "local": {
+          "title": "내 채팅 설정",
+          "description": "내 화면에만 적용돼요.",
+          "options": {
+            "magnify": {
+              "label": "넉넉한 말풍선 크기",
+              "description": "메시지의 여백과 글꼴 크기를 키워요."
+            },
+            "labels": {
+              "label": "메시지 라벨 표시",
+              "description": "각 메시지 위에 보낸 사람과 시간을 보여줘요."
+            },
+            "theme": {
+              "label": "밝은 말풍선 사용",
+              "description": "내가 보내는 메시지를 더 밝은 스타일로 바꿔요."
+            }
+          }
+        }
+      },
       "composer": {
         "placeholder": "메시지를 작성해 보세요…",
         "send": "보내기",

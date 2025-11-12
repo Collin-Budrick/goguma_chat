@@ -17,7 +17,22 @@ import {
   getContactName,
   getInitials,
 } from "@/components/contacts/types";
+import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { cn } from "@/lib/utils";
+import {
+  type DisplaySettings,
+  DEFAULT_DISPLAY_SETTINGS,
+  DISPLAY_SETTINGS_EVENT,
+  loadDisplaySettings,
+  persistDisplaySettings,
+} from "@/lib/display-settings";
+import {
+  type MessagingMode,
+  DEFAULT_MESSAGING_MODE,
+  MESSAGING_MODE_EVENT,
+  loadMessagingMode,
+  persistMessagingMode,
+} from "@/lib/messaging-mode";
 
 import type {
   ChatConversation,
@@ -157,6 +172,13 @@ export default function ChatThread({
   const [isSending, setIsSending] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [typingState, setTypingState] = useState<Record<string, number>>({});
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
+    () => DEFAULT_DISPLAY_SETTINGS,
+  );
+  const [messagingMode, setMessagingMode] = useState<MessagingMode>(
+    () => DEFAULT_MESSAGING_MODE,
+  );
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -170,6 +192,39 @@ export default function ChatThread({
       : null,
   );
   const lastConversationReadKeyRef = useRef<string | null>(null);
+  const settingsPanelRef = useRef<HTMLDivElement | null>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const updateDisplaySettings = useCallback(
+    (updater: (prev: DisplaySettings) => DisplaySettings) => {
+      setDisplaySettings((prev) => {
+        const next = updater(prev);
+
+        if (
+          next.magnify === prev.magnify &&
+          next.showLabels === prev.showLabels &&
+          next.theme === prev.theme
+        ) {
+          return prev;
+        }
+
+        persistDisplaySettings(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleMessagingModeSelect = useCallback((mode: MessagingMode) => {
+    setMessagingMode((prev) => {
+      if (prev === mode) {
+        return prev;
+      }
+
+      persistMessagingMode(mode);
+      return mode;
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -206,6 +261,99 @@ export default function ChatThread({
       }),
     );
   }, [conversation?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stored = loadDisplaySettings();
+    setDisplaySettings(stored);
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<DisplaySettings>).detail;
+      setDisplaySettings((prev) =>
+        prev.magnify === detail.magnify &&
+        prev.showLabels === detail.showLabels &&
+        prev.theme === detail.theme
+          ? prev
+          : detail,
+      );
+    };
+
+    window.addEventListener(
+      DISPLAY_SETTINGS_EVENT,
+      handler as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        DISPLAY_SETTINGS_EVENT,
+        handler as EventListener,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stored = loadMessagingMode();
+    setMessagingMode((prev) => (prev === stored ? prev : stored));
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<MessagingMode>).detail;
+      setMessagingMode((prev) => (prev === detail ? prev : detail));
+    };
+
+    window.addEventListener(
+      MESSAGING_MODE_EVENT,
+      handler as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        MESSAGING_MODE_EVENT,
+        handler as EventListener,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        target &&
+        !settingsPanelRef.current?.contains(target) &&
+        !settingsTriggerRef.current?.contains(target)
+      ) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSettingsOpen]);
+
+  useEffect(() => {
+    setIsSettingsOpen(false);
+  }, [friendId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -646,7 +794,25 @@ export default function ChatThread({
     }
   }, [conversationId, isFetchingMore, nextCursor, t]);
 
-  const transportMode: "progressive" = "progressive";
+  const bubblePaddingClasses = displaySettings.magnify ? "px-5 py-4" : "px-4 py-3";
+  const bubbleTextClasses = displaySettings.magnify
+    ? "text-base leading-7"
+    : "text-sm leading-6";
+  const viewerBubbleClasses = displaySettings.theme === "light"
+    ? "ml-auto border-white/40 bg-white text-black"
+    : "ml-auto border-white/20 bg-black/80 text-white";
+  const viewerMetaClasses = displaySettings.theme === "light" ? "text-black/50" : "text-white/50";
+  const toggleTheme: "dark" | "light" =
+    displaySettings.theme === "light" ? "light" : "dark";
+  const messagingOptions = useMemo(
+    () =>
+      (["progressive", "udp"] as MessagingMode[]).map((mode) => ({
+        mode,
+        label: t(`thread.settings.unified.transport.options.${mode}.label`),
+        description: t(`thread.settings.unified.transport.options.${mode}.description`),
+      })),
+    [t],
+  );
 
   return (
     <section className="relative flex flex-1 flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
@@ -684,11 +850,131 @@ export default function ChatThread({
                   </p>
                 </div>
               </div>
-              <div className="text-right text-xs text-white/50">
-                <p className="uppercase tracking-[0.3em]">
-                  {t("thread.transport.label")}
-                </p>
-                <p>{t(`thread.transport.mode.${transportMode}`)}</p>
+              <div className="relative flex items-center gap-3 text-right text-xs text-white/50">
+                <div>
+                  <p className="uppercase tracking-[0.3em]">
+                    {t("thread.transport.label")}
+                  </p>
+                  <p>{t(`thread.transport.mode.${messagingMode}`)}</p>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    ref={settingsTriggerRef}
+                    onClick={() => setIsSettingsOpen((prev) => !prev)}
+                    aria-haspopup="dialog"
+                    aria-expanded={isSettingsOpen}
+                    aria-label={
+                      isSettingsOpen
+                        ? t("thread.settings.close")
+                        : t("thread.settings.open")
+                    }
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:border-white/40 hover:bg-white/10"
+                  >
+                    <span className="sr-only">
+                      {isSettingsOpen
+                        ? t("thread.settings.close")
+                        : t("thread.settings.open")}
+                    </span>
+                    <img
+                      src="/icons/gear.svg"
+                      alt=""
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                  </button>
+                  {isSettingsOpen ? (
+                    <div
+                      ref={settingsPanelRef}
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={t("thread.settings.panelLabel")}
+                      className="absolute right-0 top-full z-30 mt-3 w-72 rounded-2xl border border-white/15 bg-black/90 p-4 text-left shadow-xl backdrop-blur"
+                    >
+                      <div className="space-y-6">
+                        <section>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+                            {t("thread.settings.unified.title")}
+                          </p>
+                          <p className="mt-1 text-xs text-white/50">
+                            {t("thread.settings.unified.description")}
+                          </p>
+                          <div className="mt-3 flex flex-col gap-2">
+                            {messagingOptions.map((option) => {
+                              const isActive = messagingMode === option.mode;
+                              return (
+                                <button
+                                  key={option.mode}
+                                  type="button"
+                                  onClick={() => handleMessagingModeSelect(option.mode)}
+                                  className={cn(
+                                    "rounded-xl border px-3 py-3 text-left transition",
+                                    isActive
+                                      ? "border-white/60 bg-white/10 text-white"
+                                      : "border-white/10 text-white/70 hover:border-white/25 hover:bg-white/10 hover:text-white",
+                                  )}
+                                >
+                                  <span className="text-sm font-medium text-white">
+                                    {option.label}
+                                  </span>
+                                  <p className="mt-1 text-xs text-white/60">
+                                    {option.description}
+                                  </p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </section>
+                        <section>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+                            {t("thread.settings.local.title")}
+                          </p>
+                          <p className="mt-1 text-xs text-white/50">
+                            {t("thread.settings.local.description")}
+                          </p>
+                          <div className="mt-3 flex flex-col gap-2">
+                            <PreferenceToggle
+                              label={t("thread.settings.local.options.magnify.label")}
+                              description={t("thread.settings.local.options.magnify.description")}
+                              value={displaySettings.magnify}
+                              theme={toggleTheme}
+                              onChange={() =>
+                                updateDisplaySettings((prev) => ({
+                                  ...prev,
+                                  magnify: !prev.magnify,
+                                }))
+                              }
+                            />
+                            <PreferenceToggle
+                              label={t("thread.settings.local.options.labels.label")}
+                              description={t("thread.settings.local.options.labels.description")}
+                              value={displaySettings.showLabels}
+                              theme={toggleTheme}
+                              onChange={() =>
+                                updateDisplaySettings((prev) => ({
+                                  ...prev,
+                                  showLabels: !prev.showLabels,
+                                }))
+                              }
+                            />
+                            <PreferenceToggle
+                              label={t("thread.settings.local.options.theme.label")}
+                              description={t("thread.settings.local.options.theme.description")}
+                              value={displaySettings.theme === "light"}
+                              theme={toggleTheme}
+                              onChange={() =>
+                                updateDisplaySettings((prev) => ({
+                                  ...prev,
+                                  theme: prev.theme === "light" ? "dark" : "light",
+                                }))
+                              }
+                            />
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </header>
@@ -727,25 +1013,37 @@ export default function ChatThread({
                         <li
                           key={message.id}
                           className={cn(
-                            "max-w-xl rounded-2xl border px-4 py-3 text-sm leading-6",
+                            "max-w-xl rounded-2xl border",
+                            bubblePaddingClasses,
+                            bubbleTextClasses,
                             isViewer
-                              ? "ml-auto border-white/40 bg-white text-black"
+                              ? viewerBubbleClasses
                               : "border-white/10 bg-black/50 text-white",
                           )}
                         >
-                          <div
-                            className={cn(
-                              "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
-                              isViewer ? "text-black/50" : "text-white/50",
-                            )}
-                          >
-                            <span>
+                          {displaySettings.showLabels ? (
+                            <div
+                              className={cn(
+                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
+                                isViewer ? viewerMetaClasses : "text-white/50",
+                              )}
+                            >
+                              <span>
+                                {isViewer
+                                  ? t("thread.me")
+                                  : getContactName(message.sender)}
+                              </span>
+                              <span>{timestamp}</span>
+                            </div>
+                          ) : (
+                            <p className="sr-only">
                               {isViewer
                                 ? t("thread.me")
                                 : getContactName(message.sender)}
-                            </span>
-                            <span>{timestamp}</span>
-                          </div>
+                              {" "}
+                              {timestamp}
+                            </p>
+                          )}
                           <p>{message.body}</p>
                         </li>
                       );
