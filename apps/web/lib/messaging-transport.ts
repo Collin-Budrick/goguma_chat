@@ -1905,17 +1905,17 @@ const createProgressiveDriver = (
           ? dependencies.webTransportEndpoint(startOptions.options)
           : dependencies.webTransportEndpoint;
 
-      const webTransportFactory =
-        dependencies.createWebTransport ?? ((options) => defaultCreateWebTransport(options));
+      if (dependencies.createWebTransport || endpoint) {
+        const webTransportFactory =
+          dependencies.createWebTransport ?? ((options) => defaultCreateWebTransport(options));
 
-      if (!dependencies.createWebTransport && !endpoint) {
-        throw normalized;
+        return webTransportFactory({
+          ...withDependencies,
+          endpoint,
+        });
       }
 
-      return webTransportFactory({
-        ...withDependencies,
-        endpoint,
-      });
+      throw normalized;
     }
   },
 });
