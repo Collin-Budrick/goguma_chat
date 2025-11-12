@@ -391,9 +391,61 @@
     "metadata": {
       "title": "Contacts | Yaong-i Chat"
     },
-    "title": "Contacts live inside chat threads",
+    "title": "Contact hub",
+    "headline": "Keep friends close to every chat",
     "description": "Profiles stay beside every message so the story never leaves the chat.",
-    "body": "Jump into the <link>cat lounge</link> to browse friends, invite new members, and pin favorite people."
+    "lastSynced": "Last synced {timestamp}",
+    "toast": {
+      "dismiss": "Dismiss"
+    },
+    "errors": {
+      "load": "We couldn't refresh your contacts. Please try again.",
+      "request": "We couldn't update that request. Please try again.",
+      "search": "Search failed. Try again soon."
+    },
+    "lists": {
+      "friends": {
+        "title": "Friends",
+        "empty": "No friends yet. Start by sending an invite.",
+        "count": "{count, plural, one {# friend} other {# friends}}",
+        "syncing": "Syncing…",
+        "since": "Since {timestamp}"
+      },
+      "incoming": {
+        "title": "Incoming requests",
+        "empty": "No new requests right now.",
+        "badge": "Incoming"
+      },
+      "outgoing": {
+        "title": "Outgoing requests",
+        "empty": "You haven't sent any requests.",
+        "badge": "Outgoing"
+      },
+      "requests": {
+        "timestamp": "Requested {timestamp}"
+      }
+    },
+    "actions": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "cancel": "Cancel"
+    },
+    "search": {
+      "title": "Search directory",
+      "hint": "Type at least {count} letters to find new contacts.",
+      "label": "Search",
+      "placeholder": "Search by name or email",
+      "tooShort": "Enter a little more to start searching.",
+      "loading": "Searching…",
+      "empty": "No people found. Try a different spelling.",
+      "action": "Add friend",
+      "pending": "Sending…",
+      "status": {
+        "friend": "Friend",
+        "incoming": "Request received",
+        "outgoing": "Request sent"
+      }
+    }
   },
   "Dashboard": {
     "metrics": {

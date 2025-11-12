@@ -391,9 +391,61 @@
     "metadata": {
       "title": "연락처 | 야옹이 챗"
     },
-    "title": "연락처는 채팅 안에서 숨 쉬어요",
-    "description": "프로필이 메시지 옆에 붙어 있어 대화 맥락을 놓치지 않습니다.",
-    "body": "<link>캣 라운지</link>로 들어가 친구를 탐색하고 초대하거나 마음에 드는 사람을 고정해 보세요."
+    "title": "연락처 허브",
+    "headline": "친구를 모든 대화 옆에 둬요",
+    "description": "프로필은 메시지 옆에 있어 이야기가 채팅을 떠나지 않아요.",
+    "lastSynced": "마지막 동기화 {timestamp}",
+    "toast": {
+      "dismiss": "닫기"
+    },
+    "errors": {
+      "load": "연락처를 새로고침할 수 없었어요. 다시 시도해 주세요.",
+      "request": "요청을 업데이트할 수 없었어요. 다시 시도해 주세요.",
+      "search": "검색에 실패했어요. 잠시 후 다시 시도해 주세요."
+    },
+    "lists": {
+      "friends": {
+        "title": "친구",
+        "empty": "아직 친구가 없어요. 초대장을 보내 보세요.",
+        "count": "친구 {count}명",
+        "syncing": "동기화 중…",
+        "since": "{timestamp}부터"
+      },
+      "incoming": {
+        "title": "받은 요청",
+        "empty": "새로운 요청이 없어요.",
+        "badge": "받음"
+      },
+      "outgoing": {
+        "title": "보낸 요청",
+        "empty": "보낸 요청이 아직 없어요.",
+        "badge": "보냄"
+      },
+      "requests": {
+        "timestamp": "{timestamp}에 요청됨"
+      }
+    },
+    "actions": {
+      "accept": "수락",
+      "decline": "거절",
+      "cancel": "취소"
+    },
+    "search": {
+      "title": "디렉터리 검색",
+      "hint": "새 친구를 찾으려면 최소 {count}자를 입력해 주세요.",
+      "label": "검색",
+      "placeholder": "이름 또는 이메일로 검색",
+      "tooShort": "검색을 시작하려면 조금만 더 입력해 주세요.",
+      "loading": "검색 중…",
+      "empty": "일치하는 사람이 없어요. 다른 철자를 시도해 보세요.",
+      "action": "친구 추가",
+      "pending": "전송 중…",
+      "status": {
+        "friend": "친구",
+        "incoming": "받은 요청",
+        "outgoing": "보낸 요청"
+      }
+    }
   },
   "Dashboard": {
     "metrics": {
