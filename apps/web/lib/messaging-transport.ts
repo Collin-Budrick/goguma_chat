@@ -5,7 +5,7 @@ import {
   MESSAGING_MODE_EVENT,
   loadMessagingMode,
 } from "./messaging-mode";
-import type { PeerPresenceUpdate } from "./messaging-schema";
+import type { PeerHandshakeFrame, PeerPresenceUpdate } from "./messaging-schema";
 import {
   createPeerCryptoSession,
   type PeerCryptoSession,
@@ -505,6 +505,7 @@ export type PeerSignalingController = {
   setRole: (role: PeerSignalingRole | null) => void;
   setRemoteInvite: (token: string) => Promise<void>;
   setRemoteAnswer: (token: string) => Promise<void>;
+  setActiveTransport: (handle: TransportHandle | null) => void;
   clear: () => void;
   markConnected: () => void;
   markDisconnected: () => void;
@@ -539,6 +540,121 @@ export const createPeerSignalingController = (
 
   let pendingNegotiation: PeerNegotiationEntry | null = null;
 
+  const HANDSHAKE_RETRY_LIMIT = 5;
+  const HANDSHAKE_RETRY_INTERVAL_MS = 5_000;
+
+  type HandshakeEntry = {
+    handshake: PeerHandshakeFrame["handshake"];
+    attempts: number;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    stop: () => boolean;
+  };
+
+  let activeTransport: TransportHandle | null = null;
+  const pendingHandshakes = new Map<string, HandshakeEntry>();
+
+  const clearHandshakeEntry = (key: string) => {
+    const entry = pendingHandshakes.get(key);
+    if (!entry) return;
+    if (entry.timeoutId) {
+      clearTimeout(entry.timeoutId);
+    }
+    pendingHandshakes.delete(key);
+  };
+
+  const attemptHandshakeSend = async (key: string) => {
+    const entry = pendingHandshakes.get(key);
+    if (!entry) return;
+    entry.timeoutId = null;
+
+    if (entry.stop()) {
+      clearHandshakeEntry(key);
+      return;
+    }
+
+    const transport = activeTransport;
+    if (!transport) {
+      entry.timeoutId = setTimeout(() => {
+        void attemptHandshakeSend(key);
+      }, HANDSHAKE_RETRY_INTERVAL_MS);
+      return;
+    }
+
+    try {
+      const frame: PeerHandshakeFrame = {
+        type: "handshake",
+        handshake: entry.handshake,
+      };
+      await transport.send(JSON.stringify(frame));
+    } catch (error) {
+      console.error("Failed to send peer handshake frame", error);
+    }
+
+    entry.attempts += 1;
+
+    if (entry.stop() || entry.attempts >= HANDSHAKE_RETRY_LIMIT) {
+      clearHandshakeEntry(key);
+      return;
+    }
+
+    entry.timeoutId = setTimeout(() => {
+      void attemptHandshakeSend(key);
+    }, HANDSHAKE_RETRY_INTERVAL_MS);
+  };
+
+  const evaluateHandshakeQueue = () => {
+    pendingHandshakes.forEach((entry, key) => {
+      if (entry.stop()) {
+        clearHandshakeEntry(key);
+        return;
+      }
+      if (activeTransport && entry.timeoutId) {
+        clearTimeout(entry.timeoutId);
+        entry.timeoutId = null;
+      }
+      if (!entry.timeoutId) {
+        entry.timeoutId = setTimeout(() => {
+          void attemptHandshakeSend(key);
+        }, 0);
+      }
+    });
+  };
+
+  const clearPendingHandshakes = () => {
+    pendingHandshakes.forEach((entry) => {
+      if (entry.timeoutId) {
+        clearTimeout(entry.timeoutId);
+      }
+    });
+    pendingHandshakes.clear();
+  };
+
+  const queueHandshake = (
+    handshake: PeerHandshakeFrame["handshake"],
+    stop: () => boolean,
+  ) => {
+    const key = `${handshake.kind}:${handshake.token}`;
+    const existing = pendingHandshakes.get(key);
+    if (existing) {
+      existing.stop = stop;
+      if (!existing.timeoutId) {
+        existing.timeoutId = setTimeout(() => {
+          void attemptHandshakeSend(key);
+        }, 0);
+      }
+      return;
+    }
+
+    pendingHandshakes.set(key, {
+      handshake,
+      stop,
+      attempts: 0,
+      timeoutId: setTimeout(() => {
+        void attemptHandshakeSend(key);
+      }, 0),
+    });
+  };
+
   const notify = () => {
     listeners.forEach((listener) => {
       try {
@@ -564,6 +680,7 @@ export const createPeerSignalingController = (
       lastUpdated: currentState.lastUpdated,
     };
     persistPeerState(storageKey, nextPersistent);
+    evaluateHandshakeQueue();
     notify();
   };
 
@@ -602,8 +719,13 @@ export const createPeerSignalingController = (
       createdAt: now(),
     });
 
+    queueHandshake(
+      { kind: "offer", token },
+      () => !currentState.awaitingAnswer || Boolean(currentState.remoteAnswer),
+    );
+
     commitState({
-      localInvite: token,
+      localInvite: "[automatic peer handshake]",
       awaitingAnswer: true,
       inviteExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -624,8 +746,13 @@ export const createPeerSignalingController = (
       createdAt: now(),
     });
 
+    queueHandshake(
+      { kind: "answer", token },
+      () => Boolean(currentState.connected),
+    );
+
     commitState({
-      localAnswer: token,
+      localAnswer: "[automatic peer handshake]",
       awaitingOffer: false,
       answerExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -895,6 +1022,7 @@ export const createPeerSignalingController = (
     },
     setRole(role) {
       resetNegotiation();
+      clearPendingHandshakes();
       commitState({
         role,
         sessionId: createSessionId(),
@@ -954,8 +1082,13 @@ export const createPeerSignalingController = (
         throw new Error(message);
       }
     },
+    setActiveTransport(handle) {
+      activeTransport = handle;
+      evaluateHandshakeQueue();
+    },
     clear() {
       resetNegotiation();
+      clearPendingHandshakes();
       commitState({
         localInvite: null,
         localAnswer: null,

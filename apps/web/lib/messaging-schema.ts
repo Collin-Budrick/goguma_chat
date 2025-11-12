@@ -136,6 +136,14 @@ export type PeerHeartbeatFrame = {
   timestamp: number;
 };
 
+export type PeerHandshakeFrame = {
+  type: "handshake";
+  handshake: {
+    kind: "offer" | "answer";
+    token: string;
+  };
+};
+
 /**
  * Union describing all frames that can be received over the peer transport
  * channel.
@@ -149,4 +157,5 @@ export type PeerTransportIncomingFrame =
   | PeerPresenceFrame
   | PeerLegacyTypingFrame
   | PeerErrorFrame
-  | PeerHeartbeatFrame;
+  | PeerHeartbeatFrame
+  | PeerHandshakeFrame;

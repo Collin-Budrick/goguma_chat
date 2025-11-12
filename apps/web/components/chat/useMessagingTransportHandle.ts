@@ -47,6 +47,7 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
     (handle: TransportHandle | null) => {
       detachListeners();
       transportRef.current = handle;
+      controller.setActiveTransport(handle);
 
       if (!handle) {
         setTransport(null);

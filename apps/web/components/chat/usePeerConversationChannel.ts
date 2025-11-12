@@ -6,12 +6,18 @@ import {
   type TransportHandle,
   type TransportMessage,
   emitPeerPresence,
+  peerSignalingController,
 } from "@/lib/messaging-transport";
 import type {
   PeerPresenceUpdate,
   PeerHeartbeatFrame,
   PeerTransportIncomingFrame,
 } from "@/lib/messaging-schema";
+import {
+  getPeerTrustState,
+  markPeerTrusted,
+  subscribePeerTrust,
+} from "@/lib/crypto/session";
 
 import type {
   ChatConversation,
@@ -169,6 +175,59 @@ export function usePeerConversationChannel(options: {
   const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awaitingHeartbeatAckRef = useRef(false);
   const heartbeatRecoveryRef = useRef(false);
+
+  const ensurePeerTrusted = useCallback(async () => {
+    const sessionId = peerSignalingController.getSnapshot().sessionId;
+    if (!sessionId) {
+      return;
+    }
+
+    try {
+      const trust = await getPeerTrustState(sessionId);
+      if (trust.remoteFingerprint) {
+        if (!trust.trusted) {
+          await markPeerTrusted(sessionId, true);
+        }
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to inspect peer trust state", error);
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let cleaned = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      unsubscribe?.();
+      unsubscribe = null;
+    };
+
+    unsubscribe = subscribePeerTrust((state) => {
+      if (state.sessionId !== sessionId) {
+        return;
+      }
+      if (!state.remoteFingerprint) {
+        return;
+      }
+      if (!state.trusted) {
+        void markPeerTrusted(sessionId, true).catch((error) => {
+          console.error("Failed to mark peer trusted", error);
+        });
+      }
+      cleanup();
+    });
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+    }, 30_000);
+  }, []);
 
   const dispatchHydration = useCallback(
     (conversationId: string, snapshot: ConversationSnapshot) => {
@@ -620,6 +679,24 @@ export function usePeerConversationChannel(options: {
           }
           break;
         }
+        case "handshake": {
+          const { handshake } = frame;
+          if (!handshake) {
+            break;
+          }
+
+          const apply = handshake.kind === "offer"
+            ? peerSignalingController.setRemoteInvite(handshake.token)
+            : peerSignalingController.setRemoteAnswer(handshake.token);
+
+          void apply
+            .then(() => ensurePeerTrusted())
+            .catch((error) => {
+              console.error("Failed to apply peer handshake frame", error);
+            });
+
+          break;
+        }
         case "message": {
           const { conversationId, message, clientMessageId } = frame;
           const updatedSnapshot = updateMessages(conversationId, [message]);
@@ -795,7 +872,9 @@ export function usePeerConversationChannel(options: {
       }
     },
     [
+      ensurePeerTrusted,
       notify,
+      peerSignalingController,
       readStored,
       rejectPending,
       resolvePending,
