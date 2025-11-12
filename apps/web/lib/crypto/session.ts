@@ -345,16 +345,35 @@ const compareUint8Arrays = (left: Uint8Array, right: Uint8Array): number => {
   return left.length - right.length;
 };
 
+const compareStrings = (left: string, right: string): number => {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+};
+
 const combineSalts = (
   localSalt: Uint8Array,
   localRotation: number,
   remoteSalt: Uint8Array,
   remoteRotation: number,
+  localFingerprint?: string | null,
+  remoteFingerprint?: string | null,
 ): Uint8Array => {
-  const rotationsMatch = localRotation === remoteRotation;
-  const localFirst = rotationsMatch
-    ? compareUint8Arrays(localSalt, remoteSalt) <= 0
-    : localRotation <= remoteRotation;
+  let localFirst: boolean;
+  if (localRotation !== remoteRotation) {
+    localFirst = localRotation < remoteRotation;
+  } else {
+    const saltOrdering = compareUint8Arrays(localSalt, remoteSalt);
+    if (saltOrdering !== 0) {
+      localFirst = saltOrdering < 0;
+    } else {
+      const fingerprintOrdering = compareStrings(
+        localFingerprint ?? "",
+        remoteFingerprint ?? "",
+      );
+      localFirst = fingerprintOrdering <= 0;
+    }
+  }
   const first = localFirst ? localSalt : remoteSalt;
   const second = localFirst ? remoteSalt : localSalt;
   const combined = new Uint8Array(first.length + second.length);
@@ -612,6 +631,8 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       this.localRotation,
       this.remoteSalt,
       this.remoteRotation,
+      this.identity.fingerprint,
+      this.remoteFingerprint,
     );
 
     const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
