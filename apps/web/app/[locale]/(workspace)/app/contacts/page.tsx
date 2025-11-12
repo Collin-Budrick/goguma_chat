@@ -40,6 +40,7 @@ function serializeState(state: Awaited<ReturnType<typeof getFriendState>>): Cont
       lastName: friend.lastName,
       image: friend.image,
       createdAt: toISODate(friend.createdAt) ?? new Date().toISOString(),
+      hasConversation: friend.hasConversation ?? false,
     })),
     incoming: state.incoming.map((request) => ({
       id: request.id,

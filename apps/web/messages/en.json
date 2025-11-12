@@ -511,6 +511,7 @@
       "createHint": "Pick a friend to start a direct message.",
       "empty": "Add friends from Contacts to start chatting.",
       "emptyPreview": "No messages yet",
+      "openChat": "Open chat",
       "lastActive": "Last activity {time}"
     },
     "thread": {

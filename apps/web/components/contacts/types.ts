@@ -16,6 +16,7 @@ export type FriendSummary = {
   lastName: string | null;
   image: string | null;
   createdAt: string;
+  hasConversation: boolean;
 };
 
 export type FriendRequestSummary = {

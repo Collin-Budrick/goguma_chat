@@ -511,6 +511,7 @@
       "createHint": "친구를 선택해 1:1 채팅을 시작하세요.",
       "empty": "연락처에서 친구를 추가하면 바로 채팅을 시작할 수 있어요.",
       "emptyPreview": "아직 메시지가 없어요",
+      "openChat": "채팅 열기",
       "lastActive": "최근 활동 {time}"
     },
     "thread": {

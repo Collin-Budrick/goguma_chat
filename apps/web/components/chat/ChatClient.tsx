@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 import type { FriendSummary } from "@/components/contacts/types";
 import { getContactName, getInitials } from "@/components/contacts/types";
@@ -148,6 +149,7 @@ export default function ChatClient({
 }: ChatClientProps) {
   const t = useTranslations("Chat");
   const locale = useLocale();
+  const router = useRouter();
 
   const [search, setSearch] = useState("");
   const [activeFriendId, setActiveFriendId] = useState<string | null>(
@@ -587,6 +589,26 @@ export default function ChatClient({
     searchInputRef.current?.focus();
   }, []);
 
+  const handleOpenChat = useCallback(
+    (friendId: string) => {
+      const params = new URLSearchParams({ friendId });
+      router.push(`/${locale}/app/chat?${params.toString()}`);
+    },
+    [locale, router],
+  );
+
+  const handleFriendSelect = useCallback(
+    (friend: FriendSummary) => {
+      if (!friend.hasConversation) {
+        handleOpenChat(friend.friendId);
+        return;
+      }
+
+      setActiveFriendId(friend.friendId);
+    },
+    [handleOpenChat, setActiveFriendId],
+  );
+
   const typingText = useMemo(() => {
     if (!typingProfiles.length) {
       return null;
@@ -643,42 +665,57 @@ export default function ChatClient({
               const profile = friendToContactProfile(friend);
               const isActive = friend.friendId === activeFriendId;
               return (
-                <button
-                  type="button"
+                <div
                   key={friend.friendId}
-                  onClick={() => setActiveFriendId(friend.friendId)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition",
+                    "group rounded-2xl border transition",
                     isActive
                       ? "border-white/50 bg-white/10"
                       : "border-transparent hover:border-white/20 hover:bg-white/5",
                   )}
                 >
-                  {friend.image ? (
-                    <img
-                      src={friend.image}
-                      alt={getContactName(profile)}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
-                      {getInitials(profile)}
-                    </span>
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">
-                      {getContactName(profile)}
-                    </p>
-                    <p className="truncate text-xs text-white/60">
-                      {friend.email ?? t("roster.emptyPreview")}
-                    </p>
-                    <p className="text-[11px] text-white/40">
-                      {t("roster.lastActive", {
-                        time: formatRosterTime(friend.createdAt, locale),
-                      })}
-                    </p>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFriendSelect(friend)}
+                    className="flex w-full items-center gap-3 px-3 py-3 text-left"
+                  >
+                    {friend.image ? (
+                      <img
+                        src={friend.image}
+                        alt={getContactName(profile)}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
+                        {getInitials(profile)}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {getContactName(profile)}
+                      </p>
+                      <p className="truncate text-xs text-white/60">
+                        {friend.email ?? t("roster.emptyPreview")}
+                      </p>
+                      <p className="text-[11px] text-white/40">
+                        {t("roster.lastActive", {
+                          time: formatRosterTime(friend.createdAt, locale),
+                        })}
+                      </p>
+                    </div>
+                  </button>
+                  {!friend.hasConversation ? (
+                    <div className="border-t border-white/10 px-3 pb-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChat(friend.friendId)}
+                        className="w-full rounded-full border border-white/30 px-3 py-2 text-[11px] uppercase tracking-[0.3em] text-white transition hover:border-white/60"
+                      >
+                        {t("roster.openChat")}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               );
             })
           ) : (

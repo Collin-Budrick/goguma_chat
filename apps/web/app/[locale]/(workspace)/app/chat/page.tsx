@@ -54,6 +54,7 @@ function serializeFriends(
     lastName: friend.lastName,
     image: friend.image,
     createdAt: toISODate(friend.createdAt),
+    hasConversation: friend.hasConversation,
   }));
 }
 

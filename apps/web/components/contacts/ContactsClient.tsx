@@ -70,6 +70,7 @@ function normalizeFriend(friend: Partial<FriendSummary>): FriendSummary {
     lastName: friend.lastName ?? null,
     image: friend.image ?? null,
     createdAt,
+    hasConversation: Boolean(friend.hasConversation),
   };
 }
 
