@@ -49,7 +49,6 @@ import type {
 import { mergeMessages, toDate } from "./message-utils";
 import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
 import { usePeerConversationChannel } from "./usePeerConversationChannel";
-import { ManualSignalingPanel } from "./ManualSignalingPanel";
 
 type ChatThreadProps = {
   viewerId: string;
@@ -1222,9 +1221,6 @@ export default function ChatThread({
 
   return (
     <section className="relative flex flex-1 flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
-      <div className="hidden border-b border-white/10 lg:block">
-        <ManualSignalingPanel />
-      </div>
       {friendContact ? (
         <>
           <header className="relative flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">

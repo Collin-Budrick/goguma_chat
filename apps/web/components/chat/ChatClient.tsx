@@ -20,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import ChatThread from "./ChatThread";
-import { ManualSignalingPanel } from "./ManualSignalingPanel";
 import type {
   ChatConversation,
   ChatMessage,
@@ -155,9 +154,6 @@ export default function ChatClient({
 
   return (
     <div className="flex flex-col gap-6 lg:h-full lg:flex-row">
-      <div className="lg:hidden">
-        <ManualSignalingPanel />
-      </div>
       <section className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur lg:w-80">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
