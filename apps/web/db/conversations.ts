@@ -1,8 +1,9 @@
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { db } from "./index";
 import {
   conversationParticipants,
+  conversationReads,
   conversations,
   conversationTypeEnum,
   friendships,
@@ -45,6 +46,13 @@ export type MessageWithSender = MessageRecord & {
   };
 };
 
+export type ConversationReadRecord = typeof conversationReads.$inferSelect;
+
+export type UnreadConversationSummary = {
+  conversationId: string;
+  unreadCount: number;
+};
+
 type MessagePageOptions = {
   limit?: number;
   beforeMessageId?: string;
@@ -54,6 +62,18 @@ type MessagePage = {
   messages: MessageWithSender[];
   nextCursor: string | null;
 };
+
+type MarkConversationReadOptions = {
+  lastMessageId?: string | null;
+  readAt?: Date | string | null;
+};
+
+function ensureDate(value: Date | string | null | undefined) {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 function makeDirectKey(userA: string, userB: string) {
   const [left, right] = [userA, userB].sort();
@@ -334,6 +354,98 @@ export async function getConversationWithParticipants(
   return { ...conversation, participants };
 }
 
+export async function markConversationRead(
+  conversationId: string,
+  userId: string,
+  options: MarkConversationReadOptions = {},
+) {
+  await assertParticipant(conversationId, userId);
+
+  let messageId = options.lastMessageId ?? null;
+  let timestamp = options.readAt ? ensureDate(options.readAt) : null;
+
+  if (messageId && !timestamp) {
+    const [message] = await db
+      .select({
+        id: messages.id,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.id, messageId),
+          eq(messages.conversationId, conversationId),
+        ),
+      )
+      .limit(1);
+
+    if (message) {
+      messageId = message.id;
+      timestamp = ensureDate(message.createdAt);
+    } else {
+      messageId = null;
+    }
+  }
+
+  const lastReadAt = timestamp ?? new Date();
+
+  await db
+    .insert(conversationReads)
+    .values({
+      conversationId,
+      userId,
+      lastReadMessageId: messageId,
+      lastReadAt,
+    })
+    .onConflictDoUpdate({
+      target: [conversationReads.conversationId, conversationReads.userId],
+      set: {
+        lastReadMessageId: messageId,
+        lastReadAt,
+      },
+    });
+}
+
+export async function listUnreadConversations(
+  userId: string,
+): Promise<UnreadConversationSummary[]> {
+  const rows = await db
+    .select({
+      conversationId: messages.conversationId,
+      unreadCount: sql<number>`COUNT(*)`,
+    })
+    .from(conversationParticipants)
+    .innerJoin(
+      messages,
+      and(
+        eq(messages.conversationId, conversationParticipants.conversationId),
+        ne(messages.senderId, userId),
+      ),
+    )
+    .leftJoin(
+      conversationReads,
+      and(
+        eq(conversationReads.conversationId, conversationParticipants.conversationId),
+        eq(conversationReads.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        eq(conversationParticipants.userId, userId),
+        or(
+          isNull(conversationReads.lastReadAt),
+          gt(messages.createdAt, conversationReads.lastReadAt),
+        ),
+      ),
+    )
+    .groupBy(messages.conversationId);
+
+  return rows.map((row) => ({
+    conversationId: row.conversationId,
+    unreadCount: Number(row.unreadCount ?? 0),
+  }));
+}
+
 export async function createMessage(
   conversationId: string,
   senderId: string,
@@ -369,6 +481,11 @@ export async function createMessage(
     .update(conversations)
     .set({ updatedAt: inserted.createdAt })
     .where(eq(conversations.id, conversationId));
+
+  await markConversationRead(conversationId, senderId, {
+    lastMessageId: inserted.id,
+    readAt: inserted.createdAt,
+  });
 
   const [sender] = await db
     .select({

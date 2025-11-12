@@ -169,6 +169,7 @@ export default function ChatThread({
       ? `${initialFriendId ?? ""}:${initialConversation?.id ?? ""}`
       : null,
   );
+  const lastConversationReadKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -187,6 +188,12 @@ export default function ChatThread({
       previousBootstrapKeyRef.current = bootstrapKey;
     }
   }, [bootstrapKey]);
+
+  useEffect(() => {
+    if (!conversation?.id) {
+      lastConversationReadKeyRef.current = null;
+    }
+  }, [conversation?.id]);
 
   useEffect(() => {
     if (shouldUseInitialData) {
@@ -280,6 +287,41 @@ export default function ChatThread({
       controller.abort();
     };
   }, [friendId, shouldUseInitialData, t]);
+
+  const lastMessageId =
+    messages.length > 0 ? messages[messages.length - 1]?.id ?? null : null;
+
+  useEffect(() => {
+    if (!conversation?.id) {
+      return;
+    }
+
+    const syncKey = `${conversation.id}:${lastMessageId ?? "none"}`;
+
+    if (lastConversationReadKeyRef.current === syncKey) {
+      return;
+    }
+
+    lastConversationReadKeyRef.current = syncKey;
+
+    const controller = new AbortController();
+    const body = lastMessageId ? JSON.stringify({ lastMessageId }) : "{}";
+
+    fetch(`/api/conversations/${conversation.id}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      signal: controller.signal,
+    }).catch((error) => {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+      console.error("Failed to mark conversation as read", error);
+      lastConversationReadKeyRef.current = null;
+    });
+
+    return () => controller.abort();
+  }, [conversation?.id, lastMessageId]);
 
   useEffect(() => {
     eventSourceRef.current?.close();

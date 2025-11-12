@@ -1,6 +1,13 @@
 "use client";
 
-import { startTransition, useCallback, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
@@ -98,12 +105,203 @@ export default function SiteDock() {
   const router = useRouter();
   const locale = useLocale() as Locale;
   const dockT = useTranslations("Shell.dock");
-  const dockItems = useMemo(
+  const baseDockItems = useMemo(
     () => resolveDock(pathname, (key) => dockT(key)),
     [pathname, dockT],
   );
+  const [indicatorState, setIndicatorState] = useState({
+    chat: false,
+    contacts: false,
+  });
+  const indicatorFetchControllerRef = useRef<AbortController | null>(null);
+  const indicatorsInitializedRef = useRef(false);
+  const shouldHydrateAppIndicators = useMemo(
+    () =>
+      baseDockItems.some(
+        (item) =>
+          isLinkItem(item) &&
+          (item.href === "/app/chat" || item.href === "/app/contacts"),
+      ),
+    [baseDockItems],
+  );
+  const dockItems = useMemo(() => {
+    if (!shouldHydrateAppIndicators) {
+      return baseDockItems;
+    }
+    return baseDockItems.map((item) => {
+      if (!isLinkItem(item)) {
+        return item;
+      }
+      if (item.href === "/app/chat") {
+        return { ...item, indicator: indicatorState.chat };
+      }
+      if (item.href === "/app/contacts") {
+        return { ...item, indicator: indicatorState.contacts };
+      }
+      return item;
+    });
+  }, [baseDockItems, indicatorState, shouldHydrateAppIndicators]);
   const scrolled = useDockScrollState();
   const mounted = useDockMounted();
+  const refreshDockIndicators = useCallback(async () => {
+    if (!mounted || !shouldHydrateAppIndicators) {
+      return;
+    }
+
+    indicatorFetchControllerRef.current?.abort();
+    const controller = new AbortController();
+    indicatorFetchControllerRef.current = controller;
+
+    let aborted = false;
+    let nextContacts = false;
+    let nextChat = false;
+
+    const checkAbort = () => {
+      if (controller.signal.aborted) {
+        aborted = true;
+      }
+      return aborted;
+    };
+
+    try {
+      try {
+        const response = await fetch("/api/friend-requests", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (response.ok) {
+          const data = (await response.json().catch(() => ({}))) as {
+            incoming?: unknown;
+          };
+          const incoming = Array.isArray(data?.incoming) ? data.incoming : [];
+          nextContacts = incoming.length > 0;
+        } else if (response.status !== 401 && !checkAbort()) {
+          console.error(
+            "Failed to load friend requests for dock",
+            response.statusText,
+          );
+        }
+      } catch (error) {
+        if (checkAbort()) {
+          return;
+        }
+        console.error("Failed to load friend requests for dock", error);
+      }
+
+      try {
+        const response = await fetch("/api/conversations/unread", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (response.ok) {
+          const data = (await response.json().catch(() => ({}))) as {
+            total?: unknown;
+            conversations?: Array<{ unreadCount?: unknown }>;
+          };
+
+          if (typeof data?.total === "number" && Number.isFinite(data.total)) {
+            nextChat = data.total > 0;
+          } else if (Array.isArray(data?.conversations)) {
+            nextChat = data.conversations.some((conversation) => {
+              const count = Number(conversation?.unreadCount ?? 0);
+              return Number.isFinite(count) && count > 0;
+            });
+          } else {
+            nextChat = false;
+          }
+        } else if (response.status !== 401 && !checkAbort()) {
+          console.error(
+            "Failed to load unread conversations for dock",
+            response.statusText,
+          );
+        }
+      } catch (error) {
+        if (checkAbort()) {
+          return;
+        }
+        console.error("Failed to load unread conversations for dock", error);
+      }
+
+      if (checkAbort()) {
+        return;
+      }
+
+      setIndicatorState((prev) => {
+        if (prev.chat === nextChat && prev.contacts === nextContacts) {
+          return prev;
+        }
+        return { chat: nextChat, contacts: nextContacts };
+      });
+    } finally {
+      if (indicatorFetchControllerRef.current === controller) {
+        indicatorFetchControllerRef.current = null;
+      }
+      if (!aborted) {
+        indicatorsInitializedRef.current = true;
+      }
+    }
+  }, [mounted, shouldHydrateAppIndicators]);
+  useEffect(() => {
+    return () => {
+      indicatorFetchControllerRef.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    if (!mounted || !shouldHydrateAppIndicators) {
+      return;
+    }
+
+    refreshDockIndicators();
+  }, [mounted, shouldHydrateAppIndicators, refreshDockIndicators]);
+  useEffect(() => {
+    if (!shouldHydrateAppIndicators) {
+      return;
+    }
+
+    if (!isChatPath && !isContactsPath) {
+      return;
+    }
+
+    setIndicatorState((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      if (isChatPath && prev.chat) {
+        next.chat = false;
+        changed = true;
+      }
+
+      if (isContactsPath && prev.contacts) {
+        next.contacts = false;
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [isChatPath, isContactsPath, shouldHydrateAppIndicators]);
+  useEffect(() => {
+    if (!mounted || !shouldHydrateAppIndicators) {
+      return;
+    }
+
+    if (!indicatorsInitializedRef.current) {
+      return;
+    }
+
+    if (isChatPath || isContactsPath) {
+      return;
+    }
+
+    refreshDockIndicators();
+  }, [
+    mounted,
+    shouldHydrateAppIndicators,
+    isChatPath,
+    isContactsPath,
+    refreshDockIndicators,
+  ]);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const {
     displaySettings,
@@ -160,6 +358,8 @@ export default function SiteDock() {
   const range = displaySettings.magnify ? 180 : 120;
   const panelHeight = 74;
   const dockHeight = 110;
+  const isChatPath = pathname.startsWith("/app/chat");
+  const isContactsPath = pathname.startsWith("/app/contacts");
 
   const { mouseX, rowHeight, height, handlers: hoverHandlers } = useDockHoverAnimation({
     panelHeight,
@@ -236,6 +436,24 @@ export default function SiteDock() {
 
     setPreferencesOpen(false);
     const href = item.href;
+    if (shouldHydrateAppIndicators) {
+      setIndicatorState((prev) => {
+        let changed = false;
+        const next = { ...prev };
+
+        if (href.startsWith("/app/chat") && prev.chat) {
+          next.chat = false;
+          changed = true;
+        }
+
+        if (href.startsWith("/app/contacts") && prev.contacts) {
+          next.contacts = false;
+          changed = true;
+        }
+
+        return changed ? next : prev;
+      });
+    }
     const targetIndex = indexForPath(dockItems, href);
     let dir: 1 | -1 = 1;
 
