@@ -230,6 +230,32 @@ export function usePeerConversationChannel(options: {
     return storagePromiseRef.current;
   }, []);
 
+  const shouldReplaceCache = useCallback(
+    (
+      existing: ConversationSnapshot | undefined,
+      incoming: ConversationSnapshot,
+    ): boolean => {
+      if (!existing) {
+        return true;
+      }
+
+      if (incoming.updatedAt !== existing.updatedAt) {
+        return incoming.updatedAt > existing.updatedAt;
+      }
+
+      if (incoming.messages.length !== existing.messages.length) {
+        return incoming.messages.length > existing.messages.length;
+      }
+
+      if (!existing.conversation && incoming.conversation) {
+        return true;
+      }
+
+      return false;
+    },
+    [],
+  );
+
   const readStored = useCallback(
     (conversationId: string): ConversationSnapshot => {
       if (!conversationId) {
@@ -252,6 +278,10 @@ export function usePeerConversationChannel(options: {
             if (!snapshot) {
               return;
             }
+            const current = cacheRef.current.get(conversationId);
+            if (!shouldReplaceCache(current, snapshot)) {
+              return;
+            }
             cacheRef.current.set(conversationId, snapshot);
             dispatchHydration(conversationId, snapshot);
           })
@@ -262,7 +292,7 @@ export function usePeerConversationChannel(options: {
 
       return placeholder;
     },
-    [dispatchHydration, ensureStorage],
+    [dispatchHydration, ensureStorage, shouldReplaceCache],
   );
 
   const writeStored = useCallback(
@@ -306,6 +336,10 @@ export function usePeerConversationChannel(options: {
         }
         const snapshot = await storage.read(conversationId);
         if (snapshot) {
+          const current = cacheRef.current.get(conversationId);
+          if (!shouldReplaceCache(current, snapshot)) {
+            return current ?? cached;
+          }
           cacheRef.current.set(conversationId, snapshot);
           dispatchHydration(conversationId, snapshot);
           return snapshot;
@@ -316,7 +350,7 @@ export function usePeerConversationChannel(options: {
 
       return cacheRef.current.get(conversationId) ?? fallbackConversation;
     },
-    [dispatchHydration, ensureStorage, readStored],
+    [dispatchHydration, ensureStorage, readStored, shouldReplaceCache],
   );
 
   const updateMessages = useCallback(
