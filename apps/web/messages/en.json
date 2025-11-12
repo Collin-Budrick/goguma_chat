@@ -504,40 +504,41 @@
     }
   },
   "Chat": {
-    "sidebar": {
-      "title": "Rooms",
-      "new": "New"
+    "roster": {
+      "title": "Conversations",
+      "new": "New chat",
+      "searchPlaceholder": "Search friends…",
+      "createHint": "Pick a friend to start a direct message.",
+      "empty": "Add friends from Contacts to start chatting.",
+      "emptyPreview": "No messages yet",
+      "lastActive": "Last activity {time}"
     },
-    "threads": {
-      "shipping": {
-        "preview": "Late-night ramen meetup?",
-        "time": "2m"
+    "thread": {
+      "header": "Direct message",
+      "directWith": "Chat with {name}",
+      "me": "You",
+      "loading": "Loading conversation…",
+      "empty": "Send the first message to get things rolling.",
+      "placeholder": {
+        "title": "Select a conversation",
+        "body": "Choose a friend from the list to open your messages."
       },
-      "webhook": {
-        "preview": "Share your Tokyo pics!!",
-        "time": "7m"
+      "transport": {
+        "label": "Transport",
+        "mode": {
+          "progressive": "Progressive",
+          "udp": "UDP"
+        }
       },
-      "handoff": {
-        "preview": "Game queue in 10?",
-        "time": "12m"
+      "composer": {
+        "placeholder": "Write a message…",
+        "send": "Send",
+        "sending": "Sending…"
       }
     },
-    "activeThread": {
-      "participant": "Avery",
-      "topic": "Osaka spring trip planning",
-      "badges": {
-        "transcript": "Transcript",
-        "macros": "Macros"
-      }
-    },
-    "messages": {
-      "customerGreeting": "Guys I found a tiny cafe near Dotonbori that does late-night bingsu?",
-      "agentUpdate": "Need!! Does it have vegan options for Mina? Also can we book six seats?",
-      "customerThanks": "Menu says yes + private booth if we call ahead. Dropping the number now."
-    },
-    "composer": {
-      "placeholder": "Drop a message…",
-      "send": "Send"
+    "alerts": {
+      "history": "We couldn’t load that conversation. Try again in a moment.",
+      "send": "We couldn’t send that message. Try again."
     }
   },
   "Settings": {
