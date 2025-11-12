@@ -200,8 +200,7 @@ export const conversations = pgTable(
   },
   (table) => ({
     directKeyUnique: uniqueIndex("conversations_direct_key_unique")
-      .on(table.directKey)
-      .where(sql`${table.type} = 'direct'`),
+      .on(table.directKey),
     directKeyCheck: check(
       "conversations_direct_key_check",
       sql`(${table.type} <> 'direct') OR ${table.directKey} IS NOT NULL`,
