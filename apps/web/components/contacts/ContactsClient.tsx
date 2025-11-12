@@ -473,6 +473,38 @@ export default function ContactsClient({ cacheKey, viewerId, initialState }: Con
     });
   };
 
+  const removeFriend = (friend: FriendSummary) => {
+    dispatch({ type: "removeFriend", friendshipId: friend.friendshipId });
+    markPending(friend.friendshipId, true);
+
+    startTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/friends/${encodeURIComponent(friend.friendId)}`,
+          {
+            method: "DELETE",
+          },
+        );
+
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(errorPayload.error ?? "Unable to remove friend");
+        }
+
+        const payload = (await response.json()) as Partial<ContactsState>;
+        handleSync(payload);
+      } catch (error) {
+        console.error(error);
+        dispatch({ type: "addFriend", payload: friend });
+        handleError(error instanceof Error ? error.message : t("errors.removeFriend"));
+      } finally {
+        markPending(friend.friendshipId, false);
+      }
+    });
+  };
+
   const pendingIds = useMemo(() => new Set(Object.keys(pendingMap)), [pendingMap]);
 
   const lastSynced = useMemo(
@@ -522,6 +554,10 @@ export default function ContactsClient({ cacheKey, viewerId, initialState }: Con
             formatSinceLabel={(value) =>
               t("lists.friends.since", { timestamp: value })
             }
+            onRemove={removeFriend}
+            pendingIds={pendingIds}
+            removeLabel={t("actions.remove")}
+            removingLabel={t("actions.removing")}
           />
           <div className="grid gap-6 lg:grid-cols-2">
             <FriendRequestList

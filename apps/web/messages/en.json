@@ -401,7 +401,8 @@
     "errors": {
       "load": "We couldn't refresh your contacts. Please try again.",
       "request": "We couldn't update that request. Please try again.",
-      "search": "Search failed. Try again soon."
+      "search": "Search failed. Try again soon.",
+      "removeFriend": "We couldn't remove that friend. Please try again."
     },
     "lists": {
       "friends": {
@@ -428,7 +429,9 @@
     "actions": {
       "accept": "Accept",
       "decline": "Decline",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "removing": "Removing…"
     },
     "search": {
       "title": "Search directory",

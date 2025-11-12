@@ -13,6 +13,10 @@ type FriendListProps = {
   countLabel: string;
   syncingLabel: string;
   formatSinceLabel: (value: string) => string;
+  onRemove?: (friend: FriendSummary) => void;
+  pendingIds?: Set<string>;
+  removeLabel?: string;
+  removingLabel?: string;
 };
 
 function formatDate(value: string, locale: string) {
@@ -58,8 +62,13 @@ export default function FriendList({
   countLabel,
   syncingLabel,
   formatSinceLabel,
+  onRemove,
+  pendingIds,
+  removeLabel,
+  removingLabel,
 }: FriendListProps) {
   const locale = useLocale();
+  const canRemove = typeof onRemove === "function";
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 text-sm text-white/80">
@@ -112,7 +121,21 @@ export default function FriendList({
                     ) : null}
                   </div>
                 </div>
-                <p className="text-xs text-white/40">{sinceLabel}</p>
+                <div className="flex flex-col items-end gap-2 text-right">
+                  <p className="text-xs text-white/40">{sinceLabel}</p>
+                  {canRemove ? (
+                    <button
+                      type="button"
+                      onClick={() => onRemove && onRemove(friend)}
+                      disabled={pendingIds?.has(friend.friendshipId)}
+                      className="text-xs uppercase tracking-[0.3em] text-white/50 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {pendingIds?.has(friend.friendshipId)
+                        ? removingLabel ?? "Removing…"
+                        : removeLabel ?? "Remove"}
+                    </button>
+                  ) : null}
+                </div>
               </li>
             );
           })}
