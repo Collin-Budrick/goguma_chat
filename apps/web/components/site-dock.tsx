@@ -39,6 +39,13 @@ type LocaleTransitionPayload = {
   timestamp?: number;
 };
 
+type IndicatorEventPayload = {
+  scope?: "chat" | "contacts" | "all";
+  reason?: string;
+  conversationId?: string | null;
+  requestId?: string | null;
+};
+
 const getStoredLocaleTransition = (): {
   locale: Locale | null;
   words: string[] | null;
@@ -115,6 +122,7 @@ export default function SiteDock() {
   });
   const indicatorFetchControllerRef = useRef<AbortController | null>(null);
   const indicatorsInitializedRef = useRef(false);
+  const activeConversationIdRef = useRef<string | null>(null);
   const shouldHydrateAppIndicators = useMemo(
     () =>
       baseDockItems.some(
@@ -126,6 +134,7 @@ export default function SiteDock() {
   );
   const isChatPath = pathname.startsWith("/app/chat");
   const isContactsPath = pathname.startsWith("/app/contacts");
+  const isChatPathRef = useRef(isChatPath);
   const dockItems = useMemo(() => {
     if (!shouldHydrateAppIndicators) {
       return baseDockItems;
@@ -143,6 +152,9 @@ export default function SiteDock() {
       return item;
     });
   }, [baseDockItems, indicatorState, shouldHydrateAppIndicators]);
+  useEffect(() => {
+    isChatPathRef.current = isChatPath;
+  }, [isChatPath]);
   const scrolled = useDockScrollState();
   const mounted = useDockMounted();
   const refreshDockIndicators = useCallback(async () => {
@@ -246,6 +258,30 @@ export default function SiteDock() {
     }
   }, [mounted, shouldHydrateAppIndicators]);
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handler = (event: Event) => {
+      if (!("detail" in event)) {
+        activeConversationIdRef.current = null;
+        return;
+      }
+      const detail = (event as CustomEvent<{ conversationId?: string | null }>).detail;
+      if (detail && typeof detail.conversationId === "string") {
+        activeConversationIdRef.current = detail.conversationId;
+      } else {
+        activeConversationIdRef.current = null;
+      }
+    };
+
+    window.addEventListener("dock:active-conversation", handler);
+
+    return () => {
+      window.removeEventListener("dock:active-conversation", handler);
+    };
+  }, []);
+  useEffect(() => {
     return () => {
       indicatorFetchControllerRef.current?.abort();
     };
@@ -256,6 +292,123 @@ export default function SiteDock() {
     }
 
     refreshDockIndicators();
+  }, [mounted, shouldHydrateAppIndicators, refreshDockIndicators]);
+  useEffect(() => {
+    if (!shouldHydrateAppIndicators) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handler = (event: Event) => {
+      const detail =
+        "detail" in event
+          ? (event as CustomEvent<{ scope?: "chat" | "contacts" | "all" }>).detail
+          : undefined;
+      const scope = detail?.scope ?? "all";
+      if (scope !== "all" && scope !== "chat") {
+        return;
+      }
+      refreshDockIndicators();
+    };
+
+    window.addEventListener("dock:refresh-indicators", handler);
+
+    return () => {
+      window.removeEventListener("dock:refresh-indicators", handler);
+    };
+  }, [shouldHydrateAppIndicators, refreshDockIndicators]);
+  useEffect(() => {
+    if (!mounted || !shouldHydrateAppIndicators) {
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof window.EventSource === "undefined") {
+      return;
+    }
+
+    let stopped = false;
+    let source: EventSource | null = null;
+    let reconnectTimeout: ReturnType<typeof window.setTimeout> | null = null;
+
+    const indicatorListener: EventListener = (event) => {
+      let payload: IndicatorEventPayload | null = null;
+      try {
+        const message = event as MessageEvent;
+        payload = JSON.parse(message.data) as IndicatorEventPayload;
+      } catch {
+        payload = null;
+      }
+
+      if (
+        payload?.scope === "chat" &&
+        payload.conversationId &&
+        activeConversationIdRef.current &&
+        payload.conversationId === activeConversationIdRef.current &&
+        isChatPathRef.current &&
+        payload.reason !== "read"
+      ) {
+        return;
+      }
+
+      refreshDockIndicators();
+    };
+
+    const readyListener: EventListener = () => {
+      refreshDockIndicators();
+    };
+
+    const cleanupSource = () => {
+      if (!source) {
+        return;
+      }
+      source.removeEventListener("indicator", indicatorListener);
+      source.removeEventListener("ready", readyListener);
+      source.onerror = null;
+      source.close();
+      source = null;
+    };
+
+    const connect = () => {
+      if (stopped) {
+        return;
+      }
+
+      cleanupSource();
+
+      const next = new EventSource("/api/app-indicators/events");
+      source = next;
+
+      next.addEventListener("indicator", indicatorListener);
+      next.addEventListener("ready", readyListener);
+
+      next.onerror = () => {
+        cleanupSource();
+        if (stopped) {
+          return;
+        }
+        if (reconnectTimeout !== null) {
+          return;
+        }
+        reconnectTimeout = window.setTimeout(() => {
+          reconnectTimeout = null;
+          connect();
+        }, 5_000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      stopped = true;
+      if (reconnectTimeout !== null) {
+        window.clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      cleanupSource();
+    };
   }, [mounted, shouldHydrateAppIndicators, refreshDockIndicators]);
   useEffect(() => {
     if (!shouldHydrateAppIndicators) {

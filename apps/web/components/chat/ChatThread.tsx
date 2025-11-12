@@ -196,6 +196,32 @@ export default function ChatThread({
   }, [conversation?.id]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("dock:active-conversation", {
+        detail: { conversationId: conversation?.id ?? null },
+      }),
+    );
+  }, [conversation?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("dock:active-conversation", {
+          detail: { conversationId: null },
+        }),
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     if (shouldUseInitialData) {
       setConversation(initialConversation);
       setMessages(initialMessages);
@@ -307,18 +333,31 @@ export default function ChatThread({
     const controller = new AbortController();
     const body = lastMessageId ? JSON.stringify({ lastMessageId }) : "{}";
 
-    fetch(`/api/conversations/${conversation.id}/read`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      signal: controller.signal,
-    }).catch((error) => {
-      if (error instanceof Error && error.name === "AbortError") {
-        return;
+    const run = async () => {
+      try {
+        await fetch(`/api/conversations/${conversation.id}/read`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("dock:refresh-indicators", {
+              detail: { scope: "chat", conversationId: conversation.id },
+            }),
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        console.error("Failed to mark conversation as read", error);
+        lastConversationReadKeyRef.current = null;
       }
-      console.error("Failed to mark conversation as read", error);
-      lastConversationReadKeyRef.current = null;
-    });
+    };
+
+    void run();
 
     return () => controller.abort();
   }, [conversation?.id, lastMessageId]);

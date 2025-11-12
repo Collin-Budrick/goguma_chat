@@ -139,6 +139,11 @@ async function getParticipants(
     .where(eq(conversationParticipants.conversationId, conversationId));
 }
 
+export async function listConversationParticipantIds(conversationId: string) {
+  const participants = await getParticipants(conversationId);
+  return participants.map((participant) => participant.userId);
+}
+
 export async function getDirectConversation(
   viewerId: string,
   friendId: string,

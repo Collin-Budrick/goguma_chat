@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { markConversationRead } from "@/db/conversations";
 import { auth } from "@/lib/auth";
+import { emitDockIndicatorEvent } from "@/lib/server-events";
 
 const markConversationReadSchema = z
   .object({
@@ -13,7 +14,7 @@ const markConversationReadSchema = z
 
 export async function POST(
   request: Request,
-  { params }: { params: { conversationId: string } },
+  context: { params: Promise<{ conversationId: string }> },
 ) {
   const session = await auth();
 
@@ -21,7 +22,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { conversationId } = params;
+  const { conversationId } = await context.params;
 
   if (!conversationId) {
     return NextResponse.json(
@@ -48,6 +49,12 @@ export async function POST(
 
   try {
     await markConversationRead(conversationId, session.user.id, { lastMessageId });
+    emitDockIndicatorEvent(session.user.id, {
+      type: "refresh",
+      scope: "chat",
+      reason: "read",
+      conversationId,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message =

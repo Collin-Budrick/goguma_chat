@@ -6,6 +6,7 @@ import {
   getFriendState,
 } from "@/db/friends";
 import { auth } from "@/lib/auth";
+import { emitDockIndicatorEvent } from "@/lib/server-events";
 
 const createFriendRequestSchema = z.object({
   recipientId: z.string().min(1, "recipientId is required"),
@@ -67,8 +68,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    await createFriendRequest(userId, recipientId);
+    const request = await createFriendRequest(userId, recipientId);
     const state = await getFriendState(userId);
+
+    emitDockIndicatorEvent(recipientId, {
+      type: "refresh",
+      scope: "contacts",
+      reason: "friend-request-created",
+      requestId: request.id,
+    });
+    emitDockIndicatorEvent(userId, {
+      type: "refresh",
+      scope: "contacts",
+      reason: "friend-request-created",
+      requestId: request.id,
+    });
 
     return NextResponse.json({
       ...state,

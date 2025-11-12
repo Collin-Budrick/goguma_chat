@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { cancelFriendRequest, getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
+import { emitDockIndicatorEvent } from "@/lib/server-events";
 
 const paramsSchema = z.object({
   requestId: z.string().min(1, "requestId is required"),
@@ -28,8 +29,21 @@ export async function POST(
   const { requestId } = parseResult.data;
 
   try {
-    await cancelFriendRequest(requestId, userId);
+    const request = await cancelFriendRequest(requestId, userId);
     const state = await getFriendState(userId);
+
+    emitDockIndicatorEvent(userId, {
+      type: "refresh",
+      scope: "contacts",
+      reason: "friend-request-cancelled",
+      requestId,
+    });
+    emitDockIndicatorEvent(request.recipientId, {
+      type: "refresh",
+      scope: "contacts",
+      reason: "friend-request-cancelled",
+      requestId,
+    });
 
     return NextResponse.json({
       ...state,

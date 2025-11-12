@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { createMessage, serializeMessage } from "@/db/conversations";
+import {
+  createMessage,
+  listConversationParticipantIds,
+  serializeMessage,
+} from "@/db/conversations";
 import { auth } from "@/lib/auth";
-import { emitConversationEvent } from "@/lib/server-events";
+import {
+  emitConversationEvent,
+  emitDockIndicatorEvent,
+} from "@/lib/server-events";
 
 type SendMessagePayload = {
   conversationId?: string;
@@ -49,6 +56,23 @@ export async function POST(request: Request) {
       clientMessageId:
         typeof body.clientMessageId === "string" ? body.clientMessageId : undefined,
     });
+
+    try {
+      const participantIds = await listConversationParticipantIds(body.conversationId);
+      for (const participantId of participantIds) {
+        if (participantId === session.user.id) {
+          continue;
+        }
+        emitDockIndicatorEvent(participantId, {
+          type: "refresh",
+          scope: "chat",
+          reason: "message",
+          conversationId: body.conversationId,
+        });
+      }
+    } catch (eventError) {
+      console.error("Failed to emit dock indicator events", eventError);
+    }
 
     return NextResponse.json({ message: serialized });
   } catch (error) {

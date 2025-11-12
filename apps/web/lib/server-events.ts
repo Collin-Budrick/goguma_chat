@@ -9,25 +9,64 @@ type TypingPayload = {
 };
 
 type ConversationEvent =
-  | { type: "message"; conversationId: string; message: SerializedMessage; clientMessageId?: string }
+  | {
+      type: "message";
+      conversationId: string;
+      message: SerializedMessage;
+      clientMessageId?: string;
+    }
   | { type: "typing"; conversationId: string; typing: TypingPayload };
 
-const emitter = new EventEmitter();
+type DockIndicatorScope = "chat" | "contacts" | "all";
 
-emitter.setMaxListeners(0);
+type DockIndicatorEvent = {
+  type: "refresh";
+  scope: DockIndicatorScope;
+  reason?: string;
+  conversationId?: string;
+  requestId?: string;
+};
+
+const conversationEmitter = new EventEmitter();
+const indicatorEmitter = new EventEmitter();
+
+conversationEmitter.setMaxListeners(0);
+indicatorEmitter.setMaxListeners(0);
 
 export function emitConversationEvent(event: ConversationEvent) {
-  emitter.emit(event.conversationId, event);
+  conversationEmitter.emit(event.conversationId, event);
 }
 
 export function subscribeToConversationEvents(
   conversationId: string,
   listener: (event: ConversationEvent) => void,
 ) {
-  emitter.on(conversationId, listener);
+  conversationEmitter.on(conversationId, listener);
   return () => {
-    emitter.off(conversationId, listener);
+    conversationEmitter.off(conversationId, listener);
   };
 }
 
-export type { ConversationEvent, TypingPayload };
+export function emitDockIndicatorEvent(
+  userId: string,
+  event: DockIndicatorEvent,
+) {
+  indicatorEmitter.emit(userId, event);
+}
+
+export function subscribeToDockIndicatorEvents(
+  userId: string,
+  listener: (event: DockIndicatorEvent) => void,
+) {
+  indicatorEmitter.on(userId, listener);
+  return () => {
+    indicatorEmitter.off(userId, listener);
+  };
+}
+
+export type {
+  ConversationEvent,
+  DockIndicatorEvent,
+  DockIndicatorScope,
+  TypingPayload,
+};
