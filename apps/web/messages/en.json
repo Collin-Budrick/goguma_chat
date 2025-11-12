@@ -549,6 +549,18 @@
         "light": "Light mode"
       }
     },
+    "messaging": {
+      "title": "Messaging transport",
+      "description": "Choose how live chats connect. UDP is experimental and skips congestion helpers.",
+      "options": {
+        "udp": "UDP burst (experimental)",
+        "progressive": "Progressive WebRTC/WebTransport"
+      },
+      "helper": {
+        "udp": "Route packets over UDP for ultra-low latency. Expect occasional drops while we polish the stack.",
+        "progressive": "Stick with the reliable WebRTC/WebTransport pipeline for adaptive, congestion-aware delivery."
+      }
+    },
     "motion": {
       "title": "Motion",
       "description": "Reduce motion if you get woozy or are screen recording.",
