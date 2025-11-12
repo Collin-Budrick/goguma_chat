@@ -1,6 +1,7 @@
 import { and, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import { findDirectConversation } from "./conversations";
 import { db } from "./index";
 import {
   friendRequestStatusEnum,
@@ -215,8 +216,17 @@ export async function getFriendState(userId: string) {
     listPendingRequests(userId),
   ]);
 
+  const friendsWithConversations = await Promise.all(
+    friends.map(async (friend) => ({
+      ...friend,
+      hasConversation: Boolean(
+        await findDirectConversation(userId, friend.friendId),
+      ),
+    })),
+  );
+
   return {
-    friends,
+    friends: friendsWithConversations,
     incoming: pending.incoming,
     outgoing: pending.outgoing,
   };

@@ -60,6 +60,27 @@ function makeDirectKey(userA: string, userB: string) {
   return `${left}:${right}`;
 }
 
+export async function findDirectConversation(
+  viewerId: string,
+  friendId: string,
+  client = db,
+): Promise<ConversationRecord | null> {
+  const directKey = makeDirectKey(viewerId, friendId);
+
+  const [conversation] = await client
+    .select()
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.type, DIRECT_CONVERSATION),
+        eq(conversations.directKey, directKey),
+      ),
+    )
+    .limit(1);
+
+  return conversation ?? null;
+}
+
 async function assertFriendship(
   userId: string,
   friendId: string,
