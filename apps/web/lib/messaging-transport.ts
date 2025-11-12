@@ -837,12 +837,65 @@ export const createPeerSignalingController = (
       };
 
       if (role === "guest") {
-        const state = controller.getSnapshot();
-        if (!state.remoteInvite) {
-          throw new TransportUnavailableError("Missing remote invite for peer signaling");
-        }
+        const waitForRemoteInvite = async (): Promise<string> => {
+          const latest = controller.getSnapshot();
+          if (latest.remoteInvite) {
+            return latest.remoteInvite;
+          }
 
-        const offerPayload = controller.decodeToken(state.remoteInvite);
+          if (signal.aborted) {
+            throw createAbortError();
+          }
+
+          return await new Promise<string>((resolve, reject) => {
+            let settled = false;
+            let unsubscribe: (() => void) | null = null;
+            const cleanup = () => {
+              if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+              }
+              signal.removeEventListener("abort", handleAbort);
+            };
+
+            const handleAbort = () => {
+              if (settled) {
+                return;
+              }
+              settled = true;
+              cleanup();
+              reject(createAbortError());
+            };
+
+            unsubscribe = controller.subscribe((next) => {
+              if (settled) {
+                return;
+              }
+              if (next.role !== "guest") {
+                settled = true;
+                cleanup();
+                reject(
+                  new TransportUnavailableError(
+                    "Peer role changed before invite was received",
+                  ),
+                );
+                return;
+              }
+
+              if (next.remoteInvite) {
+                settled = true;
+                cleanup();
+                resolve(next.remoteInvite);
+              }
+            });
+
+            signal.addEventListener("abort", handleAbort, { once: true });
+          });
+        };
+
+        const inviteToken = await waitForRemoteInvite();
+
+        const offerPayload = controller.decodeToken(inviteToken);
         if (offerPayload.kind !== "offer") {
           throw new TransportUnavailableError("Remote invite token is not an offer");
         }
@@ -1130,13 +1183,7 @@ export const createPeerSignalingController = (
       commitState({ connected: false, lastUpdated: now() });
     },
     shouldInitialize() {
-      if (currentState.role === "host") {
-        return true;
-      }
-      if (currentState.role === "guest") {
-        return Boolean(currentState.remoteInvite);
-      }
-      return false;
+      return currentState.role !== null;
     },
     createDependencies,
     decodeToken: (token) => deserializePeerToken(token),
