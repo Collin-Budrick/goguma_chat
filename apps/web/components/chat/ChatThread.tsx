@@ -84,6 +84,7 @@ function formatMessageTime(value: string, locale: string) {
   } catch (error) {
     return value;
   }
+}
 function createOptimisticMessage(
   conversationId: string,
   viewerId: string,
