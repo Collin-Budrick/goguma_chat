@@ -15,6 +15,13 @@
       "when": 1762904220950,
       "tag": "0001_known_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762904221950,
+      "tag": "0002_add_conversations",
+      "breakpoints": true
     }
   ]
 }
