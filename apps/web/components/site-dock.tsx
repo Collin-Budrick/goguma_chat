@@ -204,7 +204,18 @@ export default function SiteDock() {
       }
 
       try {
-        const response = await fetch("/api/conversations/unread", {
+        const shouldExclude =
+          Boolean(activeConversationIdRef.current) && isChatPathRef.current;
+        const unreadParams = new URLSearchParams();
+        if (shouldExclude && activeConversationIdRef.current) {
+          unreadParams.set("exclude", activeConversationIdRef.current);
+        }
+        const unreadUrl =
+          unreadParams.size > 0
+            ? `/api/conversations/unread?${unreadParams.toString()}`
+            : "/api/conversations/unread";
+
+        const response = await fetch(unreadUrl, {
           method: "GET",
           signal: controller.signal,
         });
@@ -419,6 +430,10 @@ export default function SiteDock() {
       return;
     }
 
+    if (!indicatorState.chat && !indicatorState.contacts) {
+      return;
+    }
+
     setIndicatorState((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -435,7 +450,13 @@ export default function SiteDock() {
 
       return changed ? next : prev;
     });
-  }, [isChatPath, isContactsPath, shouldHydrateAppIndicators]);
+  }, [
+    isChatPath,
+    isContactsPath,
+    shouldHydrateAppIndicators,
+    indicatorState.chat,
+    indicatorState.contacts,
+  ]);
   useEffect(() => {
     if (!mounted || !shouldHydrateAppIndicators) {
       return;

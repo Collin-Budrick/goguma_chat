@@ -413,7 +413,10 @@ export async function markConversationRead(
 
 export async function listUnreadConversations(
   userId: string,
+  options: { excludeConversationId?: string | null } = {},
 ): Promise<UnreadConversationSummary[]> {
+  const { excludeConversationId = null } = options;
+
   const rows = await db
     .select({
       conversationId: messages.conversationId,
@@ -434,15 +437,21 @@ export async function listUnreadConversations(
         eq(conversationReads.userId, userId),
       ),
     )
-    .where(
-      and(
+    .where(() => {
+      const conditions = [
         eq(conversationParticipants.userId, userId),
         or(
           isNull(conversationReads.lastReadAt),
           gt(messages.createdAt, conversationReads.lastReadAt),
         ),
-      ),
-    )
+      ];
+
+      if (excludeConversationId) {
+        conditions.push(ne(messages.conversationId, excludeConversationId));
+      }
+
+      return and(...conditions);
+    })
     .groupBy(messages.conversationId);
 
   return rows.map((row) => ({
