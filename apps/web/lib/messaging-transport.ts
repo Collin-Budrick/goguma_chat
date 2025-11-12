@@ -5,6 +5,7 @@ import {
   MESSAGING_MODE_EVENT,
   loadMessagingMode,
 } from "./messaging-mode";
+import type { PeerPresenceUpdate } from "./messaging-schema";
 
 export type TransportMessage =
   | string
@@ -52,6 +53,25 @@ const createEmitter = <T>() => {
     },
   };
 };
+
+export type PeerPresenceListener = (update: PeerPresenceUpdate) => void;
+
+export const PEER_PRESENCE_EVENT = "messaging:peer-presence";
+
+const presenceEmitter = createEmitter<PeerPresenceUpdate>();
+
+export const emitPeerPresence = (update: PeerPresenceUpdate) => {
+  presenceEmitter.emit(update);
+  if (typeof window !== "undefined") {
+    const event = new CustomEvent<PeerPresenceUpdate>(PEER_PRESENCE_EVENT, {
+      detail: update,
+    });
+    window.dispatchEvent(event);
+  }
+};
+
+export const onPeerPresence = (listener: PeerPresenceListener) =>
+  presenceEmitter.subscribe(listener);
 
 type DriverConnection = {
   send: (payload: TransportMessage) => Promise<void>;

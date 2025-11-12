@@ -170,10 +170,16 @@ export default function ChatThread({
   const [isMessagingModeUpdating, setIsMessagingModeUpdating] = useState(false);
   const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
+  const [presenceToast, setPresenceToast] = useState<string | null>(null);
 
   const transportHandle = useMessagingTransportHandle();
-  const { sendMessage: sendPeerMessage, subscribeMessages, loadMore, syncHistory } =
-    usePeerConversationChannel({ transport: transportHandle });
+  const {
+    sendMessage: sendPeerMessage,
+    subscribeMessages,
+    loadMore,
+    syncHistory,
+    presence,
+  } = usePeerConversationChannel({ transport: transportHandle });
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -188,6 +194,46 @@ export default function ChatThread({
   const lastConversationReadKeyRef = useRef<string | null>(null);
   const settingsPanelRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const playPresenceChime = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const AudioContextCtor =
+      window.AudioContext ??
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    try {
+      const context = new AudioContextCtor();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      gain.gain.value = 0.08;
+      oscillator.frequency.value = 880;
+      oscillator.type = "sine";
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.12);
+      oscillator.onended = () => {
+        try {
+          oscillator.disconnect();
+          gain.disconnect();
+        } catch (error) {
+          console.error("Failed to clean up presence audio", error);
+        }
+        context.close().catch(() => undefined);
+      };
+    } catch (error) {
+      console.error("Failed to play presence chime", error);
+    }
+  }, []);
 
   const updateDisplaySettings = useCallback(
     (updater: (prev: DisplaySettings) => DisplaySettings) => {
@@ -572,6 +618,11 @@ export default function ChatThread({
 
     const run = async () => {
       try {
+        void presence.sendReadReceipt({
+          conversationId: conversation.id,
+          userId: viewerId,
+          lastMessageId,
+        });
         await fetch(`/api/conversations/${conversation.id}/read`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -597,7 +648,7 @@ export default function ChatThread({
     void run();
 
     return () => controller.abort();
-  }, [conversation?.id, lastMessageId]);
+  }, [conversation?.id, lastMessageId, presence, viewerId]);
 
   useEffect(() => {
     if (!conversation?.id) {
@@ -651,11 +702,62 @@ export default function ChatThread({
         return;
       }
 
-      if (event.type === "typing") {
-        setTypingState((prev) => ({
-          ...prev,
-          [event.typing.userId]: toDate(event.typing.expiresAt).getTime(),
-        }));
+      if (event.type === "presence") {
+        if (event.presence.kind === "typing") {
+          const { typing } = event.presence;
+          setTypingState((prev) => {
+            if (!typing.isTyping) {
+              if (!prev[typing.userId]) {
+                return prev;
+              }
+              const next = { ...prev };
+              delete next[typing.userId];
+              return next;
+            }
+            return {
+              ...prev,
+              [typing.userId]: toDate(typing.expiresAt).getTime(),
+            };
+          });
+          return;
+        }
+
+        if (event.presence.kind === "read") {
+          if (event.presence.userId !== viewerId) {
+            const profile = getParticipantProfile(conversation, event.presence.userId);
+            const name = profile ? getContactName(profile) : t("thread.presence.readFallback");
+            setPresenceToast(
+              t("thread.presence.readToast", {
+                name,
+              }),
+            );
+            playPresenceChime();
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("dock:refresh-indicators", {
+                  detail: {
+                    scope: "chat",
+                    conversationId: conversation.id,
+                  },
+                }),
+              );
+            }
+          }
+          return;
+        }
+
+        if (event.presence.kind === "delivery") {
+          if (event.presence.userId !== viewerId) {
+            const profile = getParticipantProfile(conversation, event.presence.userId);
+            const name = profile ? getContactName(profile) : t("thread.presence.deliveryFallback");
+            setPresenceToast(
+              t("thread.presence.deliveryToast", {
+                name,
+              }),
+            );
+            playPresenceChime();
+          }
+        }
         return;
       }
 
@@ -665,7 +767,13 @@ export default function ChatThread({
     });
 
     return unsubscribe;
-  }, [conversation?.id, subscribeMessages]);
+  }, [
+    conversation,
+    subscribeMessages,
+    t,
+    viewerId,
+    playPresenceChime,
+  ]);
 
   useEffect(() => {
     if (!conversation?.id) {
@@ -705,6 +813,24 @@ export default function ChatThread({
     const node = messageContainerRef.current;
     node.scrollTop = node.scrollHeight;
   }, [conversation?.id, messages.length, isFetchingMore, clearedHistoryAt]);
+
+  useEffect(() => {
+    if (!presenceToast) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPresenceToast(null);
+    }, 4_000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [presenceToast]);
 
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
@@ -760,18 +886,17 @@ export default function ChatThread({
       if (!conversationId) {
         return;
       }
-      fetch("/api/messages/typing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId,
+      const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
+      void presence.sendTyping({
+        conversationId,
+        typing: {
+          userId: viewerId,
           isTyping,
-        }),
-      }).catch(() => {
-        // Best effort typing indicator.
+          expiresAt,
+        },
       });
     },
-    [conversationId],
+    [conversationId, presence, viewerId],
   );
 
   const handleDraftChange = useCallback(
@@ -1178,6 +1303,12 @@ export default function ChatThread({
               <p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {threadError}
               </p>
+            ) : null}
+
+            {presenceToast ? (
+              <div className="mb-4 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white/80 shadow-sm">
+                {presenceToast}
+              </div>
             ) : null}
 
             {isThreadLoading ? (

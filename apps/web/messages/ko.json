@@ -586,6 +586,12 @@
         "placeholder": "메시지를 작성해 보세요…",
         "send": "보내기",
         "sending": "보내는 중…"
+      },
+      "presence": {
+        "readToast": "{name}님이 최근 메시지를 읽었어요.",
+        "deliveryToast": "{name}님에게 전달됐어요.",
+        "readFallback": "친구",
+        "deliveryFallback": "친구"
       }
     },
     "alerts": {

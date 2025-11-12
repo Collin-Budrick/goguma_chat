@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   type TransportHandle,
   type TransportMessage,
+  emitPeerPresence,
 } from "@/lib/messaging-transport";
+import type {
+  PeerPresenceUpdate,
+  PeerTransportIncomingFrame,
+} from "@/lib/messaging-schema";
 
 import type {
   ChatConversation,
@@ -32,7 +37,7 @@ type ChannelEvent =
       nextCursor: string | null;
     }
   | { type: "conversation"; conversation: ChatConversation | null }
-  | { type: "typing"; typing: TypingEvent }
+  | { type: "presence"; presence: PeerPresenceUpdate }
   | { type: "error"; error: Error };
 
 type ChannelListener = (event: ChannelEvent) => void;
@@ -81,51 +86,6 @@ type SyncHistoryResult = {
   nextCursor: string | null;
 };
 
-type PeerFrame =
-  | {
-      type: "message";
-      conversationId: string;
-      message: ChatMessage;
-      clientMessageId?: string | null;
-    }
-  | {
-      type: "message:ack";
-      conversationId: string;
-      message?: ChatMessage;
-      clientMessageId?: string | null;
-      error?: string;
-    }
-  | {
-      type: "history:sync";
-      conversationId: string;
-      messages: ChatMessage[];
-      nextCursor?: string | null;
-      conversation?: ChatConversation | null;
-      requestId?: string;
-    }
-  | {
-      type: "history:page";
-      conversationId: string;
-      messages: ChatMessage[];
-      nextCursor?: string | null;
-      requestId?: string;
-    }
-  | {
-      type: "conversation";
-      conversation: ChatConversation;
-    }
-  | {
-      type: "typing";
-      conversationId: string;
-      typing: TypingEvent;
-    }
-  | {
-      type: "error";
-      requestId?: string;
-      conversationId?: string;
-      message?: string;
-    };
-
 type PendingMap<T> = Map<string, PendingEntry<T>>;
 
 const fallbackConversation: ConversationSnapshot = {
@@ -135,10 +95,12 @@ const fallbackConversation: ConversationSnapshot = {
   updatedAt: 0,
 };
 
-const parseTransportMessage = (payload: TransportMessage): PeerFrame | null => {
+const parseTransportMessage = (
+  payload: TransportMessage,
+): PeerTransportIncomingFrame | null => {
   try {
     if (typeof payload === "string") {
-      return JSON.parse(payload) as PeerFrame;
+      return JSON.parse(payload) as PeerTransportIncomingFrame;
     }
 
     if (payload instanceof ArrayBuffer || ArrayBuffer.isView(payload)) {
@@ -146,7 +108,7 @@ const parseTransportMessage = (payload: TransportMessage): PeerFrame | null => {
         ? new Uint8Array(payload)
         : new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength);
       const text = new TextDecoder().decode(view);
-      return JSON.parse(text) as PeerFrame;
+      return JSON.parse(text) as PeerTransportIncomingFrame;
     }
 
     if (payload instanceof Blob) {
@@ -165,6 +127,26 @@ const createRequestId = () =>
 
 const normalizeError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value ?? "Unknown error"));
+
+type SendTypingPresenceOptions = {
+  conversationId: string;
+  typing: TypingEvent;
+};
+
+type SendReadReceiptPresenceOptions = {
+  conversationId: string;
+  userId: string;
+  lastMessageId: string | null;
+  readAt?: string;
+};
+
+type SendDeliveryPresenceOptions = {
+  conversationId: string;
+  userId: string;
+  messageId: string;
+  clientMessageId?: string | null;
+  deliveredAt?: string;
+};
 
 export function usePeerConversationChannel(options: {
   transport: TransportHandle | null;
@@ -470,7 +452,7 @@ export function usePeerConversationChannel(options: {
   }, []);
 
   const handleFrame = useCallback(
-    (frame: PeerFrame | null) => {
+    (frame: PeerTransportIncomingFrame | null) => {
       if (!frame) return;
 
       switch (frame.type) {
@@ -530,6 +512,22 @@ export function usePeerConversationChannel(options: {
           updateMessages(conversationId, [message]);
           resolvePending(pendingAcksRef.current, clientMessageId, message);
           notify(conversationId, { type: "message", message, clientMessageId });
+          const deliveredAt = message.updatedAt ?? message.createdAt;
+          const snapshot = readStored(conversationId);
+          const recipientId =
+            snapshot.conversation?.participants.find(
+              (participant) => participant.userId !== message.senderId,
+            )?.userId ?? message.senderId;
+          const deliveryPresence: PeerPresenceUpdate = {
+            kind: "delivery",
+            conversationId,
+            userId: recipientId,
+            messageId: message.id,
+            clientMessageId: clientMessageId ?? null,
+            deliveredAt,
+          };
+          emitPeerPresence(deliveryPresence);
+          notify(conversationId, { type: "presence", presence: deliveryPresence });
           break;
         }
         case "history:sync": {
@@ -596,9 +594,21 @@ export function usePeerConversationChannel(options: {
           }
           break;
         }
+        case "presence": {
+          const { conversationId, presence } = frame;
+          emitPeerPresence(presence);
+          notify(conversationId, { type: "presence", presence });
+          break;
+        }
         case "typing": {
           const { conversationId, typing } = frame;
-          notify(conversationId, { type: "typing", typing });
+          const presence: PeerPresenceUpdate = {
+            kind: "typing",
+            conversationId,
+            typing,
+          };
+          emitPeerPresence(presence);
+          notify(conversationId, { type: "presence", presence });
           break;
         }
         case "error": {
@@ -735,6 +745,114 @@ export function usePeerConversationChannel(options: {
       });
     },
     [notify, registerPending, rejectPending, updateMessages],
+  );
+
+  const sendPresence = useCallback(
+    async (presence: PeerPresenceUpdate) => {
+      const conversationId = presence.conversationId;
+      if (!conversationId) {
+        throw new Error("Presence update is missing a conversation identifier");
+      }
+
+      const transport = transportRef.current;
+      if (!transport) {
+        return;
+      }
+
+      await transport.ready.catch(() => undefined);
+
+      try {
+        await transport.send(
+          JSON.stringify({
+            type: "presence",
+            conversationId,
+            presence,
+          }),
+        );
+      } catch (error) {
+        console.error("Failed to send presence update", error);
+      }
+    },
+    [],
+  );
+
+  const sendPresenceTyping = useCallback(
+    async ({ conversationId, typing }: SendTypingPresenceOptions) => {
+      if (!conversationId) {
+        return;
+      }
+
+      const payload: PeerPresenceUpdate = {
+        kind: "typing",
+        conversationId,
+        typing,
+      };
+
+      try {
+        await sendPresence(payload);
+      } catch (error) {
+        console.error("Failed to publish typing presence", error);
+      }
+    },
+    [sendPresence],
+  );
+
+  const sendPresenceReadReceipt = useCallback(
+    async ({
+      conversationId,
+      userId,
+      lastMessageId,
+      readAt,
+    }: SendReadReceiptPresenceOptions) => {
+      if (!conversationId) {
+        return;
+      }
+
+      const payload: PeerPresenceUpdate = {
+        kind: "read",
+        conversationId,
+        userId,
+        lastMessageId,
+        readAt: readAt ?? new Date().toISOString(),
+      };
+
+      try {
+        await sendPresence(payload);
+      } catch (error) {
+        console.error("Failed to publish read receipt", error);
+      }
+    },
+    [sendPresence],
+  );
+
+  const sendPresenceDeliveryAck = useCallback(
+    async ({
+      conversationId,
+      userId,
+      messageId,
+      clientMessageId,
+      deliveredAt,
+    }: SendDeliveryPresenceOptions) => {
+      if (!conversationId) {
+        return;
+      }
+
+      const payload: PeerPresenceUpdate = {
+        kind: "delivery",
+        conversationId,
+        userId,
+        messageId,
+        clientMessageId: clientMessageId ?? null,
+        deliveredAt: deliveredAt ?? new Date().toISOString(),
+      };
+
+      try {
+        await sendPresence(payload);
+      } catch (error) {
+        console.error("Failed to publish delivery acknowledgment", error);
+      }
+    },
+    [sendPresence],
   );
 
   const loadMore = useCallback(
@@ -901,7 +1019,20 @@ export function usePeerConversationChannel(options: {
       subscribeMessages,
       loadMore,
       syncHistory,
+      presence: {
+        sendTyping: sendPresenceTyping,
+        sendReadReceipt: sendPresenceReadReceipt,
+        sendDeliveryAck: sendPresenceDeliveryAck,
+      },
     }),
-    [loadMore, sendMessage, subscribeMessages, syncHistory],
+    [
+      loadMore,
+      sendMessage,
+      sendPresenceDeliveryAck,
+      sendPresenceReadReceipt,
+      sendPresenceTyping,
+      subscribeMessages,
+      syncHistory,
+    ],
   );
 }
