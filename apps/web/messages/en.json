@@ -532,6 +532,45 @@
           "udp": "UDP"
         }
       },
+      "settings": {
+        "open": "Open chat settings",
+        "close": "Close chat settings",
+        "panelLabel": "Chat settings",
+        "unified": {
+          "title": "Unified chat settings",
+          "description": "Everyone in this conversation sees these choices.",
+          "transport": {
+            "options": {
+              "progressive": {
+                "label": "Progressive delivery",
+                "description": "Adaptive WebRTC/WebTransport pipeline with congestion helpers."
+              },
+              "udp": {
+                "label": "UDP relay",
+                "description": "Experimental low-latency UDP path that may drop packets."
+              }
+            }
+          }
+        },
+        "local": {
+          "title": "My chat settings",
+          "description": "These tweaks only affect your view.",
+          "options": {
+            "magnify": {
+              "label": "Comfortable bubble size",
+              "description": "Add extra padding and larger type to messages."
+            },
+            "labels": {
+              "label": "Show message labels",
+              "description": "Display sender names and timestamps above each message."
+            },
+            "theme": {
+              "label": "Use light bubbles",
+              "description": "Switch your outgoing messages to a lighter appearance."
+            }
+          }
+        }
+      },
       "composer": {
         "placeholder": "Write a message…",
         "send": "Send",
