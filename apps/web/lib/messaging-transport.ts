@@ -1897,16 +1897,24 @@ const createProgressiveDriver = (
     try {
       return await webrtcFactory(withDependencies);
     } catch (error) {
-      startOptions.emitError(normalizeError(error));
+      const normalized = normalizeError(error);
+      startOptions.emitError(normalized);
+
+      const endpoint =
+        typeof dependencies.webTransportEndpoint === "function"
+          ? dependencies.webTransportEndpoint(startOptions.options)
+          : dependencies.webTransportEndpoint;
 
       const webTransportFactory =
         dependencies.createWebTransport ?? ((options) => defaultCreateWebTransport(options));
 
+      if (!dependencies.createWebTransport && !endpoint) {
+        throw normalized;
+      }
+
       return webTransportFactory({
         ...withDependencies,
-        endpoint: typeof dependencies.webTransportEndpoint === "function"
-          ? dependencies.webTransportEndpoint(startOptions.options)
-          : dependencies.webTransportEndpoint,
+        endpoint,
       });
     }
   },

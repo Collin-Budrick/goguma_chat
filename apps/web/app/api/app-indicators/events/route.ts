@@ -12,9 +12,8 @@ const HEARTBEAT_INTERVAL = 25_000;
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function formatIndicatorEvent(event: DockIndicatorEvent) {
-  return `event: indicator\ndata: ${JSON.stringify(event)}\n\n`;
-}
+const formatEvent = (event: string, payload: object) =>
+  `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -23,37 +22,58 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
   const userId = session.user.id;
+  let cleanup: (() => void) | null = null;
 
-  const keepAlive = setInterval(() => {
-    writer.write(encoder.encode("event: ping\ndata: {}\n\n")).catch(() => {
-      clearInterval(keepAlive);
-    });
-  }, HEARTBEAT_INTERVAL);
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const pushEvent = (event: string, payload: object) => {
+        controller.enqueue(encoder.encode(formatEvent(event, payload)));
+      };
 
-  const unsubscribe = subscribeToDockIndicatorEvents(userId, (event) => {
-    const payload = formatIndicatorEvent(event);
-    writer.write(encoder.encode(payload)).catch(() => {
-      unsubscribe();
-      clearInterval(keepAlive);
-    });
+      let keepAlive: ReturnType<typeof setInterval> | null = null;
+      let unsubscribe: (() => void) | null = null;
+      let closed = false;
+
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        if (keepAlive) {
+          clearInterval(keepAlive);
+          keepAlive = null;
+        }
+        unsubscribe?.();
+        unsubscribe = null;
+        controller.close();
+      };
+
+      cleanup = close;
+      request.signal.addEventListener("abort", close, { once: true });
+
+      keepAlive = setInterval(() => {
+        try {
+          pushEvent("ping", {});
+        } catch {
+          close();
+        }
+      }, HEARTBEAT_INTERVAL);
+
+      unsubscribe = subscribeToDockIndicatorEvents(userId, (event) => {
+        try {
+          pushEvent("indicator", event as DockIndicatorEvent);
+        } catch {
+          close();
+        }
+      });
+
+      pushEvent("ready", {});
+    },
+    cancel() {
+      cleanup?.();
+    },
   });
 
-  const closeStream = () => {
-    unsubscribe();
-    clearInterval(keepAlive);
-    writer.close().catch(() => {});
-  };
-
-  request.signal.addEventListener("abort", closeStream);
-
-  writer.write(encoder.encode("event: ready\ndata: {}\n\n")).catch(() => {
-    closeStream();
-  });
-
-  return new Response(stream.readable, {
+  return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       Connection: "keep-alive",
