@@ -318,7 +318,23 @@ export default function ChatThread({
     source.addEventListener("typing", (event) => {
       try {
         const payload = JSON.parse(event.data) as TypingEvent;
-        setTypingState((prev) => ({ ...prev, [payload.userId]: payload.expiresAt }));
+        setTypingState((prev) => {
+          if (!payload.isTyping) {
+            if (!(payload.userId in prev)) {
+              return prev;
+            }
+            const next = { ...prev };
+            delete next[payload.userId];
+            return next;
+          }
+
+          const expiry = Date.parse(payload.expiresAt);
+          if (Number.isNaN(expiry)) {
+            return prev;
+          }
+
+          return { ...prev, [payload.userId]: expiry };
+        });
       } catch (error) {
         console.error("Failed to parse typing event", error);
       }
