@@ -151,6 +151,7 @@ export default function ChatClient({
   const locale = useLocale();
   const router = useRouter();
 
+  const [rosterFriends, setRosterFriends] = useState<FriendSummary[]>(friends);
   const [search, setSearch] = useState("");
   const [activeFriendId, setActiveFriendId] = useState<string | null>(
     initialFriendId ?? friends[0]?.friendId ?? null,
@@ -180,8 +181,8 @@ export default function ChatClient({
   const pendingThreadControllerRef = useRef<AbortController | null>(null);
 
   const friendProfile = useMemo(
-    () => getFriendProfile(activeFriendId, friends),
-    [activeFriendId, friends],
+    () => getFriendProfile(activeFriendId, rosterFriends),
+    [activeFriendId, rosterFriends],
   );
 
   const activeFriendContact = useMemo(
@@ -196,16 +197,16 @@ export default function ChatClient({
 
   const filteredFriends = useMemo(() => {
     if (!search.trim()) {
-      return friends;
+      return rosterFriends;
     }
     const needle = search.trim().toLowerCase();
-    return friends.filter((friend) => {
+    return rosterFriends.filter((friend) => {
       const profile = friendToContactProfile(friend);
       const name = getContactName(profile).toLowerCase();
       const email = friend.email?.toLowerCase() ?? "";
       return name.includes(needle) || email.includes(needle);
     });
-  }, [friends, search]);
+  }, [rosterFriends, search]);
 
   const typingProfiles = useMemo(() => {
     if (!conversation) return [];
@@ -221,18 +222,37 @@ export default function ChatClient({
   }, [conversation, typingState, viewerId]);
 
   useEffect(() => {
-    if (!friends.length) {
+    if (!rosterFriends.length) {
       setActiveFriendId(null);
       return;
     }
     if (
       activeFriendId &&
-      friends.some((friend) => friend.friendId === activeFriendId)
+      rosterFriends.some((friend) => friend.friendId === activeFriendId)
     ) {
       return;
     }
-    setActiveFriendId(friends[0]?.friendId ?? null);
-  }, [activeFriendId, friends]);
+    setActiveFriendId(rosterFriends[0]?.friendId ?? null);
+  }, [activeFriendId, rosterFriends]);
+
+  useEffect(() => {
+    setRosterFriends((prev) => {
+      const previousById = new Map(
+        prev.map((friend) => [friend.friendId, friend] as const),
+      );
+
+      return friends.map((friend) => {
+        const existing = previousById.get(friend.friendId);
+        if (!existing) {
+          return friend;
+        }
+        return {
+          ...friend,
+          hasConversation: friend.hasConversation || existing.hasConversation,
+        };
+      });
+    });
+  }, [friends]);
 
   useEffect(() => {
     return () => {
@@ -591,6 +611,13 @@ export default function ChatClient({
 
   const handleOpenChat = useCallback(
     (friendId: string) => {
+      setRosterFriends((prev) =>
+        prev.map((friend) =>
+          friend.friendId === friendId
+            ? { ...friend, hasConversation: true }
+            : friend,
+        ),
+      );
       const params = new URLSearchParams({ friendId });
       router.push(`/${locale}/app/chat?${params.toString()}`);
     },
@@ -623,7 +650,7 @@ export default function ChatClient({
     return `${names[0]} and others are typing...`;
   }, [typingProfiles]);
 
-  const rosterEmpty = friends.length === 0;
+  const rosterEmpty = rosterFriends.length === 0;
   const rosterHasMatches = filteredFriends.length > 0;
   const transportMode: "progressive" = "progressive";
 
