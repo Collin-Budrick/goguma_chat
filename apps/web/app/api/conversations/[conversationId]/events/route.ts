@@ -22,6 +22,14 @@ function formatEvent(event: ConversationEvent) {
     return `event: typing\ndata: ${JSON.stringify(event.typing)}\n\n`;
   }
 
+  if (event.type === "settings") {
+    return `event: settings\ndata: ${JSON.stringify({
+      messagingMode: event.settings.messagingMode,
+      updatedAt: event.updatedAt,
+      updatedBy: event.updatedBy,
+    })}\n\n`;
+  }
+
   return "";
 }
 

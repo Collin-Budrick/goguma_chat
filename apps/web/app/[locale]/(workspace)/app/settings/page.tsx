@@ -3,7 +3,7 @@
 import { startTransition, useCallback, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "@/components/transition-context";
 import {
   DisplaySettings,
@@ -12,13 +12,6 @@ import {
   loadDisplaySettings,
   persistDisplaySettings,
 } from "@/lib/display-settings";
-import {
-  type MessagingMode,
-  DEFAULT_MESSAGING_MODE,
-  MESSAGING_MODE_EVENT,
-  loadMessagingMode,
-  persistMessagingMode,
-} from "@/lib/messaging-mode";
 import { routing, type Locale } from "@/i18n/routing";
 
 const PREFERENCE_IDS = ["notifications", "aiDrafts", "presence"] as const;
@@ -31,9 +24,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setDirection } = useTransitionDirection();
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
-  const [messagingMode, setMessagingMode] = useState<MessagingMode>(
-    () => DEFAULT_MESSAGING_MODE,
-  );
 
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [motion, setMotion] = useState(true);
@@ -77,21 +67,6 @@ export default function SettingsPage() {
     };
     window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
     return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const stored = loadMessagingMode();
-    setMessagingMode((prev) => (prev === stored ? prev : stored));
-
-    const handler = (event: Event) => {
-      const next = (event as CustomEvent<MessagingMode>).detail;
-      setMessagingMode((prev) => (prev === next ? prev : next));
-    };
-
-    window.addEventListener(MESSAGING_MODE_EVENT, handler);
-    return () => window.removeEventListener(MESSAGING_MODE_EVENT, handler);
   }, []);
 
   const handleLocaleToggle = useCallback(
@@ -157,16 +132,6 @@ export default function SettingsPage() {
       onToggle: () => setMotion((prev) => !prev),
     },
   ];
-
-  const messagingOptions: Array<{
-    id: MessagingMode;
-    label: string;
-    description: string;
-  }> = (["udp", "progressive"] satisfies MessagingMode[]).map((value) => ({
-    id: value,
-    label: t(`messaging.options.${value}`),
-    description: t(`messaging.helper.${value}`),
-  }));
 
   const isLightThemeEnabled = displaySettings.theme === "light";
   const cardTone = isLightThemeEnabled
@@ -243,30 +208,16 @@ export default function SettingsPage() {
           <p className="text-sm text-white/60">{t("messaging.description")}</p>
         </header>
         <div className="space-y-4">
-          {messagingOptions.map((option) => {
-            const active = messagingMode === option.id;
-            const tone = active ? cardTone.active : cardTone.inactive;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => {
-                  if (option.id === messagingMode) return;
-                  setMessagingMode(option.id);
-                  persistMessagingMode(option.id);
-                }}
-                className={"w-full rounded-2xl border px-4 py-4 text-left transition " + tone.container}
-              >
-                <div className="flex items-center justify-between text-sm font-medium">
-                  <span>{option.label}</span>
-                  <span className="text-xs uppercase tracking-[0.3em]">
-                    {active ? t("preferences.state.on") : t("preferences.state.off")}
-                  </span>
-                </div>
-                <p className={"mt-2 text-xs " + tone.description}>{option.description}</p>
-              </button>
-            );
-          })}
+          <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm text-white/70">
+            {t("messaging.relocated.body")}
+          </p>
+          <Link
+            href={`/${locale}/app/chat`}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white transition hover:text-white/80"
+          >
+            {t("messaging.relocated.cta")}
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </section>
 

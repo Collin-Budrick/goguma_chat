@@ -1,13 +1,16 @@
 "use client";
 
-export type MessagingMode = "udp" | "progressive";
+import {
+  DEFAULT_MESSAGING_MODE,
+  isMessagingMode,
+  type MessagingMode,
+} from "./messaging-mode-shared";
 
 const STORAGE_KEY = "site-messaging-mode";
 export const MESSAGING_MODE_EVENT = "site-messaging-mode-change";
-export const DEFAULT_MESSAGING_MODE: MessagingMode = "progressive";
 
-const isMessagingMode = (value: unknown): value is MessagingMode =>
-  value === "udp" || value === "progressive";
+export { DEFAULT_MESSAGING_MODE, isMessagingMode };
+export type { MessagingMode };
 
 export function loadMessagingMode(): MessagingMode {
   if (typeof window === "undefined") {

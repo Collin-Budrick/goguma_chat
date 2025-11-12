@@ -17,6 +17,7 @@ import {
   getContactName,
   getInitials,
 } from "@/components/contacts/types";
+import MessagingTransportOptions from "@/components/settings/MessagingTransportOptions";
 import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -29,9 +30,6 @@ import {
 import {
   type MessagingMode,
   DEFAULT_MESSAGING_MODE,
-  MESSAGING_MODE_EVENT,
-  loadMessagingMode,
-  persistMessagingMode,
 } from "@/lib/messaging-mode";
 
 import type {
@@ -154,6 +152,10 @@ export default function ChatThread({
       initialConversation,
   );
 
+  const initialMessagingMode = shouldUseInitialData
+    ? initialConversation?.messagingMode ?? DEFAULT_MESSAGING_MODE
+    : DEFAULT_MESSAGING_MODE;
+
   const [conversation, setConversation] = useState<ChatConversation | null>(
     shouldUseInitialData ? initialConversation : null,
   );
@@ -177,8 +179,9 @@ export default function ChatThread({
     () => DEFAULT_DISPLAY_SETTINGS,
   );
   const [messagingMode, setMessagingMode] = useState<MessagingMode>(
-    () => DEFAULT_MESSAGING_MODE,
+    () => initialMessagingMode,
   );
+  const [isMessagingModeUpdating, setIsMessagingModeUpdating] = useState(false);
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -215,16 +218,61 @@ export default function ChatThread({
     [],
   );
 
-  const handleMessagingModeSelect = useCallback((mode: MessagingMode) => {
-    setMessagingMode((prev) => {
-      if (prev === mode) {
-        return prev;
+  const handleMessagingModeSelect = useCallback(
+    async (mode: MessagingMode) => {
+      if (!conversation?.id) {
+        return;
       }
 
-      persistMessagingMode(mode);
-      return mode;
-    });
-  }, []);
+      if (isMessagingModeUpdating || messagingMode === mode) {
+        return;
+      }
+
+      const previousMode = messagingMode;
+      setThreadError(null);
+      setMessagingMode(mode);
+      setIsMessagingModeUpdating(true);
+
+      try {
+        const response = await fetch(
+          `/api/conversations/${conversation.id}/mode`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode }),
+          },
+        );
+
+        if (!response.ok) {
+          const payload = (await response
+            .json()
+            .catch(() => ({}))) as ApiError;
+          throw new Error(
+            payload.error ?? "Failed to update messaging mode",
+          );
+        }
+
+        const payload = (await response.json()) as {
+          conversation: ChatConversation;
+        };
+
+        setConversation(payload.conversation);
+      } catch (error) {
+        console.error("Failed to update messaging mode", error);
+        setMessagingMode(previousMode);
+        setThreadError(t("alerts.settings"));
+      } finally {
+        setIsMessagingModeUpdating(false);
+      }
+    },
+    [
+      conversation?.id,
+      isMessagingModeUpdating,
+      messagingMode,
+      setConversation,
+      t,
+    ],
+  );
 
   useEffect(() => {
     return () => {
@@ -295,32 +343,6 @@ export default function ChatThread({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const stored = loadMessagingMode();
-    setMessagingMode((prev) => (prev === stored ? prev : stored));
-
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<MessagingMode>).detail;
-      setMessagingMode((prev) => (prev === detail ? prev : detail));
-    };
-
-    window.addEventListener(
-      MESSAGING_MODE_EVENT,
-      handler as EventListener,
-    );
-
-    return () => {
-      window.removeEventListener(
-        MESSAGING_MODE_EVENT,
-        handler as EventListener,
-      );
-    };
-  }, []);
-
-  useEffect(() => {
     if (!isSettingsOpen) {
       return;
     }
@@ -381,6 +403,21 @@ export default function ChatThread({
     initialMessages,
     initialCursor,
   ]);
+
+  useEffect(() => {
+    if (!conversation) {
+      setMessagingMode(DEFAULT_MESSAGING_MODE);
+      return;
+    }
+
+    if (isMessagingModeUpdating) {
+      return;
+    }
+
+    setMessagingMode((prev) =>
+      prev === conversation.messagingMode ? prev : conversation.messagingMode,
+    );
+  }, [conversation?.messagingMode, conversation, isMessagingModeUpdating]);
 
   useEffect(() => {
     pendingThreadControllerRef.current?.abort();
@@ -550,6 +587,32 @@ export default function ChatThread({
         setTypingState((prev) => ({ ...prev, [payload.userId]: payload.expiresAt }));
       } catch (error) {
         console.error("Failed to parse typing event", error);
+      }
+    });
+
+    source.addEventListener("settings", (event) => {
+      try {
+        const payload = JSON.parse(event.data) as {
+          messagingMode: MessagingMode;
+          updatedAt: string;
+          updatedBy?: string;
+        };
+
+        setConversation((prev) =>
+          prev
+            ? {
+                ...prev,
+                messagingMode: payload.messagingMode,
+                updatedAt: payload.updatedAt,
+              }
+            : prev,
+        );
+
+        setMessagingMode((prev) =>
+          prev === payload.messagingMode ? prev : payload.messagingMode,
+        );
+      } catch (error) {
+        console.error("Failed to parse settings event", error);
       }
     });
 
@@ -807,7 +870,7 @@ export default function ChatThread({
   const messagingOptions = useMemo(
     () =>
       (["progressive", "udp"] as MessagingMode[]).map((mode) => ({
-        mode,
+        id: mode,
         label: t(`thread.settings.unified.transport.options.${mode}.label`),
         description: t(`thread.settings.unified.transport.options.${mode}.description`),
       })),
@@ -899,31 +962,13 @@ export default function ChatThread({
                           <p className="mt-1 text-xs text-white/50">
                             {t("thread.settings.unified.description")}
                           </p>
-                          <div className="mt-3 flex flex-col gap-2">
-                            {messagingOptions.map((option) => {
-                              const isActive = messagingMode === option.mode;
-                              return (
-                                <button
-                                  key={option.mode}
-                                  type="button"
-                                  onClick={() => handleMessagingModeSelect(option.mode)}
-                                  className={cn(
-                                    "rounded-xl border px-3 py-3 text-left transition",
-                                    isActive
-                                      ? "border-white/60 bg-white/10 text-white"
-                                      : "border-white/10 text-white/70 hover:border-white/25 hover:bg-white/10 hover:text-white",
-                                  )}
-                                >
-                                  <span className="text-sm font-medium text-white">
-                                    {option.label}
-                                  </span>
-                                  <p className="mt-1 text-xs text-white/60">
-                                    {option.description}
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
+                          <MessagingTransportOptions
+                            className="mt-3"
+                            value={messagingMode}
+                            options={messagingOptions}
+                            onChange={handleMessagingModeSelect}
+                            disabled={!conversation?.id || isMessagingModeUpdating}
+                          />
                         </section>
                         <section>
                           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">

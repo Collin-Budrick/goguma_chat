@@ -579,7 +579,8 @@
     },
     "alerts": {
       "history": "대화를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
-      "send": "메시지를 보내지 못했어요. 다시 시도해 주세요."
+      "send": "메시지를 보내지 못했어요. 다시 시도해 주세요.",
+      "settings": "채팅 설정을 업데이트하지 못했어요. 잠시 후 다시 시도해 주세요."
     }
   },
   "Settings": {
@@ -593,14 +594,10 @@
     },
     "messaging": {
       "title": "메시징 전송 방식",
-      "description": "실시간 채팅 연결 방식을 고르세요. UDP는 실험 기능으로 혼잡 제어를 건너뜁니다.",
-      "options": {
-        "udp": "UDP 버스트 (실험)",
-        "progressive": "WebRTC·WebTransport 스트리밍"
-      },
-      "helper": {
-        "udp": "초저지연을 위해 UDP로 패킷을 보냅니다. 스택을 다듬는 동안 가끔 끊김이 있을 수 있어요.",
-        "progressive": "적응형 혼잡 제어가 있는 안정적인 WebRTC·WebTransport 파이프라인을 유지합니다."
+      "description": "이제 각 대화의 채팅 설정에서 전송 방식을 관리해요.",
+      "relocated": {
+        "body": "채팅을 열고 톱니바퀴 아이콘에서 UDP 또는 Progressive를 고르면 모든 참가자에게 적용돼요.",
+        "cta": "채팅 열기"
       }
     },
     "motion": {

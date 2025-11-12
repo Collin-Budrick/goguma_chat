@@ -579,7 +579,8 @@
     },
     "alerts": {
       "history": "We couldn’t load that conversation. Try again in a moment.",
-      "send": "We couldn’t send that message. Try again."
+      "send": "We couldn’t send that message. Try again.",
+      "settings": "We couldn’t update these chat settings. Try again in a moment."
     }
   },
   "Settings": {
@@ -593,14 +594,10 @@
     },
     "messaging": {
       "title": "Messaging transport",
-      "description": "Choose how live chats connect. UDP is experimental and skips congestion helpers.",
-      "options": {
-        "udp": "UDP burst (experimental)",
-        "progressive": "Progressive WebRTC/WebTransport"
-      },
-      "helper": {
-        "udp": "Route packets over UDP for ultra-low latency. Expect occasional drops while we polish the stack.",
-        "progressive": "Stick with the reliable WebRTC/WebTransport pipeline for adaptive, congestion-aware delivery."
+      "description": "Messaging transport now lives inside each conversation's chat settings.",
+      "relocated": {
+        "body": "Open a chat and use the gear icon to pick UDP or Progressive for everyone in the thread.",
+        "cta": "Open chats"
       }
     },
     "motion": {
