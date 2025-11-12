@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { redirect } from "next/navigation";
 
 import ChatClient from "@/components/chat/ChatClient";
 import type { FriendSummary } from "@/components/contacts/types";
-import { getFriendState } from "@/db/friends";
-import { auth } from "@/lib/auth";
-
-import ChatClient from "@/components/chat/ChatClient";
-import type { FriendSummary } from "@/components/contacts/types";
+import type {
+  ChatConversation,
+  ChatMessage,
+  ChatUserProfile,
+} from "@/components/chat/types";
 import {
   getDirectConversation,
   listConversationMessages,
@@ -18,12 +17,6 @@ import {
 } from "@/db/conversations";
 import { getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
-
-import type {
-  ChatConversation,
-  ChatMessage,
-  ChatUserProfile,
-} from "@/components/chat/types";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -35,14 +28,17 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Chat" });
+
   return {
-    title: t("sidebar.title"),
+    title: t("roster.title"),
   };
 }
 
 function toISODate(value: Date | string | null | undefined) {
   if (!value) return new Date().toISOString();
-  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
@@ -61,7 +57,9 @@ function serializeFriends(
   }));
 }
 
-function buildViewerProfile(session: Awaited<ReturnType<typeof auth>>): ChatUserProfile {
+function buildViewerProfile(
+  session: Awaited<ReturnType<typeof auth>>,
+): ChatUserProfile {
   return {
     id: session?.user?.id ?? "",
     email: typeof session?.user?.email === "string" ? session.user.email : null,
@@ -73,17 +71,20 @@ function buildViewerProfile(session: Awaited<ReturnType<typeof auth>>): ChatUser
   };
 }
 
-async function loadInitialConversation(
-  viewerId: string,
-  friendId: string,
-): Promise<{
+type InitialConversationPayload = {
   conversation: ChatConversation | null;
   messages: ChatMessage[];
   nextCursor: string | null;
-}> {
+};
+
+async function loadInitialConversation(
+  viewerId: string,
+  friendId: string,
+): Promise<InitialConversationPayload> {
   try {
     const conversation = await getDirectConversation(viewerId, friendId);
     const page = await listConversationMessages(conversation.id, viewerId);
+
     return {
       conversation: serializeConversation(conversation),
       messages: page.messages.map((message) => serializeMessage(message)),
@@ -93,35 +94,6 @@ async function loadInitialConversation(
     console.error("Failed to load initial conversation", error);
     return { conversation: null, messages: [], nextCursor: null };
   }
-type ViewerProfile = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  image: string | null;
-};
-
-function toISODate(value: Date | string | null | undefined) {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}
-
-function serializeFriends(
-  friends: Awaited<ReturnType<typeof getFriendState>>["friends"],
-): FriendSummary[] {
-  return friends.map((friend) => ({
-    friendshipId: friend.friendshipId,
-    friendId: friend.friendId,
-    email: friend.email,
-    firstName: friend.firstName,
-    lastName: friend.lastName,
-    image: friend.image,
-    createdAt: toISODate(friend.createdAt) ?? new Date().toISOString(),
-  }));
 }
 
 export default async function ChatPage({ params, searchParams }: PageProps) {
@@ -136,12 +108,25 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
   const viewerProfile = buildViewerProfile(session);
   const friendState = await getFriendState(viewerId);
   const friends = serializeFriends(friendState.friends);
-  const search = await searchParams;
 
-  const requestedFriendId = search.friendId;
-  const availableFriendIds = new Set(friends.map((friend) => friend.friendId));
+  if (friends.length === 0) {
+    return (
+      <ChatClient
+        viewerId={viewerId}
+        viewerProfile={viewerProfile}
+        friends={friends}
+        initialFriendId={null}
+        initialConversation={null}
+        initialMessages={[]}
+        initialCursor={null}
+      />
+    );
+  }
+
+  const { friendId: requestedFriendId } = await searchParams;
+  const friendIds = new Set(friends.map((friend) => friend.friendId));
   const initialFriendId =
-    requestedFriendId && availableFriendIds.has(requestedFriendId)
+    requestedFriendId && friendIds.has(requestedFriendId)
       ? requestedFriendId
       : friends[0]?.friendId ?? null;
 
@@ -150,10 +135,10 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
   let initialCursor: string | null = null;
 
   if (initialFriendId) {
-    const loaded = await loadInitialConversation(viewerId, initialFriendId);
-    initialConversation = loaded.conversation;
-    initialMessages = loaded.messages;
-    initialCursor = loaded.nextCursor;
+    const payload = await loadInitialConversation(viewerId, initialFriendId);
+    initialConversation = payload.conversation;
+    initialMessages = payload.messages;
+    initialCursor = payload.nextCursor;
   }
 
   return (
@@ -167,17 +152,4 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
       initialCursor={initialCursor}
     />
   );
-  const userId = session.user.id;
-  const state = await getFriendState(userId);
-  const friends = serializeFriends(state.friends);
-
-  const viewer: ViewerProfile = {
-    id: userId,
-    email: session.user.email ?? null,
-    firstName: session.user.firstName ?? null,
-    lastName: session.user.lastName ?? null,
-    image: session.user.image ?? null,
-  };
-
-  return <ChatClient viewer={viewer} friends={friends} />;
 }

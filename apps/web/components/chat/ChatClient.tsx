@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import type { FriendSummary } from "@/components/contacts/types";
 import { getContactName, getInitials } from "@/components/contacts/types";
@@ -19,18 +20,6 @@ import type {
   ChatUserProfile,
   TypingEvent,
 } from "./types";
-
-function toDate(value: string) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-}
-
-function formatTime(value: string) {
-  return toDate(value).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 type ChatClientProps = {
   viewerId: string;
@@ -51,6 +40,38 @@ type MessageEventPayload = {
   clientMessageId: string | null;
 };
 
+const MESSAGE_LIMIT = 30;
+const TYPING_DEBOUNCE_MS = 2_000;
+
+function toDate(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function formatMessageTime(value: string, locale: string) {
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(toDate(value));
+  } catch (error) {
+    return value;
+  }
+}
+
+function formatRosterTime(value: string, locale: string) {
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(toDate(value));
+  } catch (error) {
+    return value;
+  }
+}
+
 function generateClientMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `client-${crypto.randomUUID()}`;
@@ -63,6 +84,16 @@ function getFriendProfile(friendId: string | null, friends: FriendSummary[]) {
   return friends.find((friend) => friend.friendId === friendId) ?? null;
 }
 
+function friendToContactProfile(friend: FriendSummary) {
+  return {
+    id: friend.friendId,
+    email: friend.email,
+    firstName: friend.firstName,
+    lastName: friend.lastName,
+    image: friend.image,
+  };
+}
+
 function getParticipantProfile(
   conversation: ChatConversation | null,
   userId: string,
@@ -72,78 +103,6 @@ function getParticipantProfile(
     conversation.participants.find((participant) => participant.userId === userId)
       ?.user ?? null
   );
-  type FormEvent,
-} from "react";
-import { useLocale, useTranslations } from "next-intl";
-
-import type { FriendSummary } from "@/components/contacts/types";
-import { getContactName, getInitials } from "@/components/contacts/types";
-import type { ChatHistory, ChatMessage, SendMessageResponse } from "@/lib/chat/types";
-import {
-  MESSAGING_MODE_EVENT,
-  type MessagingMode,
-} from "@/lib/messaging-mode";
-import { initializeMessagingTransport } from "@/lib/messaging-transport";
-import { cn } from "@/lib/utils";
-
-type ViewerProfile = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  image: string | null;
-};
-
-type ChatClientProps = {
-  viewer: ViewerProfile;
-  friends: FriendSummary[];
-};
-
-type ConversationState = {
-  conversationId: string;
-  messages: ChatMessage[];
-};
-
-type ConversationMap = Record<string, ConversationState>;
-
-function isAbortError(error: unknown): error is DOMException {
-  return error instanceof DOMException && error.name === "AbortError";
-}
-
-function formatDateTime(value: string, locale: string) {
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-    return new Intl.DateTimeFormat(locale, {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(date);
-  } catch (error) {
-    return value;
-  }
-}
-
-function formatTime(value: string, locale: string) {
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-    return new Intl.DateTimeFormat(locale, {
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(date);
-  } catch (error) {
-    return value;
-  }
-}
-
-function ellipsize(value: string, limit = 72) {
-  if (!value) return "";
-  if (value.length <= limit) return value;
-  return `${value.slice(0, limit - 1)}…`;
 }
 
 function mergeMessages(
@@ -154,9 +113,28 @@ function mergeMessages(
   for (const message of incoming) {
     seen.set(message.id, message);
   }
-  return Array.from(seen.values()).sort((a, b) =>
-    toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime(),
+  return Array.from(seen.values()).sort(
+    (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime(),
   );
+}
+
+function createOptimisticMessage(
+  conversationId: string,
+  viewerId: string,
+  viewerProfile: ChatUserProfile,
+  body: string,
+  id: string,
+): ChatMessage {
+  const timestamp = new Date().toISOString();
+  return {
+    id,
+    conversationId,
+    senderId: viewerId,
+    body,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    sender: viewerProfile,
+  };
 }
 
 export default function ChatClient({
@@ -168,6 +146,10 @@ export default function ChatClient({
   initialMessages,
   initialCursor,
 }: ChatClientProps) {
+  const t = useTranslations("Chat");
+  const locale = useLocale();
+
+  const [search, setSearch] = useState("");
   const [activeFriendId, setActiveFriendId] = useState<string | null>(
     initialFriendId ?? friends[0]?.friendId ?? null,
   );
@@ -176,19 +158,33 @@ export default function ChatClient({
   );
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [nextCursor, setNextCursor] = useState<string | null>(initialCursor);
+  const [isThreadLoading, setIsThreadLoading] = useState(
+    Boolean(activeFriendId) && !initialConversation,
+  );
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [typingState, setTypingState] = useState<Record<string, number>>({});
 
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const messageContainerRef = useRef<HTMLDivElement | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const typingActiveRef = useRef(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const bootstrapFriendRef = useRef(initialFriendId ?? null);
+  const hasConsumedBootstrapRef = useRef(!initialConversation);
+  const pendingThreadControllerRef = useRef<AbortController | null>(null);
 
   const friendProfile = useMemo(
     () => getFriendProfile(activeFriendId, friends),
     [activeFriendId, friends],
+  );
+
+  const activeFriendContact = useMemo(
+    () => (friendProfile ? friendToContactProfile(friendProfile) : null),
+    [friendProfile],
   );
 
   const viewerParticipant = useMemo(
@@ -196,22 +192,91 @@ export default function ChatClient({
     [conversation, viewerId, viewerProfile],
   );
 
+  const filteredFriends = useMemo(() => {
+    if (!search.trim()) {
+      return friends;
+    }
+    const needle = search.trim().toLowerCase();
+    return friends.filter((friend) => {
+      const profile = friendToContactProfile(friend);
+      const name = getContactName(profile).toLowerCase();
+      const email = friend.email?.toLowerCase() ?? "";
+      return name.includes(needle) || email.includes(needle);
+    });
+  }, [friends, search]);
+
+  const typingProfiles = useMemo(() => {
+    if (!conversation) return [];
+    const now = Date.now();
+    return conversation.participants
+      .map((participant) => participant.user)
+      .filter(
+        (profile) =>
+          profile.id !== viewerId &&
+          typingState[profile.id] &&
+          typingState[profile.id] > now,
+      );
+  }, [conversation, typingState, viewerId]);
+
   useEffect(() => {
+    if (!friends.length) {
+      setActiveFriendId(null);
+      return;
+    }
+    if (
+      activeFriendId &&
+      friends.some((friend) => friend.friendId === activeFriendId)
+    ) {
+      return;
+    }
+    setActiveFriendId(friends[0]?.friendId ?? null);
+  }, [activeFriendId, friends]);
+
+  useEffect(() => {
+    return () => {
+      pendingThreadControllerRef.current?.abort();
+      eventSourceRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    pendingThreadControllerRef.current?.abort();
+
     if (!activeFriendId) {
       setConversation(null);
       setMessages([]);
       setNextCursor(null);
+      setThreadError(null);
+      setIsThreadLoading(false);
+      return;
+    }
+
+    if (
+      !hasConsumedBootstrapRef.current &&
+      bootstrapFriendRef.current === activeFriendId
+    ) {
+      hasConsumedBootstrapRef.current = true;
+      setThreadError(null);
+      setIsThreadLoading(false);
       return;
     }
 
     const controller = new AbortController();
-    setIsLoading(true);
-    setError(null);
+    pendingThreadControllerRef.current = controller;
+
+    setConversation(null);
+    setMessages([]);
+    setNextCursor(null);
+    setThreadError(null);
+    setSendError(null);
+    setDraft("");
+    setTypingState({});
+    setIsThreadLoading(true);
 
     fetch("/api/conversations/direct", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ friendId: activeFriendId }),
+      body: JSON.stringify({ friendId: activeFriendId, limit: MESSAGE_LIMIT }),
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -219,74 +284,66 @@ export default function ChatClient({
           const payload = (await response.json().catch(() => ({}))) as ApiError;
           throw new Error(payload.error ?? "Failed to load conversation");
         }
-        return response.json();
-      })
-      .then(
-        (data: {
+        return response.json() as Promise<{
           conversation: ChatConversation;
           messages: ChatMessage[];
           nextCursor: string | null;
-        }) => {
-          setConversation(data.conversation);
-          setMessages(data.messages);
-          setNextCursor(data.nextCursor);
-        },
-      )
-      .catch((loadError) => {
+        }>;
+      })
+      .then((payload) => {
+        setConversation(payload.conversation);
+        setMessages(payload.messages);
+        setNextCursor(payload.nextCursor ?? null);
+      })
+      .catch((error) => {
         if (controller.signal.aborted) {
           return;
         }
-        console.error(loadError);
+        console.error("Failed to load conversation", error);
         setConversation(null);
         setMessages([]);
         setNextCursor(null);
-        setError(
-          loadError instanceof Error ? loadError.message : "Failed to load conversation",
-        );
+        setThreadError(t("alerts.history"));
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          setIsLoading(false);
+          setIsThreadLoading(false);
         }
       });
 
     return () => {
       controller.abort();
     };
-  }, [activeFriendId]);
+  }, [activeFriendId, t]);
 
   useEffect(() => {
-    if (!conversation) {
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+
+    if (!conversation?.id) {
+      setTypingState({});
+      typingActiveRef.current = false;
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
       return;
     }
 
-    const source = new EventSource(
-      `/api/conversations/${conversation.id}/events`,
-    );
+    const source = new EventSource(`/api/conversations/${conversation.id}/events`);
     eventSourceRef.current = source;
 
     source.addEventListener("message", (event) => {
       try {
         const payload = JSON.parse(event.data) as MessageEventPayload;
-        const incoming = payload.message;
-
         setMessages((prev) => {
           const withoutClient = payload.clientMessageId
-            ? prev.filter((msg) => msg.id !== payload.clientMessageId)
+            ? prev.filter((message) => message.id !== payload.clientMessageId)
             : prev;
-          const exists = withoutClient.some((msg) => msg.id === incoming.id);
-          const next = exists
-            ? withoutClient.map((msg) => (msg.id === incoming.id ? incoming : msg))
-            : [...withoutClient, incoming];
-          return next.sort(
-            (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime(),
-          );
+          return mergeMessages(withoutClient, [payload.message]);
         });
-
         setConversation((prev) =>
-          prev ? { ...prev, updatedAt: incoming.createdAt } : prev,
+          prev ? { ...prev, updatedAt: payload.message.createdAt } : prev,
         );
       } catch (eventError) {
         console.error("Failed to process message event", eventError);
@@ -315,17 +372,18 @@ export default function ChatClient({
 
     source.addEventListener("error", () => {
       source.close();
-      eventSourceRef.current = null;
-      setTimeout(() => {
-        setConversation((prev) => (prev ? { ...prev } : prev));
-      }, 2_000);
+      if (eventSourceRef.current === source) {
+        eventSourceRef.current = null;
+      }
     });
 
     return () => {
       source.close();
-      eventSourceRef.current = null;
+      if (eventSourceRef.current === source) {
+        eventSourceRef.current = null;
+      }
     };
-  }, [conversation, viewerId]);
+  }, [conversation?.id, viewerId]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -348,30 +406,46 @@ export default function ChatClient({
     };
   }, []);
 
+  useEffect(() => {
+    if (!messageContainerRef.current) {
+      return;
+    }
+    if (isFetchingMore) {
+      return;
+    }
+    const node = messageContainerRef.current;
+    node.scrollTop = node.scrollHeight;
+  }, [conversation?.id, messages.length, isFetchingMore]);
+
+  const conversationId = conversation?.id ?? null;
+
   const sendTyping = useCallback(
     (isTyping: boolean) => {
-      if (!conversation) {
+      if (!conversationId) {
         return;
       }
-
       fetch("/api/messages/typing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId: conversation.id,
+          conversationId,
           isTyping,
         }),
       }).catch(() => {
-        // Ignore typing errors.
+        // Best effort typing indicator.
       });
     },
-    [conversation],
+    [conversationId],
   );
 
   const handleDraftChange = useCallback(
     (value: string) => {
       setDraft(value);
-      if (!conversation) {
+      if (sendError) {
+        setSendError(null);
+      }
+
+      if (!conversationId) {
         return;
       }
 
@@ -391,42 +465,41 @@ export default function ChatClient({
         typingTimeoutRef.current = window.setTimeout(() => {
           typingActiveRef.current = false;
           sendTyping(false);
-        }, 2_000);
+          typingTimeoutRef.current = null;
+        }, TYPING_DEBOUNCE_MS);
       } else if (typingActiveRef.current) {
         typingActiveRef.current = false;
         sendTyping(false);
       }
     },
-    [conversation, sendTyping],
+    [conversationId, sendTyping, sendError],
   );
 
-  const handleSend = useCallback(
-    async (event?: FormEvent) => {
-      event?.preventDefault();
-
-      if (!conversation) {
+  const handleComposerSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!conversation || !conversationId) {
         return;
       }
 
-      const trimmed = draft.trim();
-      if (!trimmed) {
+      const content = draft.trim();
+      if (!content) {
         return;
       }
 
       const clientMessageId = generateClientMessageId();
-      const optimisticMessage: ChatMessage = {
-        id: clientMessageId,
-        conversationId: conversation.id,
-        senderId: viewerId,
-        body: trimmed,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        sender: viewerParticipant ?? viewerProfile,
-      };
+      const optimistic = createOptimisticMessage(
+        conversationId,
+        viewerId,
+        viewerParticipant,
+        content,
+        clientMessageId,
+      );
 
-      setMessages((prev) => [...prev, optimisticMessage]);
+      setMessages((prev) => mergeMessages(prev, [optimistic]));
       setDraft("");
-      setError(null);
+      setSendError(null);
+      setIsSending(true);
       typingActiveRef.current = false;
       if (typingTimeoutRef.current) {
         window.clearTimeout(typingTimeoutRef.current);
@@ -439,291 +512,54 @@ export default function ChatClient({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            conversationId: conversation.id,
-            body: trimmed,
+            conversationId,
+            body: content,
             clientMessageId,
-  const map = new Map(existing.map((message) => [message.id, message]));
-  for (const message of incoming) {
-    map.set(message.id, message);
-  }
-  return Array.from(map.values()).sort((a, b) => {
-    const left = new Date(a.sentAt).getTime();
-    const right = new Date(b.sentAt).getTime();
-    return left - right;
-  });
-}
-
-function getDisplayName(viewer: ViewerProfile) {
-  const first = viewer.firstName?.trim();
-  const last = viewer.lastName?.trim();
-  const combined = [first, last].filter(Boolean).join(" ");
-  if (combined) return combined;
-  if (viewer.email) return viewer.email;
-  return "";
-}
-
-export default function ChatClient({ viewer, friends }: ChatClientProps) {
-  const t = useTranslations("Chat");
-  const locale = useLocale();
-  const [search, setSearch] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [activeFriendId, setActiveFriendId] = useState<string | null>(
-    friends[0]?.friendId ?? null,
-  );
-  const [conversations, setConversations] = useState<ConversationMap>({});
-  const [transportMode, setTransportMode] = useState<MessagingMode>("progressive");
-  const [threadError, setThreadError] = useState<string | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [isThreadLoading, setIsThreadLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  const viewerName = useMemo(() => getDisplayName(viewer), [viewer]);
-
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const messageContainerRef = useRef<HTMLDivElement | null>(null);
-  const fetchControllerRef = useRef<AbortController | null>(null);
-
-  const filteredFriends = useMemo(() => {
-    if (!search.trim()) {
-      return friends;
-    }
-    const query = search.trim().toLowerCase();
-    return friends.filter((friend) => {
-      const profile = {
-        id: friend.friendId,
-        email: friend.email,
-        firstName: friend.firstName,
-        lastName: friend.lastName,
-        image: friend.image,
-      };
-      const name = getContactName(profile).toLowerCase();
-      const email = friend.email?.toLowerCase() ?? "";
-      return name.includes(query) || email.includes(query);
-    });
-  }, [friends, search]);
-
-  const selectedFriend = useMemo(
-    () => friends.find((friend) => friend.friendId === activeFriendId) ?? null,
-    [friends, activeFriendId],
-  );
-
-  const activeConversation = activeFriendId
-    ? conversations[activeFriendId] ?? null
-    : null;
-
-  const messageCount = activeConversation?.messages.length ?? 0;
-
-  useEffect(() => {
-    const controller = initializeMessagingTransport({
-      onModeChange: (mode) => setTransportMode(mode),
-    });
-
-    const refresh = () => controller.refresh();
-    if (typeof window !== "undefined") {
-      window.addEventListener(MESSAGING_MODE_EVENT, refresh);
-    }
-
-    return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener(MESSAGING_MODE_EVENT, refresh);
-      }
-      controller.teardown();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (friends.length === 0) {
-      setActiveFriendId(null);
-      return;
-    }
-
-    if (!activeFriendId && !isCreating) {
-      setActiveFriendId(friends[0]?.friendId ?? null);
-    }
-  }, [friends, activeFriendId, isCreating]);
-
-  useEffect(() => {
-    if (activeFriendId && !friends.some((f) => f.friendId === activeFriendId)) {
-      setActiveFriendId(friends[0]?.friendId ?? null);
-    }
-  }, [friends, activeFriendId]);
-
-  const hasActiveConversation = useMemo(() => {
-    return activeFriendId ? Boolean(conversations[activeFriendId]) : false;
-  }, [activeFriendId, conversations]);
-
-  useEffect(() => {
-    return () => {
-      fetchControllerRef.current?.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    setThreadError(null);
-    setSendError(null);
-  }, [activeFriendId]);
-
-  useEffect(() => {
-    if (!activeFriendId || hasActiveConversation) {
-      return () => undefined;
-    }
-
-    const controller = new AbortController();
-    fetchControllerRef.current?.abort();
-    fetchControllerRef.current = controller;
-
-    setIsThreadLoading(true);
-    setThreadError(null);
-
-    const loadHistory = async () => {
-      try {
-        const response = await fetch(
-          `/api/chat/history?friendId=${encodeURIComponent(activeFriendId)}`,
-          { signal: controller.signal },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to load conversation");
-        }
-
-        const payload = (await response.json()) as ChatHistory;
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        setConversations((previous) => ({
-          ...previous,
-          [activeFriendId]: {
-            conversationId: payload.conversationId,
-            messages: mergeMessages([], payload.messages),
-          },
-        }));
-      } catch (error) {
-        if (controller.signal.aborted || isAbortError(error)) {
-          return;
-        }
-        setThreadError(t("alerts.history"));
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsThreadLoading(false);
-        }
-      }
-    };
-
-    loadHistory();
-
-    return () => {
-      controller.abort();
-      if (fetchControllerRef.current === controller) {
-        fetchControllerRef.current = null;
-      }
-    };
-  }, [activeFriendId, hasActiveConversation, t]);
-
-  useEffect(() => {
-    if (!activeFriendId) return;
-    const container = messageContainerRef.current;
-    if (!container) return;
-    container.scrollTop = container.scrollHeight;
-  }, [activeFriendId, messageCount]);
-
-  useEffect(() => {
-    if (isCreating) {
-      searchInputRef.current?.focus();
-    }
-  }, [isCreating]);
-
-  const handleSelectFriend = useCallback(
-    (friendId: string) => {
-      setActiveFriendId(friendId);
-      setIsCreating(false);
-      setSearch("");
-    },
-    [],
-  );
-
-  const handleStartNewChat = useCallback(() => {
-    setSearch("");
-    setIsCreating(true);
-    setActiveFriendId(null);
-  }, []);
-
-  const handleComposerSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (!activeFriendId) return;
-      const content = draft.trim();
-      if (!content) return;
-
-      setIsSending(true);
-      setSendError(null);
-
-      try {
-        const response = await fetch("/api/chat/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            friendId: activeFriendId,
-            content,
-            mode: transportMode,
           }),
         });
 
         if (!response.ok) {
           const payload = (await response.json().catch(() => ({}))) as ApiError;
-          throw new Error(payload.error ?? "Failed to send message");
+          throw new Error(payload.error ?? t("alerts.send"));
         }
 
-        const data = (await response.json()) as { message: ChatMessage };
+        const payload = (await response.json()) as { message: ChatMessage };
         setMessages((prev) => {
-          const withoutOptimistic = prev.filter(
+          const withoutClient = prev.filter(
             (message) => message.id !== clientMessageId,
           );
-          const exists = withoutOptimistic.some(
-            (message) => message.id === data.message.id,
-          );
-          const next = exists
-            ? withoutOptimistic.map((message) =>
-                message.id === data.message.id ? data.message : message,
-              )
-            : [...withoutOptimistic, data.message];
-          return next.sort(
-            (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime(),
-          );
+          return mergeMessages(withoutClient, [payload.message]);
         });
         setConversation((prev) =>
-          prev ? { ...prev, updatedAt: data.message.createdAt } : prev,
+          prev ? { ...prev, updatedAt: payload.message.createdAt } : prev,
         );
-      } catch (sendError) {
-        console.error(sendError);
+      } catch (error) {
+        console.error("Failed to send message", error);
         setMessages((prev) =>
           prev.filter((message) => message.id !== clientMessageId),
         );
-        setDraft(trimmed);
-        setError(
-          sendError instanceof Error ? sendError.message : "Failed to send message",
-        );
+        setDraft(content);
+        setSendError(t("alerts.send"));
+      } finally {
+        setIsSending(false);
       }
     },
-    [conversation, draft, viewerId, viewerParticipant, viewerProfile, sendTyping],
+    [conversation, conversationId, draft, sendTyping, t, viewerId, viewerParticipant],
   );
 
   const handleLoadMore = useCallback(async () => {
-    if (!conversation || !nextCursor || isFetchingMore) {
+    if (!conversationId || !nextCursor || isFetchingMore) {
       return;
     }
 
     setIsFetchingMore(true);
-    setError(null);
+    setThreadError(null);
 
     try {
       const response = await fetch(
-        `/api/conversations/${conversation.id}/messages?cursor=${encodeURIComponent(
+        `/api/conversations/${conversationId}/messages?cursor=${encodeURIComponent(
           nextCursor,
-        )}`,
+        )}&limit=${MESSAGE_LIMIT}`,
       );
 
       if (!response.ok) {
@@ -731,394 +567,140 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
         throw new Error(payload.error ?? "Failed to load messages");
       }
 
-      const data = (await response.json()) as {
+      const payload = (await response.json()) as {
         messages: ChatMessage[];
         nextCursor: string | null;
       };
 
-      setMessages((prev) => mergeMessages(data.messages, prev));
-      setNextCursor(data.nextCursor);
-    } catch (fetchError) {
-      console.error(fetchError);
-      setError(
-        fetchError instanceof Error ? fetchError.message : "Failed to load messages",
-      );
+      setMessages((prev) => mergeMessages(payload.messages, prev));
+      setNextCursor(payload.nextCursor ?? null);
+    } catch (error) {
+      console.error("Failed to load more messages", error);
+      setThreadError(t("alerts.history"));
     } finally {
       setIsFetchingMore(false);
     }
-  }, [conversation, nextCursor, isFetchingMore]);
+  }, [conversationId, isFetchingMore, nextCursor, t]);
 
-  const typingParticipants = useMemo(() => {
-    if (!conversation) {
-      return [] as ChatUserProfile[];
-    }
-
-    const now = Date.now();
-
-    return conversation.participants
-      .map((participant) => participant.user)
-      .filter((profile) =>
-        profile.id !== viewerId && typingState[profile.id] && typingState[profile.id] > now,
-      );
-  }, [conversation, typingState, viewerId]);
-
-  useEffect(() => {
-    return () => {
-      eventSourceRef.current?.close();
-      if (typingTimeoutRef.current) {
-        window.clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-    };
+  const handleNewChatClick = useCallback(() => {
+    setSearch("");
+    searchInputRef.current?.focus();
   }, []);
 
+  const typingText = useMemo(() => {
+    if (!typingProfiles.length) {
+      return null;
+    }
+    const names = typingProfiles.map((profile) => getContactName(profile));
+    if (names.length === 1) {
+      return `${names[0]} is typing...`;
+    }
+    if (names.length === 2) {
+      return `${names[0]} and ${names[1]} are typing...`;
+    }
+    return `${names[0]} and others are typing...`;
+  }, [typingProfiles]);
+
+  const rosterEmpty = friends.length === 0;
+  const rosterHasMatches = filteredFriends.length > 0;
+  const transportMode: "progressive" = "progressive";
+
   return (
-    <div className="grid min-h-[540px] gap-6 lg:grid-cols-[260px,1fr]">
-      <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 text-sm">
-        <header className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/50">
-          <span>Friends</span>
-          <span className="text-white/30">{friends.length}</span>
-        </header>
-        <ul className="space-y-2">
-          {friends.map((friend) => {
-            const isActive = friend.friendId === activeFriendId;
-            return (
-              <li key={friend.friendshipId}>
-                <button
-                  type="button"
-                  onClick={() => setActiveFriendId(friend.friendId)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition",
-                    isActive
-                      ? "border-white/60 bg-white text-black shadow"
-                      : "border-white/10 bg-black/40 text-white hover:border-white/30",
-                  )}
-                >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-xs uppercase">
-                    {getInitials({
-                      id: friend.friendId,
-                      email: friend.email,
-                      firstName: friend.firstName,
-                      lastName: friend.lastName,
-                      image: friend.image,
-                    })}
-                  </span>
-                  <div>
-                    <div className="text-sm font-medium">
-                      {getContactName({
-                        id: friend.friendId,
-                        email: friend.email,
-                        firstName: friend.firstName,
-                        lastName: friend.lastName,
-                        image: friend.image,
-                      })}
-                    </div>
-                    <div className="text-xs text-white/60">
-                      Friends since {new Date(friend.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-          {friends.length === 0 && (
-            <li className="rounded-2xl border border-dashed border-white/20 px-3 py-6 text-center text-xs text-white/60">
-              Add friends to start a conversation.
-            </li>
-          )}
-        </ul>
-      </aside>
-      <section className="flex min-h-[540px] flex-col rounded-3xl border border-white/10 bg-white/[0.02]">
-        <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+    <div className="flex flex-col gap-6 lg:h-full lg:flex-row">
+      <section className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur lg:w-80">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/40">Chat</p>
-            <p className="text-lg font-semibold text-white">
-              {friendProfile
-                ? getContactName({
-                    id: friendProfile.friendId,
-                    email: friendProfile.email,
-                    firstName: friendProfile.firstName,
-                    lastName: friendProfile.lastName,
-                    image: friendProfile.image,
-                  })
-                : "Select a friend"}
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+              {t("roster.title")}
             </p>
-            {typingParticipants.length > 0 && (
-              <p className="text-xs text-white/60">
-                {typingParticipants.map(getContactName).join(", ")} typing…
-              </p>
-            )}
+            <p className="text-sm text-white/80">{t("roster.createHint")}</p>
           </div>
-          {conversation && (
-            <div className="text-right text-xs text-white/50">
-              <p>Last update</p>
-              <p>{formatTime(conversation.updatedAt)}</p>
-            </div>
-          )}
-        </header>
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
-          {isLoading && (
-            <p className="text-sm text-white/60">Loading conversation…</p>
-          )}
-          {error && (
-            <p className="rounded-lg border border-red-500/60 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {error}
-            </p>
-          )}
-          {conversation && nextCursor && (
-            <button
-              type="button"
-              onClick={handleLoadMore}
-              disabled={isFetchingMore}
-              className="text-xs text-white/60 hover:text-white disabled:opacity-50"
-            >
-              {isFetchingMore ? "Loading…" : "Load older messages"}
-            </button>
-          )}
-          {messages.map((message) => {
-            const isViewer = message.senderId === viewerId;
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  "max-w-lg rounded-2xl border px-4 py-3 text-sm leading-6",
-                  isViewer
-                    ? "ml-auto border-white/40 bg-white text-black"
-                    : "border-white/10 bg-black text-white",
-                )}
-              >
-                <div
-                  className={cn(
-                    "mb-1 flex items-center justify-between text-xs",
-                    isViewer ? "text-black/60" : "text-white/60",
-                  )}
-                >
-                  <span>{getContactName(message.sender)}</span>
-                  <span>{formatTime(message.createdAt)}</span>
-                </div>
-                <p>{message.body}</p>
-              </div>
-            );
-          })}
-          {messages.length === 0 && !isLoading && !error && (
-            <p className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-sm text-white/60">
-              Start the conversation with a friendly hello.
-            </p>
-          )}
-        </div>
-        <footer className="border-t border-white/10 px-6 py-4">
-          <form className="flex items-center gap-3" onSubmit={handleSend}>
-            <textarea
-              rows={1}
-              value={draft}
-              onChange={(event) => handleDraftChange(event.target.value)}
-              placeholder={friendProfile ? "Send a message" : "Select a friend to chat"}
-              disabled={!conversation}
-              className="flex-1 resize-none rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!conversation || !draft.trim()}
-              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:opacity-50"
-            >
-              Send
-            </button>
-          </form>
-        </footer>
-          throw new Error("Failed to send message");
-        }
-
-        const payload = (await response.json()) as SendMessageResponse;
-
-        setConversations((previous) => {
-          const existing = previous[activeFriendId];
-          const base: ConversationState =
-            existing ?? {
-              conversationId: payload.conversationId,
-              messages: [],
-            };
-
-          const nextMessages = mergeMessages(base.messages, [payload.message]);
-          const replies = payload.replies ?? [];
-          const merged = mergeMessages(nextMessages, replies);
-
-          return {
-            ...previous,
-            [activeFriendId]: {
-              conversationId: payload.conversationId,
-              messages: merged,
-            },
-          };
-        });
-
-        setDraft("");
-      } catch (error) {
-        setSendError(t("alerts.send"));
-      } finally {
-        setIsSending(false);
-      }
-    },
-    [activeFriendId, draft, transportMode, t],
-  );
-
-  const rosterItems = useMemo(() => {
-    return filteredFriends.map((friend) => {
-      const profile = {
-        id: friend.friendId,
-        email: friend.email,
-        firstName: friend.firstName,
-        lastName: friend.lastName,
-        image: friend.image,
-      };
-      const name = getContactName(profile);
-      const initials = getInitials(profile);
-      const conversation = conversations[friend.friendId];
-      const lastMessage = conversation?.messages.length
-        ? conversation.messages[conversation.messages.length - 1]
-        : undefined;
-      const preview = lastMessage
-        ? ellipsize(lastMessage.body)
-        : t("roster.emptyPreview");
-      const lastActiveDate = lastMessage?.sentAt ?? friend.createdAt;
-      const lastActive = formatDateTime(lastActiveDate, locale);
-
-      return {
-        friend,
-        name,
-        initials,
-        preview,
-        lastActive,
-      };
-    });
-  }, [conversations, filteredFriends, locale, t]);
-
-  return (
-    <div className="grid min-h-[540px] gap-6 lg:grid-cols-[320px,1fr]">
-      <aside className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-        <header className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/50">
-          <span>{t("roster.title")}</span>
           <button
             type="button"
-            onClick={handleStartNewChat}
-            disabled={friends.length === 0}
-            className="text-white transition hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={handleNewChatClick}
+            disabled={rosterEmpty}
+            className="rounded-full border border-white/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("roster.new")}
           </button>
-        </header>
+        </div>
         <div className="mb-4">
           <input
             ref={searchInputRef}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t("roster.searchPlaceholder")}
-            disabled={friends.length === 0}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-white/60 focus:outline-none"
+            autoComplete="off"
           />
-          <p className="mt-2 text-xs text-white/40">{t("roster.createHint")}</p>
         </div>
-        {friends.length === 0 ? (
-          <p className="mt-auto rounded-2xl border border-white/10 bg-black/30 px-4 py-6 text-center text-sm text-white/50">
-            {t("roster.empty")}
-          </p>
-        ) : (
-          <ul className="flex-1 space-y-3 overflow-y-auto pr-1">
-            {rosterItems.map(({ friend, name, initials, preview, lastActive }) => {
+        <div className="h-[1px] w-full bg-white/10" />
+        <div className="mt-4 space-y-2 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 220px)" }}>
+          {rosterEmpty ? (
+            <p className="text-sm text-white/60">{t("roster.empty")}</p>
+          ) : rosterHasMatches ? (
+            filteredFriends.map((friend) => {
+              const profile = friendToContactProfile(friend);
               const isActive = friend.friendId === activeFriendId;
               return (
-                <li key={friend.friendshipId}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectFriend(friend.friendId)}
-                    className={cn(
-                      "w-full rounded-2xl border px-4 py-3 text-left transition",
-                      isActive
-                        ? "border-white/50 bg-white text-black shadow-lg"
-                        : "border-white/10 bg-black/20 text-white hover:border-white/30 hover:bg-black/30",
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      {friend.image ? (
-                        <img
-                          src={friend.image}
-                          alt={name}
-                          className={cn(
-                            "h-10 w-10 rounded-full border object-cover",
-                            isActive ? "border-black/10" : "border-white/10",
-                          )}
-                        />
-                      ) : (
-                        <span
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold",
-                            isActive
-                              ? "border-black/10 bg-black/5 text-black/70"
-                              : "border-white/10 bg-white/10 text-white",
-                          )}
-                        >
-                          {initials}
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={cn(
-                            "truncate text-sm font-semibold",
-                            isActive ? "text-black" : "text-white",
-                          )}
-                        >
-                          {name}
-                        </p>
-                        <p
-                          className={cn(
-                            "mt-1 truncate text-xs",
-                            isActive ? "text-black/70" : "text-white/60",
-                          )}
-                        >
-                          {preview}
-                        </p>
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-3 text-xs",
-                        isActive ? "text-black/50" : "text-white/40",
-                      )}
-                    >
-                      {t("roster.lastActive", { time: lastActive })}
-                    </div>
-                  </button>
-                </li>
+                <button
+                  type="button"
+                  key={friend.friendId}
+                  onClick={() => setActiveFriendId(friend.friendId)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition",
+                    isActive
+                      ? "border-white/50 bg-white/10"
+                      : "border-transparent hover:border-white/20 hover:bg-white/5",
+                  )}
+                >
+                  {friend.image ? (
+                    <img
+                      src={friend.image}
+                      alt={getContactName(profile)}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold">
+                      {getInitials(profile)}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {getContactName(profile)}
+                    </p>
+                    <p className="truncate text-xs text-white/60">
+                      {friend.email ?? t("roster.emptyPreview")}
+                    </p>
+                    <p className="text-[11px] text-white/40">
+                      {t("roster.lastActive", {
+                        time: formatRosterTime(friend.createdAt, locale),
+                      })}
+                    </p>
+                  </div>
+                </button>
               );
-            })}
-          </ul>
-        )}
-      </aside>
-      <section className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.02]">
-        {selectedFriend ? (
+            })
+          ) : (
+            <p className="text-sm text-white/60">{t("roster.emptyPreview")}</p>
+          )}
+        </div>
+      </section>
+
+      <section className="flex flex-1 flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
+        {friendProfile && activeFriendContact ? (
           <>
-            <header className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-5">
-              <div className="flex items-center gap-3">
-                {selectedFriend.image ? (
+            <header className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+              <div className="flex items-center gap-4">
+                {friendProfile.image ? (
                   <img
-                    src={selectedFriend.image}
-                    alt={getContactName({
-                      id: selectedFriend.friendId,
-                      email: selectedFriend.email,
-                      firstName: selectedFriend.firstName,
-                      lastName: selectedFriend.lastName,
-                      image: selectedFriend.image,
-                    })}
-                    className="h-12 w-12 rounded-full border border-white/20 object-cover"
+                    src={friendProfile.image}
+                    alt={getContactName(activeFriendContact)}
+                    className="h-12 w-12 rounded-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-base font-semibold text-white">
-                    {getInitials({
-                      id: selectedFriend.friendId,
-                      email: selectedFriend.email,
-                      firstName: selectedFriend.firstName,
-                      lastName: selectedFriend.lastName,
-                      image: selectedFriend.image,
-                    })}
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-base font-semibold">
+                    {getInitials(activeFriendContact)}
                   </span>
                 )}
                 <div>
@@ -1127,13 +709,7 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
                   </p>
                   <p className="text-sm text-white">
                     {t("thread.directWith", {
-                      name: getContactName({
-                        id: selectedFriend.friendId,
-                        email: selectedFriend.email,
-                        firstName: selectedFriend.firstName,
-                        lastName: selectedFriend.lastName,
-                        image: selectedFriend.image,
-                      }),
+                      name: getContactName(activeFriendContact),
                     })}
                   </p>
                 </div>
@@ -1145,56 +721,77 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
                 <p>{t(`thread.transport.mode.${transportMode}`)}</p>
               </div>
             </header>
-            <div className="flex-1 overflow-y-auto px-6 py-6" ref={messageContainerRef}>
+            <div
+              className="flex-1 overflow-y-auto px-6 py-4"
+              ref={messageContainerRef}
+            >
               {threadError ? (
-                <p className="rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                <p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                   {threadError}
                 </p>
               ) : null}
+
               {isThreadLoading ? (
                 <p className="text-sm text-white/60">{t("thread.loading")}</p>
               ) : null}
-              {!isThreadLoading && !threadError ? (
-                activeConversation && activeConversation.messages.length > 0 ? (
-                  <ul className="space-y-4">
-                    {activeConversation.messages.map((message) => {
-                      const isViewer = message.authorId === viewer.id;
-                      const timestamp = formatTime(message.sentAt, locale);
-                      return (
-                        <li
-                          key={message.id}
-                          className={cn(
-                            "max-w-lg rounded-2xl border px-4 py-3 text-sm leading-6",
-                            isViewer
-                              ? "ml-auto border-white/40 bg-white text-black"
-                              : "border-white/10 bg-black/60 text-white",
-                          )}
-                        >
-                          <div
+
+              {!isThreadLoading && !threadError && conversation ? (
+                <>
+                  {nextCursor ? (
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={isFetchingMore}
+                      className="mb-4 text-xs uppercase tracking-[0.3em] text-white/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isFetchingMore ? "Loading..." : "Load older messages"}
+                    </button>
+                  ) : null}
+                  {messages.length > 0 ? (
+                    <ul className="space-y-4">
+                      {messages.map((message) => {
+                        const isViewer = message.senderId === viewerId;
+                        const timestamp = formatMessageTime(
+                          message.createdAt,
+                          locale,
+                        );
+                        return (
+                          <li
+                            key={message.id}
                             className={cn(
-                              "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
-                              isViewer ? "text-black/50" : "text-white/50",
+                              "max-w-xl rounded-2xl border px-4 py-3 text-sm leading-6",
+                              isViewer
+                                ? "ml-auto border-white/40 bg-white text-black"
+                                : "border-white/10 bg-black/50 text-white",
                             )}
                           >
-                            <span>{isViewer ? viewerName || t("thread.me") : getContactName({
-                              id: selectedFriend.friendId,
-                              email: selectedFriend.email,
-                              firstName: selectedFriend.firstName,
-                              lastName: selectedFriend.lastName,
-                              image: selectedFriend.image,
-                            })}</span>
-                            <span>{timestamp}</span>
-                          </div>
-                          <p>{message.body}</p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="rounded-2xl border border-white/10 bg-black/30 px-4 py-6 text-sm text-white/60">
-                    {t("thread.empty")}
-                  </p>
-                )
+                            <div
+                              className={cn(
+                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
+                                isViewer ? "text-black/50" : "text-white/50",
+                              )}
+                            >
+                              <span>
+                                {isViewer
+                                  ? t("thread.me")
+                                  : getContactName(message.sender)}
+                              </span>
+                              <span>{timestamp}</span>
+                            </div>
+                            <p>{message.body}</p>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
+                      {t("thread.empty")}
+                    </p>
+                  )}
+                  {typingText ? (
+                    <p className="mt-4 text-xs text-white/70">{typingText}</p>
+                  ) : null}
+                </>
               ) : null}
             </div>
             <footer className="border-t border-white/10 px-6 py-4">
@@ -1204,17 +801,17 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
                 ) : null}
                 <textarea
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => handleDraftChange(event.target.value)}
                   placeholder={t("thread.composer.placeholder")}
-                  rows={2}
-                  disabled={isSending}
-                  className="flex-1 resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                  rows={3}
+                  disabled={!conversation || isSending}
+                  className="flex-1 resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center justify-end">
                   <button
                     type="submit"
-                    disabled={isSending || !draft.trim()}
-                    className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!conversation || isSending || !draft.trim()}
+                    className="rounded-full bg-white px-6 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSending
                       ? t("thread.composer.sending")
@@ -1225,7 +822,7 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
             </footer>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center text-white/60">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center text-white/70">
             <p className="text-lg font-semibold text-white">
               {t("thread.placeholder.title")}
             </p>
@@ -1236,3 +833,4 @@ export default function ChatClient({ viewer, friends }: ChatClientProps) {
     </div>
   );
 }
+
