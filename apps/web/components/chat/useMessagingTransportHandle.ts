@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   initializeMessagingTransport,
   type TransportHandle,
 } from "@/lib/messaging-transport";
-import { useManualSignaling } from "./useManualSignaling";
+import { usePeerSignaling } from "./hooks/usePeerSignaling";
 
 export function useMessagingTransportHandle() {
   const [transport, setTransport] = useState<TransportHandle | null>(null);
-  const { dependencies, state, controller } = useManualSignaling();
-
-  const shouldInitialize = useMemo(() => controller.shouldInitialize(), [
-    controller,
-    state.role,
-    state.remoteOfferToken,
-    state.sessionId,
-  ]);
+  const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling();
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -60,7 +53,7 @@ export function useMessagingTransportHandle() {
       controller.markDisconnected();
       void instance.teardown();
     };
-  }, [controller, dependencies, shouldInitialize, state.sessionId]);
+  }, [controller, dependencies, shouldInitialize, snapshot.sessionId]);
 
   return transport;
 }
