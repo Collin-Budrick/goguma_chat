@@ -71,6 +71,25 @@ type ApiError = {
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
 
+type ConnectionTone = "success" | "warning" | "error";
+
+type ConnectionIndicatorMeta = {
+  tone: ConnectionTone;
+  label: string;
+};
+
+const CONNECTION_PILL_CLASSES: Record<ConnectionTone, string> = {
+  success: "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
+  warning: "border-amber-400/40 bg-amber-500/10 text-amber-100",
+  error: "border-red-400/40 bg-red-500/10 text-red-100",
+};
+
+const CONNECTION_DOT_CLASSES: Record<ConnectionTone, string> = {
+  success: "bg-emerald-300",
+  warning: "bg-amber-300",
+  error: "bg-red-300",
+};
+
 function generateClientMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `client-${crypto.randomUUID()}`;
@@ -988,6 +1007,27 @@ export default function ChatThread({
     transportState,
   ]);
 
+  const connectionIndicator = useMemo<ConnectionIndicatorMeta | null>(() => {
+    switch (transportState) {
+      case "connected":
+        return { tone: "success", label: t("thread.connection.status.connected") };
+      case "connecting":
+      case "idle":
+        return { tone: "warning", label: t("thread.connection.status.connecting") };
+      case "degraded":
+      case "recovering":
+      case "closed":
+        return { tone: "warning", label: t("thread.connection.status.reconnecting") };
+      case "error":
+        return {
+          tone: "error",
+          label: transportError?.message ?? t("thread.connection.status.error"),
+        };
+      default:
+        return null;
+    }
+  }, [t, transportError?.message, transportState]);
+
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
     [conversation, viewerId, viewerProfile],
@@ -1324,13 +1364,32 @@ export default function ChatThread({
                   </p>
                 </div>
               </div>
-              <div className="relative flex items-center gap-3 text-right text-xs text-white/50">
+              <div className="relative flex flex-wrap items-center gap-3 text-right text-xs text-white/50">
                 <div>
                   <p className="uppercase tracking-[0.3em]">
                     {t("thread.transport.label")}
                   </p>
                   <p>{t(`thread.transport.mode.${messagingMode}`)}</p>
                 </div>
+                {connectionIndicator ? (
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 rounded-full border px-3 py-1 text-[11px]",
+                      CONNECTION_PILL_CLASSES[connectionIndicator.tone],
+                    )}
+                    aria-live="polite"
+                  >
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        CONNECTION_DOT_CLASSES[connectionIndicator.tone],
+                      )}
+                    />
+                    <span className="text-xs font-medium">
+                      {connectionIndicator.label}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="relative">
                   <button
                     type="button"

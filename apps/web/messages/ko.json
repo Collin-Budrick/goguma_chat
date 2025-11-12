@@ -598,7 +598,13 @@
       "recovering": "채널을 다시 준비하는 중이에요…",
       "reconnecting": "연결이 끊어졌어요. 다시 연결을 시도하는 중입니다…",
       "restored": "연결이 복구됐어요.",
-      "failed": "피어 연결이 끊어졌어요. 계속 다시 시도할게요."
+      "failed": "피어 연결이 끊어졌어요. 계속 다시 시도할게요.",
+      "status": {
+        "connected": "상대와 연결됨",
+        "connecting": "연결 중…",
+        "reconnecting": "재연결 중…",
+        "error": "연결을 사용할 수 없어요"
+      }
     }
   },
     "alerts": {

@@ -598,7 +598,13 @@
       "recovering": "Re-establishing the channel…",
       "reconnecting": "Connection lost. Attempting to reconnect…",
       "restored": "Connection restored.",
-      "failed": "The peer connection dropped. We’ll keep retrying."
+      "failed": "The peer connection dropped. We’ll keep retrying.",
+      "status": {
+        "connected": "Peer link active",
+        "connecting": "Connecting…",
+        "reconnecting": "Reconnecting…",
+        "error": "Connection unavailable"
+      }
     }
   },
     "alerts": {
