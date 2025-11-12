@@ -9,6 +9,7 @@ import {
 } from "@/lib/messaging-transport";
 import type {
   PeerPresenceUpdate,
+  PeerHeartbeatFrame,
   PeerTransportIncomingFrame,
 } from "@/lib/messaging-schema";
 
@@ -26,6 +27,8 @@ import {
 import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
 const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
+const HEARTBEAT_INTERVAL_MS = 10_000;
+const HEARTBEAT_TIMEOUT_MS = 15_000;
 
 type ChannelHistoryMode = "replace" | "prepend";
 
@@ -151,6 +154,7 @@ type SendDeliveryPresenceOptions = {
 
 export function usePeerConversationChannel(options: {
   transport: TransportHandle | null;
+  onHeartbeatTimeout?: () => Promise<void>;
 }) {
   const transportRef = useRef<TransportHandle | null>(options.transport);
   const listenersRef = useRef<Map<string, Set<ChannelListener>>>(new Map());
@@ -161,6 +165,10 @@ export function usePeerConversationChannel(options: {
   const pendingAcksRef = useRef<PendingMap<ChatMessage>>(new Map());
   const pendingHistoryRef = useRef<PendingMap<SyncHistoryResult>>(new Map());
   const pendingLoadRef = useRef<PendingMap<LoadMoreResult>>(new Map());
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const awaitingHeartbeatAckRef = useRef(false);
+  const heartbeatRecoveryRef = useRef(false);
 
   const dispatchHydration = useCallback(
     (conversationId: string, snapshot: ConversationSnapshot) => {
@@ -589,6 +597,29 @@ export function usePeerConversationChannel(options: {
       if (!frame) return;
 
       switch (frame.type) {
+        case "heartbeat": {
+          if (frame.kind === "ping") {
+            const response: PeerHeartbeatFrame = {
+              type: "heartbeat",
+              kind: "pong",
+              timestamp: frame.timestamp,
+            };
+            const transport = transportRef.current;
+            if (transport) {
+              transport
+                .send(JSON.stringify(response))
+                .catch((error) => console.error("Failed to send heartbeat ack", error));
+            }
+            break;
+          }
+
+          awaitingHeartbeatAckRef.current = false;
+          if (heartbeatTimeoutRef.current) {
+            clearTimeout(heartbeatTimeoutRef.current);
+            heartbeatTimeoutRef.current = null;
+          }
+          break;
+        }
         case "message": {
           const { conversationId, message, clientMessageId } = frame;
           const updatedSnapshot = updateMessages(conversationId, [message]);
@@ -777,6 +808,15 @@ export function usePeerConversationChannel(options: {
   useEffect(() => {
     transportRef.current = options.transport;
     if (!options.transport) {
+      awaitingHeartbeatAckRef.current = false;
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null;
+      }
       return undefined;
     }
 
@@ -792,6 +832,89 @@ export function usePeerConversationChannel(options: {
       unsubscribeError();
     };
   }, [handleFrame, options.transport]);
+
+  useEffect(() => {
+    const transport = transportRef.current;
+    awaitingHeartbeatAckRef.current = false;
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+    if (heartbeatTimeoutRef.current) {
+      clearTimeout(heartbeatTimeoutRef.current);
+      heartbeatTimeoutRef.current = null;
+    }
+
+    if (!transport) {
+      return () => undefined;
+    }
+
+    let cancelled = false;
+
+    const scheduleTimeout = () => {
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+      }
+      heartbeatTimeoutRef.current = setTimeout(async () => {
+        awaitingHeartbeatAckRef.current = false;
+        if (heartbeatRecoveryRef.current) {
+          return;
+        }
+        heartbeatRecoveryRef.current = true;
+        try {
+          await options.onHeartbeatTimeout?.();
+        } catch (error) {
+          console.error("Heartbeat recovery failed", error);
+        } finally {
+          heartbeatRecoveryRef.current = false;
+        }
+      }, HEARTBEAT_TIMEOUT_MS);
+    };
+
+    const sendHeartbeat = async () => {
+      const handle = transportRef.current;
+      if (!handle || cancelled) {
+        return;
+      }
+
+      try {
+        awaitingHeartbeatAckRef.current = true;
+        const payload: PeerHeartbeatFrame = {
+          type: "heartbeat",
+          kind: "ping",
+          timestamp: Date.now(),
+        };
+        await handle.ready.catch(() => undefined);
+        await handle.send(JSON.stringify(payload));
+        scheduleTimeout();
+      } catch (error) {
+        awaitingHeartbeatAckRef.current = false;
+        console.error("Failed to send heartbeat", error);
+      }
+    };
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (awaitingHeartbeatAckRef.current) {
+        return;
+      }
+      void sendHeartbeat();
+    }, HEARTBEAT_INTERVAL_MS);
+
+    void sendHeartbeat();
+
+    return () => {
+      cancelled = true;
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null;
+      }
+    };
+  }, [options.onHeartbeatTimeout, options.transport]);
 
   const subscribeMessages = useCallback(
     (conversationId: string, listener: ChannelListener) => {

@@ -587,13 +587,20 @@
         "send": "보내기",
         "sending": "보내는 중…"
       },
-      "presence": {
-        "readToast": "{name}님이 최근 메시지를 읽었어요.",
-        "deliveryToast": "{name}님에게 전달됐어요.",
-        "readFallback": "친구",
-        "deliveryFallback": "친구"
-      }
+    "presence": {
+      "readToast": "{name}님이 최근 메시지를 읽었어요.",
+      "deliveryToast": "{name}님에게 전달됐어요.",
+      "readFallback": "친구",
+      "deliveryFallback": "친구"
     },
+    "connection": {
+      "degraded": "상대와 연결이 불안정해요. 다시 연결을 시도하는 중입니다…",
+      "recovering": "채널을 다시 준비하는 중이에요…",
+      "reconnecting": "연결이 끊어졌어요. 다시 연결을 시도하는 중입니다…",
+      "restored": "연결이 복구됐어요.",
+      "failed": "피어 연결이 끊어졌어요. 계속 다시 시도할게요."
+    }
+  },
     "alerts": {
       "history": "대화를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
       "send": "메시지를 보내지 못했어요. 다시 시도해 주세요.",

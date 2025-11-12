@@ -17,6 +17,8 @@ export type TransportState =
   | "idle"
   | "connecting"
   | "connected"
+  | "degraded"
+  | "recovering"
   | "closed"
   | "error";
 
@@ -105,6 +107,7 @@ const createTransportHandle = (
   let state: TransportState = "idle";
   let connection: DriverConnection | null = null;
   let controller = new AbortController();
+  let lastConnectOptions: TransportConnectOptions | undefined;
   let readyResolve: (() => void) | undefined;
   let readyReject: ((reason: unknown) => void) | undefined;
   let readySettled = false;
@@ -137,18 +140,27 @@ const createTransportHandle = (
   };
 
   const connect: TransportHandle["connect"] = async (options) => {
-    if (state === "connected") return;
+    if (state === "connected" && !options) return;
 
     if (controller.signal.aborted) {
       controller = new AbortController();
     }
 
-    updateState("connecting");
+    const resolvedOptions = options ?? lastConnectOptions;
+    if (options || (!lastConnectOptions && resolvedOptions)) {
+      lastConnectOptions = resolvedOptions;
+    }
+
+    const nextState =
+      state === "degraded" || state === "recovering"
+        ? "recovering"
+        : "connecting";
+    updateState(nextState);
 
     try {
       connection = await driver.start({
         signal: controller.signal,
-        options,
+        options: resolvedOptions,
         emitMessage: (payload) => messageEmitter.emit(payload),
         emitState: updateState,
         emitError: (error) => errorEmitter.emit(error),
@@ -269,6 +281,11 @@ export type TransportDependencies = {
     ) => Promise<RTCSessionDescriptionInit>;
     iceServers?: RTCIceServer[];
   };
+  relayLocator?: (context: { attempt: number; reason: string }) =>
+    | Promise<RTCIceServer[] | null | undefined>
+    | RTCIceServer[]
+    | null
+    | undefined;
   webTransportEndpoint?: string | ((options?: TransportConnectOptions) => string);
   WebTransportConstructor?: new (url: string) => WebTransportLike;
   textEncoder?: () => TextEncoder;
@@ -1116,7 +1133,7 @@ const createUDPDriver = (dependencies: TransportDependencies): TransportDriver =
 const defaultCreateWebRTC = async (
   startOptions: DriverStartOptions & { dependencies: TransportDependencies },
 ): Promise<DriverConnection> => {
-  const { signal, emitMessage, emitError, dependencies, options } = startOptions;
+  const { signal, emitMessage, emitError, emitState, dependencies, options } = startOptions;
 
   if (typeof RTCPeerConnection !== "function") {
     throw new TransportUnavailableError("WebRTC is not supported in this environment");
@@ -1149,11 +1166,181 @@ const defaultCreateWebRTC = async (
     throw new TransportUnavailableError("Missing WebRTC signaling implementation");
   }
 
-  const offer = await peer.createOffer();
-  await peer.setLocalDescription(offer);
+  let closed = false;
+  let negotiationPromise: Promise<void> | null = null;
+  let restartAttempts = 0;
+  const prunedCandidates = new Set<string>();
+  const knownRelayFingerprints = new Set<string>(
+    (dependencies.signaling?.iceServers ?? []).map((server) => JSON.stringify(server)),
+  );
 
-  const answer = await negotiate(peer.localDescription as RTCSessionDescriptionInit, options);
-  await peer.setRemoteDescription(answer);
+  const ensureRelayServers = async (reason: string) => {
+    if (!dependencies.relayLocator || closed) {
+      return;
+    }
+
+    try {
+      const extraServers = await dependencies.relayLocator({
+        attempt: restartAttempts + 1,
+        reason,
+      });
+      if (!extraServers || !extraServers.length) {
+        return;
+      }
+
+      const configuration = peer.getConfiguration();
+      const nextServers = [...(configuration.iceServers ?? [])];
+      let applied = false;
+      for (const server of extraServers) {
+        if (!server) continue;
+        const fingerprint = JSON.stringify(server);
+        if (knownRelayFingerprints.has(fingerprint)) {
+          continue;
+        }
+        knownRelayFingerprints.add(fingerprint);
+        nextServers.push(server);
+        applied = true;
+      }
+
+      if (applied) {
+        try {
+          peer.setConfiguration({ ...configuration, iceServers: nextServers });
+        } catch (error) {
+          console.warn("Failed to apply relay ICE servers", error);
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to resolve relay servers", error);
+    }
+  };
+
+  const pruneFailedCandidates = async () => {
+    if (typeof peer.getStats !== "function") {
+      return;
+    }
+
+    try {
+      const stats = await peer.getStats();
+      const removals: RTCIceCandidateInit[] = [];
+      stats.forEach((report) => {
+        const candidatePair = report as RTCStats & {
+          type?: string;
+          state?: string;
+          remoteCandidateId?: string;
+        };
+        if (candidatePair.type !== "candidate-pair") return;
+        if (candidatePair.state !== "failed") return;
+        if (!candidatePair.remoteCandidateId) return;
+
+        const remote = stats.get(candidatePair.remoteCandidateId) as
+          | (RTCStats & {
+              type?: string;
+              candidate?: string;
+              sdpMid?: string;
+              sdpMLineIndex?: number;
+            })
+          | undefined;
+
+        if (!remote || remote.type !== "remote-candidate") {
+          return;
+        }
+
+        const candidateValue = remote.candidate;
+        if (!candidateValue || prunedCandidates.has(candidateValue)) {
+          return;
+        }
+
+        prunedCandidates.add(candidateValue);
+        removals.push({
+          candidate: candidateValue,
+          sdpMid: remote.sdpMid,
+          sdpMLineIndex: remote.sdpMLineIndex,
+        });
+      });
+
+      if (!removals.length) {
+        return;
+      }
+
+      await Promise.all(
+        removals.map((candidate) =>
+          peer.removeIceCandidate(candidate).catch(() => undefined),
+        ),
+      );
+    } catch (error) {
+      console.warn("Failed to prune ICE candidates", error);
+    }
+  };
+
+  const scheduleNegotiation = (params: {
+    iceRestart: boolean;
+    reason: string;
+    initial?: boolean;
+  }): Promise<void> => {
+    if (closed || signal.aborted) {
+      return Promise.resolve();
+    }
+
+    if (negotiationPromise) {
+      return negotiationPromise;
+    }
+
+    negotiationPromise = (async () => {
+      if (params.iceRestart) {
+        restartAttempts += 1;
+      }
+
+      if (!params.initial) {
+        emitState("recovering");
+      }
+
+      await pruneFailedCandidates();
+
+      if (params.iceRestart) {
+        await ensureRelayServers(params.reason);
+        if (typeof peer.restartIce === "function") {
+          try {
+            peer.restartIce();
+          } catch {
+            // Some browsers throw when restartIce is unsupported; ignore.
+          }
+        }
+      }
+
+      const offer = await peer.createOffer(
+        params.iceRestart ? { iceRestart: true } : undefined,
+      );
+      await peer.setLocalDescription(offer);
+
+      const localDescription = peer.localDescription;
+      if (!localDescription) {
+        throw new Error("Missing WebRTC local description");
+      }
+
+      const answer = await negotiate(localDescription, options);
+      await peer.setRemoteDescription(answer);
+
+      if (!params.initial) {
+        emitState("connected");
+      }
+
+      restartAttempts = 0;
+    })()
+      .catch((error) => {
+        if (!signal.aborted && !closed) {
+          emitError(normalizeError(error));
+          emitState("error");
+        }
+        throw error;
+      })
+      .finally(() => {
+        negotiationPromise = null;
+      });
+
+    return negotiationPromise;
+  };
+
+  await scheduleNegotiation({ iceRestart: false, reason: "initial", initial: true });
 
   await new Promise<void>((resolve, reject) => {
     if (signal.aborted) {
@@ -1208,9 +1395,91 @@ const defaultCreateWebRTC = async (
     }
   });
 
+  const handleIceStateChange = () => {
+    switch (peer.iceConnectionState) {
+      case "connected":
+      case "completed": {
+        emitState("connected");
+        restartAttempts = 0;
+        break;
+      }
+      case "disconnected": {
+        emitState("degraded");
+        void scheduleNegotiation({
+          iceRestart: true,
+          reason: "ice-disconnected",
+        }).catch(() => undefined);
+        break;
+      }
+      case "failed": {
+        emitState("recovering");
+        void scheduleNegotiation({
+          iceRestart: true,
+          reason: "ice-failed",
+        }).catch(() => undefined);
+        break;
+      }
+      case "closed": {
+        emitState("closed");
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  const handleConnectionStateChange = () => {
+    switch (peer.connectionState) {
+      case "connected": {
+        emitState("connected");
+        restartAttempts = 0;
+        break;
+      }
+      case "disconnected": {
+        emitState("degraded");
+        break;
+      }
+      case "failed": {
+        emitState("recovering");
+        void scheduleNegotiation({
+          iceRestart: true,
+          reason: "connection-failed",
+        }).catch(() => undefined);
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  const handleNegotiationNeeded = () => {
+    void scheduleNegotiation({
+      iceRestart: false,
+      reason: "renegotiation-needed",
+    }).catch(() => undefined);
+  };
+
+  const handleIceCandidateError = () => {
+    emitState("degraded");
+    void scheduleNegotiation({
+      iceRestart: true,
+      reason: "ice-candidate-error",
+    }).catch(() => undefined);
+  };
+
+  peer.addEventListener("iceconnectionstatechange", handleIceStateChange);
+  peer.addEventListener("connectionstatechange", handleConnectionStateChange);
+  peer.addEventListener("negotiationneeded", handleNegotiationNeeded);
+  peer.addEventListener("icecandidateerror", handleIceCandidateError);
+
   signal.addEventListener(
     "abort",
     () => {
+      closed = true;
+      peer.removeEventListener("iceconnectionstatechange", handleIceStateChange);
+      peer.removeEventListener("connectionstatechange", handleConnectionStateChange);
+      peer.removeEventListener("negotiationneeded", handleNegotiationNeeded);
+      peer.removeEventListener("icecandidateerror", handleIceCandidateError);
       try {
         channel.close();
       } finally {
@@ -1229,6 +1498,11 @@ const defaultCreateWebRTC = async (
       channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
     },
     async close() {
+      closed = true;
+      peer.removeEventListener("iceconnectionstatechange", handleIceStateChange);
+      peer.removeEventListener("connectionstatechange", handleConnectionStateChange);
+      peer.removeEventListener("negotiationneeded", handleNegotiationNeeded);
+      peer.removeEventListener("icecandidateerror", handleIceCandidateError);
       channel.close();
       peer.close();
     },
