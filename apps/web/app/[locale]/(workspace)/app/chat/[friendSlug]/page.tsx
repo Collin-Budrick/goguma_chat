@@ -3,14 +3,36 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import ChatThread from "@/components/chat/ChatThread";
-import { getFriendState } from "@/db/friends";
+import type { FriendSummary } from "@/components/contacts/types";
 import { auth } from "@/lib/auth";
+import { buildViewerProfile, loadInitialConversation } from "../utils";
 
-import {
-  buildViewerProfile,
-  loadInitialConversation,
-  serializeFriends,
-} from "../utils";
+function buildFriendFromConversation(
+  friendId: string,
+  payload: Awaited<ReturnType<typeof loadInitialConversation>>,
+): FriendSummary | null {
+  const conversation = payload.conversation;
+  if (!conversation) return null;
+
+  const participant = conversation.participants.find(
+    (member) => member.userId === friendId,
+  );
+
+  if (!participant) {
+    return null;
+  }
+
+  return {
+    friendshipId: `${conversation.id}:${friendId}`,
+    friendId,
+    email: participant.user.email,
+    firstName: participant.user.firstName,
+    lastName: participant.user.lastName,
+    image: participant.user.image,
+    createdAt: conversation.createdAt,
+    hasConversation: true,
+  };
+}
 
 type PageProps = {
   params: Promise<{ locale: string; friendSlug: string }>;
@@ -37,15 +59,12 @@ export default async function FriendChatPage({ params }: PageProps) {
 
   const viewerId = session.user.id;
   const viewerProfile = buildViewerProfile(session);
-  const friendState = await getFriendState(viewerId);
-  const friends = serializeFriends(friendState.friends);
-  const friend = friends.find((item) => item.friendId === friendSlug) ?? null;
+  const payload = await loadInitialConversation(viewerId, friendSlug);
+  const friend = buildFriendFromConversation(friendSlug, payload);
 
-  if (!friend) {
+  if (!payload.conversation || !friend) {
     notFound();
   }
-
-  const payload = await loadInitialConversation(viewerId, friend.friendId);
 
   return (
     <div className="flex h-full">
