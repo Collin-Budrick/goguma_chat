@@ -1963,10 +1963,10 @@ export function initializeMessagingTransport(options: {
     const previousHandle = currentHandle;
     const factory = getFactoryForMode(mode, dependencies, overrides);
     const nextHandle = factory();
+    currentHandle = nextHandle;
 
     try {
       await nextHandle.connect(options.connectOptions);
-      currentHandle = nextHandle;
       currentMode = mode;
       options.onModeChange?.(mode);
 

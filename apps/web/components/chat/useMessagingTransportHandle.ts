@@ -37,6 +37,17 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
   const lastDegradedRef = useRef<number | null>(null);
   const handshakeUpgradeKeyRef = useRef<string | null>(null);
 
+  const scheduleMicrotask = useCallback((callback: () => void) => {
+    if (typeof queueMicrotask === "function") {
+      queueMicrotask(callback);
+      return;
+    }
+
+    Promise.resolve()
+      .then(callback)
+      .catch(() => undefined);
+  }, []);
+
   const detachListeners = useCallback(() => {
     stateUnsubscribeRef.current?.();
     stateUnsubscribeRef.current = null;
@@ -45,7 +56,14 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
   }, []);
 
   const attachHandle = useCallback(
-    (handle: TransportHandle | null) => {
+    (handle: TransportHandle | null, options?: { force?: boolean }) => {
+      const sameHandle = transportRef.current === handle;
+
+      if (sameHandle && !options?.force) {
+        controller.setActiveTransport(handle);
+        return;
+      }
+
       detachListeners();
       transportRef.current = handle;
       controller.setActiveTransport(handle);
@@ -106,7 +124,7 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
     }
 
     if (!shouldInitialize) {
-      attachHandle(null);
+      attachHandle(null, { force: true });
       return () => undefined;
     }
 
@@ -125,15 +143,24 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
     instanceRef.current = instance;
     let cancelled = false;
 
+    const attachCurrentHandle = (force?: boolean) => {
+      if (cancelled) return;
+      attachHandle(instance.transport ?? null, force ? { force: true } : undefined);
+    };
+
     const bootstrap = async () => {
       try {
+        attachCurrentHandle(true);
+        scheduleMicrotask(() => {
+          attachCurrentHandle();
+        });
+
         await instance.whenReady();
-        if (cancelled) return;
-        attachHandle(instance.transport ?? null);
+        attachCurrentHandle(true);
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to initialize messaging transport", error);
-        attachHandle(null);
+        attachHandle(null, { force: true });
         setState("error");
         setLastError(toError(error));
         controller.markDisconnected();
@@ -145,7 +172,7 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
     return () => {
       cancelled = true;
       detachListeners();
-      attachHandle(null);
+      attachHandle(null, { force: true });
       controller.markDisconnected();
       void instance.teardown();
       instanceRef.current = null;
@@ -173,12 +200,16 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
     if (!instance) return;
 
     try {
-      await instance.refresh();
-      attachHandle(instance.transport ?? null);
+      const refreshPromise = instance.refresh();
+      scheduleMicrotask(() => {
+        attachHandle(instance.transport ?? null);
+      });
+      await refreshPromise;
+      attachHandle(instance.transport ?? null, { force: true });
     } catch (error) {
       setLastError(toError(error));
     }
-  }, [attachHandle]);
+  }, [attachHandle, scheduleMicrotask]);
 
   useEffect(() => {
     if (!snapshot.role || !snapshot.connected) {

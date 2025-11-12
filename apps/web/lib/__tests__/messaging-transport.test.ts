@@ -7,6 +7,8 @@ import {
   TransportMessage,
   TransportState,
   TransportUnavailableError,
+  createPeerSignalingController,
+  type PeerHandshakeFrame,
 } from "../messaging-transport";
 import { createPeerCryptoSession } from "../crypto/session";
 import { type MessagingMode } from "../messaging-mode";
@@ -53,6 +55,8 @@ const installWindow = () => {
         },
       },
       setTimeout: globalThis.setTimeout.bind(globalThis),
+      btoa: (value: string) => Buffer.from(value, "utf-8").toString("base64"),
+      atob: (value: string) => Buffer.from(value, "base64").toString("utf-8"),
     },
   });
 };
@@ -390,5 +394,140 @@ describe("initializeMessagingTransport", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 25));
     expect(inbound).toContain("udp-message");
+  });
+
+  it("sends manual WebRTC handshake frames while connecting", async () => {
+    const signalingController = createPeerSignalingController();
+    signalingController.setRole("host");
+    const manualDependencies = signalingController.createDependencies();
+
+    const handshakeStates: TransportState[] = [];
+    const handshakeFrames: PeerHandshakeFrame["handshake"][] = [];
+
+    const decodeBase64 = (value: string) => Buffer.from(value, "base64").toString("utf-8");
+    const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+
+    let currentHandle: TransportHandle | null = null;
+    const getHandleState = () => currentHandle?.state ?? "connecting";
+
+    const dependencies: TransportDependencies = {
+      signaling: manualDependencies.signaling,
+      async createWebRTC({ emitMessage, signal, options }) {
+        const sessionId =
+          typeof options?.metadata?.peerSessionId === "string"
+            ? options.metadata.peerSessionId
+            : "default-peer-session";
+
+        const remoteSession = await createPeerCryptoSession({
+          sessionId,
+          onPlaintext: (payload) => emitMessage(payload),
+        });
+
+        remoteSession.attachTransmitter(async (payload) => {
+          emitMessage(payload);
+        });
+
+        const abortHandler = () => {
+          void remoteSession.teardown();
+        };
+
+        signal.addEventListener("abort", abortHandler, { once: true });
+
+        void manualDependencies.signaling?.negotiate(
+          { type: "offer", sdp: "dummy-offer" },
+          options,
+        );
+
+        void remoteSession
+          .whenReady()
+          .then(() => {
+            signal.removeEventListener("abort", abortHandler);
+            return remoteSession.send("connected");
+          })
+          .catch(() => undefined);
+
+        return {
+          async send(payload) {
+            const state = getHandleState();
+            if (typeof payload === "string") {
+              try {
+                const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+                if (parsed?.type === "handshake") {
+                  handshakeStates.push(state);
+                  handshakeFrames.push(parsed.handshake);
+                  return;
+                }
+              } catch {
+                // ignore parse errors
+              }
+            }
+
+            await remoteSession.receive(payload);
+          },
+          async close() {
+            signal.removeEventListener("abort", abortHandler);
+            await remoteSession.teardown();
+          },
+        };
+      },
+    };
+
+    const controller = initializeMessagingTransport({
+      dependencies,
+      connectOptions: { metadata: { peerSessionId: "manual-session" } },
+    });
+
+    await Promise.resolve();
+    currentHandle = controller.transport;
+    expect(currentHandle).not.toBeNull();
+
+    if (currentHandle) {
+      signalingController.setActiveTransport(currentHandle);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Handshake frame was not sent"));
+      }, 500);
+
+      const check = () => {
+        if (handshakeFrames.length > 0) {
+          clearTimeout(timeout);
+          resolve();
+        } else {
+          setTimeout(check, 10);
+        }
+      };
+
+      check();
+    });
+
+    expect(handshakeFrames.length).toBeGreaterThan(0);
+    expect(handshakeStates).toContain("connecting");
+
+    const offer = handshakeFrames[0];
+    expect(offer.kind).toBe("offer");
+    const offerPayload = JSON.parse(decodeBase64(offer.token)) as {
+      sessionId: string;
+    };
+
+    const answerToken = encodeBase64(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "answer",
+        description: { type: "answer", sdp: "dummy-answer" },
+        sessionId: offerPayload.sessionId,
+        createdAt: Date.now(),
+      }),
+    );
+
+    await signalingController.setRemoteAnswer(answerToken);
+    await controller.whenReady();
+
+    const handle = controller.transport;
+    expect(handle?.state).toBe("connected");
+
+    await controller.teardown();
+    signalingController.setActiveTransport(null);
   });
 });
