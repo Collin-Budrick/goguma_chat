@@ -8,6 +8,7 @@ import {
   TransportState,
   TransportUnavailableError,
 } from "../messaging-transport";
+import { createPeerCryptoSession } from "../crypto/session";
 import { type MessagingMode } from "../messaging-mode";
 
 type ListenerMap = Map<string, Set<(event: Event) => void>>;
@@ -73,23 +74,53 @@ describe("initializeMessagingTransport", () => {
   const createMockDriver = (
     label: string,
   ): TransportDependencies["createWebRTC"] =>
-    async ({ emitMessage, signal }) => {
-      const outbound: TransportMessage[] = [];
-      const timer = setTimeout(() => emitMessage(`${label}-hello`), 0);
-      signal.addEventListener(
-        "abort",
-        () => {
+    async ({ emitMessage, signal, options }) => {
+      const sessionId =
+        typeof options?.metadata?.peerSessionId === "string"
+          ? options.metadata.peerSessionId
+          : "default-peer-session";
+
+      const remoteSession = await createPeerCryptoSession({
+        sessionId,
+        onPlaintext: (payload) => emitMessage(payload),
+      });
+
+      remoteSession.attachTransmitter(async (payload) => {
+        emitMessage(payload);
+      });
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const abortHandler = () => {
+        if (timer) {
           clearTimeout(timer);
-        },
-        { once: true },
-      );
+          timer = null;
+        }
+        void remoteSession.teardown();
+      };
+
+      signal.addEventListener("abort", abortHandler, { once: true });
+
+      void remoteSession
+        .whenReady()
+        .then(() => {
+          timer = setTimeout(() => {
+            void remoteSession.send(`${label}-hello`).catch(() => undefined);
+          }, 0);
+        })
+        .catch(() => undefined);
 
       return {
         async send(payload) {
-          outbound.push(payload);
+          await remoteSession.receive(payload);
         },
         async close() {
-          clearTimeout(timer);
+          signal.removeEventListener("abort", abortHandler);
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          await remoteSession.teardown();
         },
       };
     };
@@ -109,14 +140,21 @@ describe("initializeMessagingTransport", () => {
     expect(onModeChange).toHaveBeenCalledWith("progressive");
 
     const inbound: TransportMessage[] = [];
-    const unsubscribeMessage = handle.onMessage((message) => inbound.push(message));
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(resolve, 500);
+      const unsubscribe = handle.onMessage((message) => {
+        inbound.push(message);
+        if (message === "progressive-hello") {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
 
     expect(inbound).toContain("progressive-hello");
     expect(handle.state).toBe("connected");
-
-    unsubscribeMessage();
   });
 
   it("falls back to WebTransport when WebRTC connection fails", async () => {
@@ -125,22 +163,53 @@ describe("initializeMessagingTransport", () => {
       createWebRTC: async () => {
         throw webrtcError;
       },
-      createWebTransport: async ({ emitMessage, signal }) => {
-        const timer = setTimeout(() => emitMessage("fallback"), 0);
-        signal.addEventListener(
-          "abort",
-          () => {
+      createWebTransport: async ({ emitMessage, signal, options }) => {
+        const sessionId =
+          typeof options?.metadata?.peerSessionId === "string"
+            ? options.metadata.peerSessionId
+            : "default-peer-session";
+
+        const remoteSession = await createPeerCryptoSession({
+          sessionId,
+          onPlaintext: (payload) => emitMessage(payload),
+        });
+
+        remoteSession.attachTransmitter(async (payload) => {
+          emitMessage(payload);
+        });
+
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        const abortHandler = () => {
+          if (timer) {
             clearTimeout(timer);
-          },
-          { once: true },
-        );
+            timer = null;
+          }
+          void remoteSession.teardown();
+        };
+
+        signal.addEventListener("abort", abortHandler, { once: true });
+
+        void remoteSession
+          .whenReady()
+          .then(() => {
+            timer = setTimeout(() => {
+              void remoteSession.send("fallback").catch(() => undefined);
+            }, 0);
+          })
+          .catch(() => undefined);
 
         return {
-          async send() {
-            /* noop */
+          async send(payload) {
+            await remoteSession.receive(payload);
           },
           async close() {
-            clearTimeout(timer);
+            signal.removeEventListener("abort", abortHandler);
+            if (timer) {
+              clearTimeout(timer);
+              timer = null;
+            }
+            await remoteSession.teardown();
           },
         };
       },
@@ -150,9 +219,18 @@ describe("initializeMessagingTransport", () => {
     await controller.whenReady();
     const handle = controller.transport as TransportHandle;
     const received: TransportMessage[] = [];
-    handle.onMessage((message) => received.push(message));
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(resolve, 500);
+      const unsubscribe = handle.onMessage((message) => {
+        received.push(message);
+        if (message === "fallback") {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
 
     expect(received).toContain("fallback");
     expect(handle.state).toBe("connected");
@@ -231,19 +309,66 @@ describe("initializeMessagingTransport", () => {
     const dependencies: TransportDependencies = {
       createWebRTC: createMockDriver("progressive"),
       udpConnector: {
-        async join() {
+        async join({ signal } = {}) {
+          const sessionId = "default-peer-session";
+
+          let controller: ReadableStreamDefaultController<TransportMessage> | null = null;
+          const readable = new ReadableStream<TransportMessage>({
+            start(ctrl) {
+              controller = ctrl;
+            },
+            cancel() {
+              controller = null;
+            },
+          });
+
+          const remoteSession = await createPeerCryptoSession({
+            sessionId,
+            onPlaintext: (payload) => {
+              controller?.enqueue(payload);
+            },
+          });
+
+          remoteSession.attachTransmitter(async (payload) => {
+            controller?.enqueue(payload);
+          });
+
+          let timer: ReturnType<typeof setTimeout> | null = null;
+
+          const abortHandler = () => {
+            if (timer) {
+              clearTimeout(timer);
+              timer = null;
+            }
+            controller?.close();
+            void remoteSession.teardown();
+          };
+
+          signal?.addEventListener("abort", abortHandler, { once: true });
+
+          void remoteSession
+            .whenReady()
+            .then(() => {
+              timer = setTimeout(() => {
+                void remoteSession.send("udp-message").catch(() => undefined);
+              }, 0);
+            })
+            .catch(() => undefined);
+
           return {
-            async send() {
-              /* noop */
+            async send(payload: TransportMessage) {
+              await remoteSession.receive(payload);
             },
             async close() {
-              /* noop */
+              signal?.removeEventListener("abort", abortHandler);
+              if (timer) {
+                clearTimeout(timer);
+                timer = null;
+              }
+              controller?.close();
+              await remoteSession.teardown();
             },
-            readable: new ReadableStream<TransportMessage>({
-              start(controller) {
-                setTimeout(() => controller.enqueue("udp-message"), 0);
-              },
-            }),
+            readable,
           };
         },
       },
@@ -263,7 +388,7 @@ describe("initializeMessagingTransport", () => {
     const inbound: TransportMessage[] = [];
     handle.onMessage((message) => inbound.push(message));
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    await new Promise((resolve) => setTimeout(resolve, 25));
     expect(inbound).toContain("udp-message");
   });
 });

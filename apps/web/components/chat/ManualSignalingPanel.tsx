@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useMemo, useState } from "react";
 
 import { usePeerSignaling } from "./hooks/usePeerSignaling";
+import { usePeerTrust } from "./hooks/usePeerTrust";
 
 const tokenLabelClass =
   "text-xs font-semibold uppercase tracking-[0.2em] text-white/50 mb-2";
@@ -27,6 +28,9 @@ export function ManualSignalingPanel() {
   const [inviteInput, setInviteInput] = useState("");
   const [answerInput, setAnswerInput] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const { state: trustState, loading: trustLoading, trust, distrust } = usePeerTrust(
+    snapshot.sessionId,
+  );
 
   const statusMessage = useMemo(() => {
     if (snapshot.error) return snapshot.error;
@@ -68,6 +72,21 @@ export function ManualSignalingPanel() {
     setAnswerInput("");
     setLocalError(null);
   }, [reset]);
+
+  const handleTrustToggle = useCallback(() => {
+    if (!trustState.remoteFingerprint) return;
+    if (trustState.trusted) {
+      void distrust();
+    } else {
+      void trust();
+    }
+  }, [distrust, trust, trustState.remoteFingerprint, trustState.trusted]);
+
+  const rotationLabel = useMemo(() => {
+    if (!trustState.lastRotation) return null;
+    const date = new Date(trustState.lastRotation);
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+  }, [trustState.lastRotation]);
 
   const handleOfferSubmit = useCallback(
     async (event: FormEvent) => {
@@ -184,6 +203,56 @@ export function ManualSignalingPanel() {
           </div>
         </div>
       ) : null}
+
+      <div className="mt-6 space-y-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+        <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">Fingerprint Verification</p>
+            <p className="text-[11px] text-white/60">
+              Compare these fingerprints with your peer (scan a QR code, read them aloud, or paste into a secure channel)
+              before trusting the session.
+            </p>
+          </div>
+          {rotationLabel ? (
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+              Last rotated {rotationLabel}
+            </p>
+          ) : null}
+        </header>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className={tokenLabelClass}>Your fingerprint</p>
+            <p className={`${textBoxClass} min-h-[48px]`}>
+              {trustState.localFingerprint ?? "Generating..."}
+            </p>
+          </div>
+          <div>
+            <p className={tokenLabelClass}>Peer fingerprint</p>
+            <p className={`${textBoxClass} min-h-[48px]`}>
+              {trustState.remoteFingerprint ?? "Waiting for peer handshake"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className={buttonClass}
+            onClick={handleTrustToggle}
+            disabled={trustLoading || !trustState.remoteFingerprint}
+          >
+            {trustState.trusted ? "Revoke Trust" : "Mark as Trusted"}
+          </button>
+          <p className="text-[11px] text-white/50">
+            {trustState.remoteFingerprint
+              ? trustState.trusted
+                ? "This peer is trusted. Messages will remain end-to-end encrypted with rotating keys."
+                : "Untrusted session. Confirm the fingerprint matches your peer before marking as trusted."
+              : "Waiting for the peer's handshake to provide a fingerprint."}
+          </p>
+        </div>
+      </div>
     </section>
   );
 }
