@@ -23,6 +23,7 @@ import {
   type ConversationSnapshot,
   type ConversationStorage,
 } from "./conversation-storage";
+import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
 const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 
@@ -377,6 +378,138 @@ export function usePeerConversationChannel(options: {
     [],
   );
 
+  const resolveLocale = useCallback(() => {
+    if (typeof document === "undefined") {
+      return "en";
+    }
+    const node = document.documentElement;
+    const attr = node?.getAttribute("lang");
+    if (attr && attr.trim()) {
+      return attr.trim();
+    }
+    const fallback = typeof navigator !== "undefined" ? navigator.language : "en";
+    return fallback?.split?.("-")?.[0] ?? "en";
+  }, []);
+
+  const formatProfileName = useCallback((profile: { firstName: string | null; lastName: string | null; email: string | null; id: string }) => {
+    const first = profile.firstName?.trim();
+    const last = profile.lastName?.trim();
+    const combined = [first, last].filter(Boolean).join(" ");
+    if (combined) {
+      return combined;
+    }
+    if (profile.email?.trim()) {
+      return profile.email;
+    }
+    return profile.id;
+  }, []);
+
+  const computeConversationTitle = useCallback(
+    (snapshot: ConversationSnapshot, message: ChatMessage) => {
+      const conversation = snapshot.conversation;
+      if (!conversation) {
+        return formatProfileName(message.sender);
+      }
+
+      const participantNames = conversation.participants
+        .map((participant) => formatProfileName(participant.user))
+        .filter((value, index, array) => array.indexOf(value) === index);
+
+      if (participantNames.length === 0) {
+        return formatProfileName(message.sender);
+      }
+
+      if (participantNames.length === 1) {
+        return participantNames[0];
+      }
+
+      const [first, second] = participantNames;
+      if (participantNames.length === 2) {
+        return `${first} • ${second}`;
+      }
+
+      return `${first}, ${second} +${participantNames.length - 2}`;
+    },
+    [formatProfileName],
+  );
+
+  const publishServiceWorkerEvent = useCallback(
+    async (conversationId: string, snapshot: ConversationSnapshot, message: ChatMessage, clientMessageId?: string | null) => {
+      const locale = resolveLocale();
+      const isClientVisible =
+        typeof document !== "undefined" ? document.visibilityState === "visible" : false;
+
+      const payload = {
+        type: "peer:message",
+        conversationId,
+        message,
+        messageId: message.id,
+        clientMessageId: clientMessageId ?? null,
+        senderName: formatProfileName(message.sender),
+        body: message.body,
+        receivedAt: Date.now(),
+        locale,
+        url: `/${locale}/app/chat`,
+        conversationTitle: computeConversationTitle(snapshot, message),
+        isClientVisible,
+      } satisfies Record<string, unknown>;
+
+      await postServiceWorkerMessage(payload).catch(() => undefined);
+    },
+    [computeConversationTitle, formatProfileName, resolveLocale],
+  );
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) {
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      const payload = event.data;
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+
+      if (payload.type === "peer:queued-messages") {
+        const records = Array.isArray(payload.messages) ? payload.messages : [];
+        const ackIds: string[] = [];
+        records.forEach((entry) => {
+          if (!entry || typeof entry !== "object") {
+            return;
+          }
+          const conversationId = typeof entry.conversationId === "string" ? entry.conversationId : null;
+          const message = entry.message as ChatMessage | undefined;
+          const recordId = typeof entry.id === "string" ? entry.id : null;
+          if (!conversationId || !message) {
+            return;
+          }
+          updateMessages(conversationId, [message]);
+          notify(conversationId, { type: "message", message });
+          if (recordId) {
+            ackIds.push(recordId);
+          }
+        });
+
+        if (ackIds.length) {
+          void postServiceWorkerMessage({ type: "peer:ack-messages", messageIds: ackIds });
+        }
+      } else if (payload.type === "peer:badge-count") {
+        const detail = {
+          type: "peer:badge-count",
+          count: Number(payload.count) || 0,
+        } as const;
+        window.dispatchEvent(new CustomEvent("peer-badge-count", { detail }));
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    void postServiceWorkerMessage({ type: "peer:flush" });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [notify, updateMessages]);
+
   const resolvePending = useCallback(<T,>(
     map: PendingMap<T>,
     key: string | null | undefined,
@@ -458,8 +591,9 @@ export function usePeerConversationChannel(options: {
       switch (frame.type) {
         case "message": {
           const { conversationId, message, clientMessageId } = frame;
-          updateMessages(conversationId, [message]);
+          const updatedSnapshot = updateMessages(conversationId, [message]);
           notify(conversationId, { type: "message", message, clientMessageId });
+          void publishServiceWorkerEvent(conversationId, updatedSnapshot, message, clientMessageId);
           break;
         }
         case "message:ack": {
@@ -509,13 +643,14 @@ export function usePeerConversationChannel(options: {
             break;
           }
 
-          updateMessages(conversationId, [message]);
+          const updatedSnapshot = updateMessages(conversationId, [message]);
           resolvePending(pendingAcksRef.current, clientMessageId, message);
           notify(conversationId, { type: "message", message, clientMessageId });
+          void publishServiceWorkerEvent(conversationId, updatedSnapshot, message, clientMessageId);
           const deliveredAt = message.updatedAt ?? message.createdAt;
-          const snapshot = readStored(conversationId);
+          const storedSnapshot = readStored(conversationId);
           const recipientId =
-            snapshot.conversation?.participants.find(
+            storedSnapshot.conversation?.participants.find(
               (participant) => participant.userId !== message.senderId,
             )?.userId ?? message.senderId;
           const deliveryPresence: PeerPresenceUpdate = {
