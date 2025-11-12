@@ -79,3 +79,13 @@ export function getInitials(profile: ContactProfile) {
 
   return profile.id.charAt(0).toUpperCase();
 }
+
+export function friendToContactProfile(friend: FriendSummary): ContactProfile {
+  return {
+    id: friend.friendId,
+    email: friend.email,
+    firstName: friend.firstName,
+    lastName: friend.lastName,
+    image: friend.image,
+  };
+}

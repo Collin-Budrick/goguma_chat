@@ -516,6 +516,7 @@
     },
     "thread": {
       "header": "1:1 채팅",
+      "back": "채팅 목록으로 돌아가기",
       "directWith": "{name}님과의 대화",
       "me": "나",
       "loading": "대화를 불러오는 중…",

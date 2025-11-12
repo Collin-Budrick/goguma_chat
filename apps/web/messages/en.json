@@ -516,6 +516,7 @@
     },
     "thread": {
       "header": "Direct message",
+      "back": "Back to chats",
       "directWith": "Chat with {name}",
       "me": "You",
       "loading": "Loading conversation…",
