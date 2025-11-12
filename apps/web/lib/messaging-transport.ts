@@ -874,11 +874,7 @@ export const createPeerSignalingController = (
               if (next.role !== "guest") {
                 settled = true;
                 cleanup();
-                reject(
-                  new TransportUnavailableError(
-                    "Peer role changed before invite was received",
-                  ),
-                );
+                reject(createAbortError());
                 return;
               }
 
