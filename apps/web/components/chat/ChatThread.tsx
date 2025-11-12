@@ -28,6 +28,13 @@ import {
   persistDisplaySettings,
 } from "@/lib/display-settings";
 import {
+  type ChatHistoryEventDetail,
+  CHAT_HISTORY_EVENT,
+  getConversationClearedAt,
+  persistConversationClearedAt,
+  removeConversationClear,
+} from "@/lib/chat-history";
+import {
   type MessagingMode,
   DEFAULT_MESSAGING_MODE,
 } from "@/lib/messaging-mode";
@@ -182,6 +189,8 @@ export default function ChatThread({
     () => initialMessagingMode,
   );
   const [isMessagingModeUpdating, setIsMessagingModeUpdating] = useState(false);
+  const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
+  const [isSyncingHistory, setIsSyncingHistory] = useState(false);
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -343,6 +352,37 @@ export default function ChatThread({
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleHistoryChange = (event: Event) => {
+      const detail = (event as CustomEvent<ChatHistoryEventDetail>).detail;
+      if (!detail || !conversation?.id) {
+        return;
+      }
+
+      if (detail.conversationId !== conversation.id) {
+        return;
+      }
+
+      setClearedHistoryAt(detail.clearedAt);
+    };
+
+    window.addEventListener(
+      CHAT_HISTORY_EVENT,
+      handleHistoryChange as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        CHAT_HISTORY_EVENT,
+        handleHistoryChange as EventListener,
+      );
+    };
+  }, [conversation?.id]);
+
+  useEffect(() => {
     if (!isSettingsOpen) {
       return;
     }
@@ -418,6 +458,15 @@ export default function ChatThread({
       prev === conversation.messagingMode ? prev : conversation.messagingMode,
     );
   }, [conversation?.messagingMode, conversation, isMessagingModeUpdating]);
+
+  useEffect(() => {
+    if (!conversation?.id) {
+      setClearedHistoryAt(null);
+      return;
+    }
+
+    setClearedHistoryAt(getConversationClearedAt(conversation.id));
+  }, [conversation?.id]);
 
   useEffect(() => {
     pendingThreadControllerRef.current?.abort();
@@ -658,7 +707,7 @@ export default function ChatThread({
     }
     const node = messageContainerRef.current;
     node.scrollTop = node.scrollHeight;
-  }, [conversation?.id, messages.length, isFetchingMore]);
+  }, [conversation?.id, messages.length, isFetchingMore, clearedHistoryAt]);
 
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
@@ -693,6 +742,21 @@ export default function ChatThread({
   }, [typingProfiles]);
 
   const conversationId = conversation?.id ?? null;
+  const clearedHistoryCutoff = clearedHistoryAt
+    ? toDate(clearedHistoryAt).getTime()
+    : null;
+  const visibleMessages = useMemo(() => {
+    if (!conversationId || !clearedHistoryCutoff) {
+      return messages;
+    }
+
+    return messages.filter((message) => {
+      if (message.conversationId !== conversationId) {
+        return true;
+      }
+      return toDate(message.createdAt).getTime() > clearedHistoryCutoff;
+    });
+  }, [clearedHistoryCutoff, conversationId, messages]);
 
   const sendTyping = useCallback(
     (isTyping: boolean) => {
@@ -857,6 +921,65 @@ export default function ChatThread({
     }
   }, [conversationId, isFetchingMore, nextCursor, t]);
 
+  const handleSyncHistory = useCallback(async () => {
+    if (!friendId || isSyncingHistory) {
+      return;
+    }
+
+    setIsSyncingHistory(true);
+    setThreadError(null);
+
+    try {
+      const response = await fetch("/api/conversations/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId, limit: MESSAGE_LIMIT }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as ApiError;
+        throw new Error(payload.error ?? "Failed to sync conversation");
+      }
+
+      const payload = (await response.json()) as {
+        conversation: ChatConversation;
+        messages: ChatMessage[];
+        nextCursor: string | null;
+      };
+
+      setConversation(payload.conversation);
+      setMessages(payload.messages);
+      setNextCursor(payload.nextCursor ?? null);
+      removeConversationClear(payload.conversation.id);
+      setClearedHistoryAt(null);
+    } catch (error) {
+      console.error("Failed to sync chat history", error);
+      setThreadError(t("thread.settings.local.options.syncHistory.error"));
+    } finally {
+      setIsSyncingHistory(false);
+    }
+  }, [friendId, isSyncingHistory, t]);
+
+  const handleClearHistory = useCallback(() => {
+    if (!conversationId) {
+      return;
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        t("thread.settings.local.options.clearHistory.confirm"),
+      )
+    ) {
+      return;
+    }
+
+    const timestamp = persistConversationClearedAt(conversationId);
+    if (timestamp) {
+      setClearedHistoryAt(timestamp);
+    }
+  }, [conversationId, t]);
+
   const bubblePaddingClasses = displaySettings.magnify ? "px-5 py-4" : "px-4 py-3";
   const bubbleTextClasses = displaySettings.magnify
     ? "text-base leading-7"
@@ -867,6 +990,36 @@ export default function ChatThread({
   const viewerMetaClasses = displaySettings.theme === "light" ? "text-black/50" : "text-white/50";
   const toggleTheme: "dark" | "light" =
     displaySettings.theme === "light" ? "light" : "dark";
+  const isClearHistoryDisabled = !conversationId || isSyncingHistory;
+  const isSyncHistoryDisabled = !friendId || isThreadLoading || isSyncingHistory;
+  const syncButtonClasses = cn(
+    "rounded-xl border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-60",
+    toggleTheme === "light"
+      ? "border-white/40 bg-white text-slate-900 hover:border-white/70"
+      : "border-white/10 bg-white/5 text-white hover:border-white/25 hover:bg-white/10",
+  );
+  const syncButtonLabelClasses =
+    toggleTheme === "light"
+      ? "text-sm font-semibold text-slate-900"
+      : "text-sm font-semibold text-white";
+  const syncButtonDescriptionClasses =
+    toggleTheme === "light"
+      ? "text-xs text-slate-600"
+      : "text-xs text-white/70";
+  const clearButtonClasses = cn(
+    "rounded-xl border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-60",
+    toggleTheme === "light"
+      ? "border-red-200/70 bg-white/90 hover:border-red-300 hover:bg-red-50"
+      : "border-red-400/60 bg-white/5 hover:border-red-300/80 hover:bg-white/10",
+  );
+  const clearButtonLabelClasses =
+    toggleTheme === "light"
+      ? "text-sm font-semibold text-slate-900"
+      : "text-sm font-semibold text-white";
+  const clearButtonDescriptionClasses =
+    toggleTheme === "light"
+      ? "text-xs text-slate-600"
+      : "text-xs text-white/70";
   const messagingOptions = useMemo(
     () =>
       (["progressive", "udp"] as MessagingMode[]).map((mode) => ({
@@ -1014,6 +1167,34 @@ export default function ChatThread({
                                 }))
                               }
                             />
+                            <button
+                              type="button"
+                              onClick={handleSyncHistory}
+                              disabled={isSyncHistoryDisabled}
+                              className={syncButtonClasses}
+                            >
+                              <span className={syncButtonLabelClasses}>
+                                {isSyncingHistory
+                                  ? t("thread.settings.local.options.syncHistory.syncing")
+                                  : t("thread.settings.local.options.syncHistory.label")}
+                              </span>
+                              <span className={syncButtonDescriptionClasses}>
+                                {t("thread.settings.local.options.syncHistory.description")}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClearHistory}
+                              disabled={isClearHistoryDisabled}
+                              className={clearButtonClasses}
+                            >
+                              <span className={clearButtonLabelClasses}>
+                                {t("thread.settings.local.options.clearHistory.label")}
+                              </span>
+                              <span className={clearButtonDescriptionClasses}>
+                                {t("thread.settings.local.options.clearHistory.description")}
+                              </span>
+                            </button>
                           </div>
                         </section>
                       </div>
@@ -1046,9 +1227,9 @@ export default function ChatThread({
                     {isFetchingMore ? "Loading..." : "Load older messages"}
                   </button>
                 ) : null}
-                {messages.length > 0 ? (
+                {visibleMessages.length > 0 ? (
                   <ul className="space-y-4">
-                    {messages.map((message) => {
+                    {visibleMessages.map((message) => {
                       const isViewer = message.senderId === viewerId;
                       const timestamp = formatMessageTime(
                         message.createdAt,

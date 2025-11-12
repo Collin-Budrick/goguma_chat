@@ -567,6 +567,17 @@
             "theme": {
               "label": "Use light bubbles",
               "description": "Switch your outgoing messages to a lighter appearance."
+            },
+            "syncHistory": {
+              "label": "Sync chat history",
+              "syncing": "Syncing chat…",
+              "description": "Pull the latest history from your friend and restore cleared messages.",
+              "error": "We couldn’t sync that chat. Try again."
+            },
+            "clearHistory": {
+              "label": "Clear chat history",
+              "description": "Remove this conversation's history from your view.",
+              "confirm": "Clear this conversation's history? This only removes it for you."
             }
           }
         }
