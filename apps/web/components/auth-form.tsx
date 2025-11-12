@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
@@ -13,7 +13,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/app/dashboard";
+  const params = useParams<{ locale?: string }>();
+  const localeSegment =
+    typeof params?.locale === "string" && params.locale.length > 0
+      ? params.locale
+      : null;
+  const fallbackCallback = localeSegment
+    ? `/${localeSegment}/app/dashboard`
+    : "/app/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") ?? fallbackCallback;
   const t = useTranslations("Auth.form");
   const isLogin = mode === "login";
   const [error, setError] = useState<string | null>(null);
