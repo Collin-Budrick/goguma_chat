@@ -35,6 +35,7 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
   const stateUnsubscribeRef = useRef<(() => void) | null>(null);
   const errorUnsubscribeRef = useRef<(() => void) | null>(null);
   const lastDegradedRef = useRef<number | null>(null);
+  const handshakeUpgradeKeyRef = useRef<string | null>(null);
 
   const detachListeners = useCallback(() => {
     stateUnsubscribeRef.current?.();
@@ -178,6 +179,39 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
       setLastError(toError(error));
     }
   }, [attachHandle]);
+
+  useEffect(() => {
+    if (!snapshot.role || !snapshot.connected) {
+      handshakeUpgradeKeyRef.current = null;
+      return;
+    }
+
+    const handshakeToken =
+      snapshot.role === "host"
+        ? snapshot.remoteAnswer ?? null
+        : snapshot.localAnswer ?? null;
+
+    if (!handshakeToken) {
+      return;
+    }
+
+    const key = `${snapshot.sessionId ?? ""}:${handshakeToken}`;
+    if (handshakeUpgradeKeyRef.current === key) {
+      return;
+    }
+
+    handshakeUpgradeKeyRef.current = key;
+
+    if (transportRef.current) {
+      void restart();
+      return;
+    }
+
+    const instance = instanceRef.current;
+    if (instance) {
+      void instance.refresh();
+    }
+  }, [restart, snapshot.connected, snapshot.localAnswer, snapshot.remoteAnswer, snapshot.role, snapshot.sessionId]);
 
   return useMemo(
     () => ({
