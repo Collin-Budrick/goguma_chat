@@ -122,6 +122,8 @@ const createTransportHandle = (
   mode: MessagingMode,
   driver: TransportDriver,
 ): TransportHandle => {
+  const createNotConnectedError = () => new Error("Transport is not connected");
+
   let state: TransportState = "idle";
   let connection: DriverConnection | null = null;
   let rawConnection: DriverConnection | null = null;
@@ -135,6 +137,52 @@ const createTransportHandle = (
     readyResolve = resolve;
     readyReject = reject;
   });
+
+  type PendingSendEntry = {
+    payload: TransportMessage;
+    resolve: () => void;
+    reject: (error: Error) => void;
+  };
+
+  const pendingSends: PendingSendEntry[] = [];
+
+  const enqueuePendingSend = (payload: TransportMessage) =>
+    new Promise<void>((resolve, reject) => {
+      pendingSends.push({ payload, resolve, reject });
+    });
+
+  const drainPendingSends = async () => {
+    if (!connection || pendingSends.length === 0) {
+      return;
+    }
+
+    const activeConnection = connection;
+    const queued = pendingSends.splice(0);
+
+    for (const entry of queued) {
+      if (!activeConnection) {
+        entry.reject(createNotConnectedError());
+        continue;
+      }
+      try {
+        await activeConnection.send(entry.payload);
+        entry.resolve();
+      } catch (error) {
+        entry.reject(normalizeError(error));
+      }
+    }
+  };
+
+  const rejectPendingSends = (error: Error) => {
+    if (!pendingSends.length) {
+      return;
+    }
+
+    const normalized = normalizeError(error);
+    while (pendingSends.length) {
+      pendingSends.shift()?.reject(normalized);
+    }
+  };
 
   const messageEmitter = createEmitter<TransportMessage>();
   const stateEmitter = createEmitter<TransportState>();
@@ -232,6 +280,8 @@ const createTransportHandle = (
         throw createAbortError();
       }
 
+      await drainPendingSends();
+
       updateState("connected");
       fulfillReady();
     } catch (error) {
@@ -239,6 +289,7 @@ const createTransportHandle = (
       const normalized = normalizeError(error);
       errorEmitter.emit(normalized);
       rejectReady(normalized);
+      rejectPendingSends(normalized);
       if (cryptoSession) {
         await cryptoSession.teardown().catch(() => undefined);
       }
@@ -269,6 +320,7 @@ const createTransportHandle = (
         await activeCrypto.teardown();
       }
     } finally {
+      rejectPendingSends(createNotConnectedError());
       updateState("closed");
     }
 
@@ -277,11 +329,17 @@ const createTransportHandle = (
   };
 
   const send: TransportHandle["send"] = async (payload) => {
-    if (!connection) {
-      throw new Error("Transport is not connected");
+    if (connection) {
+      await connection.send(payload);
+      return;
     }
 
-    await connection.send(payload);
+    if (state === "connecting" || state === "recovering") {
+      await enqueuePendingSend(payload);
+      return;
+    }
+
+    throw createNotConnectedError();
   };
 
   return {
@@ -403,6 +461,17 @@ type PeerNegotiationEntry = {
   resolve: (description: RTCSessionDescriptionInit) => void;
   reject: (error: Error) => void;
 };
+
+class PeerNegotiationCancelledError extends Error {
+  constructor(message = "Peer signaling negotiation cancelled before completion") {
+    super(message);
+    this.name = "PeerNegotiationCancelledError";
+  }
+}
+
+const isNegotiationCancelledError = (
+  value: unknown,
+): value is PeerNegotiationCancelledError => value instanceof PeerNegotiationCancelledError;
 
 type PersistentPeerState = {
   role: PeerSignalingRole | null;
@@ -711,9 +780,7 @@ export const createPeerSignalingController = (
       if (error) {
         pendingNegotiation.reject(error);
       } else {
-        pendingNegotiation.reject(
-          new Error("Peer signaling negotiation cancelled before completion"),
-        );
+        pendingNegotiation.reject(new PeerNegotiationCancelledError());
       }
     }
     pendingNegotiation = null;
@@ -803,9 +870,14 @@ export const createPeerSignalingController = (
       }
     }
 
-    return await new Promise<RTCSessionDescriptionInit>((resolve, reject) => {
-      pendingNegotiation = { resolve, reject };
-    });
+    const negotiationPromise = new Promise<RTCSessionDescriptionInit>(
+      (resolve, reject) => {
+        pendingNegotiation = { resolve, reject };
+      },
+    );
+    negotiationPromise.catch(() => undefined);
+
+    return negotiationPromise;
   };
 
   let controller: PeerSignalingController;
@@ -997,7 +1069,15 @@ export const createPeerSignalingController = (
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
 
-      const answer = await negotiate(offer, startOptions.options);
+      let answer: RTCSessionDescriptionInit;
+      try {
+        answer = await negotiate(offer, startOptions.options);
+      } catch (error) {
+        if (isNegotiationCancelledError(error)) {
+          throw createAbortError();
+        }
+        throw error;
+      }
       await peer.setRemoteDescription(answer);
 
       await new Promise<void>((resolve, reject) => {
@@ -1592,7 +1672,15 @@ const defaultCreateWebRTC = async (
         throw new Error("Missing WebRTC local description");
       }
 
-      const answer = await negotiate(localDescription, options);
+      let answer: RTCSessionDescriptionInit;
+      try {
+        answer = await negotiate(localDescription, options);
+      } catch (error) {
+        if (isNegotiationCancelledError(error)) {
+          throw createAbortError();
+        }
+        throw error;
+      }
       await peer.setRemoteDescription(answer);
 
       if (!params.initial) {
@@ -1602,6 +1690,9 @@ const defaultCreateWebRTC = async (
       restartAttempts = 0;
     })()
       .catch((error) => {
+        if (isNegotiationCancelledError(error)) {
+          throw createAbortError();
+        }
         if (!signal.aborted && !closed) {
           emitError(normalizeError(error));
           emitState("error");

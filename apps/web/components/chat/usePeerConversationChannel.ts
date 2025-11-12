@@ -138,6 +138,9 @@ const createRequestId = () =>
 const normalizeError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value ?? "Unknown error"));
 
+const isTransportDisconnectedError = (value: unknown): value is Error =>
+  value instanceof Error && value.message === "Transport is not connected";
+
 type SendTypingPresenceOptions = {
   conversationId: string;
   typing: TypingEvent;
@@ -957,6 +960,14 @@ export function usePeerConversationChannel(options: {
         return;
       }
 
+      const state = handle.state;
+      const canAttempt =
+        state === "connected" || state === "connecting" || state === "recovering";
+      if (!canAttempt) {
+        awaitingHeartbeatAckRef.current = false;
+        return;
+      }
+
       try {
         awaitingHeartbeatAckRef.current = true;
         const payload: PeerHeartbeatFrame = {
@@ -969,6 +980,12 @@ export function usePeerConversationChannel(options: {
         scheduleTimeout();
       } catch (error) {
         awaitingHeartbeatAckRef.current = false;
+        if (
+          error instanceof Error &&
+          error.message === "Transport is not connected"
+        ) {
+          return;
+        }
         console.error("Failed to send heartbeat", error);
       }
     };
@@ -1107,6 +1124,9 @@ export function usePeerConversationChannel(options: {
           }),
         );
       } catch (error) {
+        if (isTransportDisconnectedError(error)) {
+          return;
+        }
         console.error("Failed to send presence update", error);
       }
     },
@@ -1128,6 +1148,9 @@ export function usePeerConversationChannel(options: {
       try {
         await sendPresence(payload);
       } catch (error) {
+        if (isTransportDisconnectedError(error)) {
+          return;
+        }
         console.error("Failed to publish typing presence", error);
       }
     },
@@ -1156,6 +1179,9 @@ export function usePeerConversationChannel(options: {
       try {
         await sendPresence(payload);
       } catch (error) {
+        if (isTransportDisconnectedError(error)) {
+          return;
+        }
         console.error("Failed to publish read receipt", error);
       }
     },
@@ -1186,6 +1212,9 @@ export function usePeerConversationChannel(options: {
       try {
         await sendPresence(payload);
       } catch (error) {
+        if (isTransportDisconnectedError(error)) {
+          return;
+        }
         console.error("Failed to publish delivery acknowledgment", error);
       }
     },
