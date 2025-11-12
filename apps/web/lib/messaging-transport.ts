@@ -442,6 +442,24 @@ const createSessionId = () =>
     ? crypto.randomUUID()
     : `${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 
+const snapshotFromPersistentState = (
+  persistent: PersistentPeerState | null,
+): PeerSignalingSnapshot => ({
+  role: persistent?.role ?? null,
+  sessionId: persistent?.sessionId ?? createSessionId(),
+  localInvite: persistent?.localInvite ?? null,
+  localAnswer: persistent?.localAnswer ?? null,
+  remoteInvite: persistent?.remoteInvite ?? null,
+  remoteAnswer: persistent?.remoteAnswer ?? null,
+  awaitingOffer: persistent?.role === "guest" && !persistent?.remoteInvite,
+  awaitingAnswer: false,
+  connected: persistent?.connected ?? false,
+  error: null,
+  inviteExpiresAt: persistent?.inviteExpiresAt ?? null,
+  answerExpiresAt: persistent?.answerExpiresAt ?? null,
+  lastUpdated: persistent?.lastUpdated ?? null,
+});
+
 const serializePeerToken = (payload: PeerSignalingTokenPayload) =>
   encodeBase64(JSON.stringify(payload));
 
@@ -514,29 +532,17 @@ export type PeerSignalingController = {
   decodeToken: (token: string) => PeerSignalingTokenPayload;
   expireLocalInvite: () => void;
   expireLocalAnswer: () => void;
+  hydrateFromStorage: () => void;
 };
 
 export const createPeerSignalingController = (
   storageKey: string = PEER_SIGNALING_STORAGE_KEY,
 ) => {
   const listeners = new Set<PeerSignalingListener>();
-  const persistent = loadPersistentPeerState(storageKey);
+  let pendingPersistentState = loadPersistentPeerState(storageKey);
+  let hasHydratedPersistentState = false;
 
-  let currentState: PeerSignalingSnapshot = {
-    role: persistent?.role ?? null,
-    sessionId: persistent?.sessionId ?? createSessionId(),
-    localInvite: persistent?.localInvite ?? null,
-    localAnswer: persistent?.localAnswer ?? null,
-    remoteInvite: persistent?.remoteInvite ?? null,
-    remoteAnswer: persistent?.remoteAnswer ?? null,
-    awaitingOffer: persistent?.role === "guest" && !persistent?.remoteInvite,
-    awaitingAnswer: false,
-    connected: persistent?.connected ?? false,
-    error: null,
-    inviteExpiresAt: persistent?.inviteExpiresAt ?? null,
-    answerExpiresAt: persistent?.answerExpiresAt ?? null,
-    lastUpdated: persistent?.lastUpdated ?? null,
-  };
+  let currentState: PeerSignalingSnapshot = snapshotFromPersistentState(null);
 
   let pendingNegotiation: PeerNegotiationEntry | null = null;
 
@@ -682,6 +688,22 @@ export const createPeerSignalingController = (
     persistPeerState(storageKey, nextPersistent);
     evaluateHandshakeQueue();
     notify();
+  };
+
+  const hydratePersistentState = () => {
+    if (hasHydratedPersistentState) {
+      return;
+    }
+    hasHydratedPersistentState = true;
+
+    if (!pendingPersistentState) {
+      pendingPersistentState = null;
+      return;
+    }
+
+    const hydratedSnapshot = snapshotFromPersistentState(pendingPersistentState);
+    pendingPersistentState = null;
+    commitState(hydratedSnapshot);
   };
 
   const resetNegotiation = (error?: Error) => {
@@ -1000,9 +1022,6 @@ export const createPeerSignalingController = (
     return {
       udpConnector: undefined,
       createWebRTC: createManualWebRTC,
-      createWebTransport: async () => {
-        throw new TransportUnavailableError("WebTransport is disabled for peer signaling");
-      },
       signaling: {
         negotiate: (offer, options) => negotiate(offer, options),
         iceServers: [],
@@ -1016,6 +1035,7 @@ export const createPeerSignalingController = (
     getSnapshot: () => currentState,
     subscribe(listener) {
       listeners.add(listener);
+      hydratePersistentState();
       return () => {
         listeners.delete(listener);
       };
@@ -1140,6 +1160,9 @@ export const createPeerSignalingController = (
         error: "Peer answer expired. Re-apply the remote invite to continue.",
         lastUpdated: now(),
       });
+    },
+    hydrateFromStorage() {
+      hydratePersistentState();
     },
   } satisfies PeerSignalingController;
 
