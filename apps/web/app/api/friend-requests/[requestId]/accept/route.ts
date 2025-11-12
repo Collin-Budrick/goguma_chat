@@ -10,7 +10,7 @@ const paramsSchema = z.object({
 
 export async function POST(
   _request: Request,
-  context: { params: { requestId: string } },
+  context: { params: Promise<{ requestId: string }> },
 ) {
   const session = await auth();
 
@@ -18,7 +18,8 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const parseResult = paramsSchema.safeParse(context.params);
+  const params = await context.params;
+  const parseResult = paramsSchema.safeParse(params);
 
   if (!parseResult.success) {
     return NextResponse.json({ error: "Invalid request id" }, { status: 400 });
