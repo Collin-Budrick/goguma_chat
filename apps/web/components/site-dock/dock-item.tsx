@@ -73,6 +73,11 @@ export function DockItem({
 
   const Icon = item.icon;
   const isLightTheme = theme === "light";
+  const indicatorValue = item.indicator;
+  const showIndicator =
+    typeof indicatorValue === "number"
+      ? indicatorValue > 0
+      : Boolean(indicatorValue);
   const buttonStateClasses = active
     ? isLightTheme
       ? "border-slate-300 bg-white/90"
@@ -110,6 +115,7 @@ export function DockItem({
         }`}
         aria-hidden
       />
+      {showIndicator ? <span className="dock-indicator" aria-hidden /> : null}
       <AnimatePresence>
         {showLabel && (
           <motion.span

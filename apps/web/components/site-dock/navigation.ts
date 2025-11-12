@@ -16,6 +16,7 @@ export type DockLinkItem = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   match?: (path: string) => boolean;
+  indicator?: boolean | number;
 };
 
 export type DockActionItem = {
@@ -23,6 +24,7 @@ export type DockActionItem = {
   id: "preferences";
   label: string;
   icon: ComponentType<{ className?: string }>;
+  indicator?: boolean | number;
 };
 
 export type DockNavItem = DockLinkItem | DockActionItem;

@@ -256,6 +256,31 @@ export const messages = pgTable(
   }),
 );
 
+export const conversationReads = pgTable(
+  "conversation_reads",
+  {
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadMessageId: text("last_read_message_id").references(
+      () => messages.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.conversationId, table.userId] }),
+    lastReadAtIdx: index("conversation_reads_last_read_idx").on(table.lastReadAt),
+  }),
+);
+
 export const appSchema = {
   users,
   accounts,
@@ -267,6 +292,7 @@ export const appSchema = {
   conversations,
   conversationParticipants,
   messages,
+  conversationReads,
 };
 
 export const authAdapterTables = {
