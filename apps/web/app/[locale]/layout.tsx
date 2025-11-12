@@ -30,9 +30,27 @@ export async function generateMetadata({
       template: t("titleTemplate"),
     },
     description: t("description"),
+    applicationName: t("title"),
     metadataBase: new URL("https://goguma.chat"),
+    manifest: "/manifest.webmanifest",
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
+      { media: "(prefers-color-scheme: dark)", color: "#05010f" },
+    ],
+    appleWebApp: {
+      capable: true,
+      title: t("title"),
+      statusBarStyle: "black-translucent",
+    },
     icons: {
-      icon: "/favicon.ico",
+      icon: [
+        { url: "/favicon.ico" },
+        { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [
+        { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      ],
     },
   } satisfies Metadata;
 }
