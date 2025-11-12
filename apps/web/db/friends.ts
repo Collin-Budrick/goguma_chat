@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "./index";
@@ -8,6 +8,89 @@ import {
   friendships,
   users,
 } from "./schema";
+
+const SCHEMA_IGNORE_CODES = new Set([
+  "42710", // duplicate_object
+  "42P07", // duplicate_table
+  "42701", // duplicate_column
+  "42P04", // duplicate_database
+  "42P06", // duplicate_schema
+  "42712", // duplicate_alias
+  "23505", // unique_violation
+]);
+
+let friendSchemaReady: Promise<void> | null = null;
+
+async function ensureFriendSchema() {
+  if (!friendSchemaReady) {
+    friendSchemaReady = (async () => {
+      const statements = [
+        sql`DO $$ BEGIN
+          CREATE TYPE "friend_request_status" AS ENUM ('pending', 'accepted', 'declined', 'cancelled');
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$`,
+        sql`
+          CREATE TABLE IF NOT EXISTS "friend_requests" (
+            "id" text PRIMARY KEY,
+            "sender_id" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "recipient_id" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "status" "friend_request_status" NOT NULL DEFAULT 'pending',
+            "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+            "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+            "responded_at" timestamp with time zone,
+            CONSTRAINT "friend_requests_sender_recipient_check" CHECK ("sender_id" <> "recipient_id")
+          )
+        `,
+        sql`
+          CREATE TABLE IF NOT EXISTS "friendships" (
+            "id" text PRIMARY KEY,
+            "user_id" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "friend_id" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+            CONSTRAINT "friendships_user_friend_check" CHECK ("user_id" <> "friend_id")
+          )
+        `,
+        sql`
+          CREATE UNIQUE INDEX IF NOT EXISTS "friend_requests_pending_unique"
+          ON "friend_requests" (
+            LEAST("sender_id", "recipient_id"),
+            GREATEST("sender_id", "recipient_id")
+          )
+          WHERE "status" = 'pending'
+        `,
+        sql`
+          CREATE UNIQUE INDEX IF NOT EXISTS "friendships_unique_pair"
+          ON "friendships" (
+            LEAST("user_id", "friend_id"),
+            GREATEST("user_id", "friend_id"),
+            ("user_id" < "friend_id")
+          )
+        `,
+      ];
+
+      for (const statement of statements) {
+        try {
+          await db.execute(statement);
+        } catch (error) {
+          const code =
+            typeof error === "object" && error && "code" in error
+              ? (error as { code?: string }).code
+              : undefined;
+          if (code && SCHEMA_IGNORE_CODES.has(code)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+    })().catch((error) => {
+      friendSchemaReady = null;
+      throw error;
+    });
+  }
+
+  return friendSchemaReady;
+}
 
 export type FriendRequestStatus =
   (typeof friendRequestStatusEnum.enumValues)[number];
@@ -56,6 +139,8 @@ export async function searchUsers(query: string, options: SearchUsersOptions = {
 }
 
 export async function listFriends(userId: string) {
+  await ensureFriendSchema();
+
   return db
     .select({
       friendshipId: friendships.id,
@@ -73,6 +158,8 @@ export async function listFriends(userId: string) {
 }
 
 export async function listPendingRequests(userId: string) {
+  await ensureFriendSchema();
+
   const sender = alias(users, "sender");
   const recipient = alias(users, "recipient");
 
@@ -121,6 +208,8 @@ export async function listPendingRequests(userId: string) {
 }
 
 export async function getFriendState(userId: string) {
+  await ensureFriendSchema();
+
   const [friends, pending] = await Promise.all([
     listFriends(userId),
     listPendingRequests(userId),
@@ -137,6 +226,8 @@ export async function createFriendRequest(
   senderId: string,
   recipientId: string,
 ) {
+  await ensureFriendSchema();
+
   if (senderId === recipientId) {
     throw new Error("Cannot send a friend request to yourself.");
   }
@@ -195,6 +286,8 @@ export async function createFriendRequest(
 }
 
 export async function acceptFriendRequest(requestId: string, recipientId: string) {
+  await ensureFriendSchema();
+
   return db.transaction(async (tx) => {
     const [request] = await tx
       .select({
@@ -247,6 +340,8 @@ export async function acceptFriendRequest(requestId: string, recipientId: string
 }
 
 export async function declineFriendRequest(requestId: string, recipientId: string) {
+  await ensureFriendSchema();
+
   const timestamp = new Date();
 
   const result = await db
@@ -273,6 +368,8 @@ export async function declineFriendRequest(requestId: string, recipientId: strin
 }
 
 export async function cancelFriendRequest(requestId: string, senderId: string) {
+  await ensureFriendSchema();
+
   const timestamp = new Date();
 
   const result = await db
@@ -299,6 +396,8 @@ export async function cancelFriendRequest(requestId: string, senderId: string) {
 }
 
 export async function removeFriendship(userId: string, friendId: string) {
+  await ensureFriendSchema();
+
   const ids = [userId, friendId];
 
   const result = await db

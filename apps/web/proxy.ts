@@ -62,7 +62,11 @@ function mergeIntlResponse(base: NextResponse, intlResponse: NextResponse) {
       return;
     }
 
-    if (key.startsWith("x-next-intl") || key === "vary") {
+    if (
+      key.startsWith("x-next-intl") ||
+      key.startsWith("x-middleware") ||
+      key === "vary"
+    ) {
       base.headers.set(key, value);
     }
   });
@@ -75,11 +79,11 @@ function isMatch(pathname: string, patterns: RegExp[]) {
 }
 
 export default async function proxy(req: NextRequest) {
-  if (req.nextUrl.pathname.startsWith("/api/auth")) {
+  if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  const intlResponse = intlMiddleware(req);
+  const intlResponse = await intlMiddleware(req);
 
   if (!intlResponse.headers.get("x-middleware-next")) {
     return intlResponse;
