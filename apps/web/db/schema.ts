@@ -181,6 +181,10 @@ export const friendships = pgTable(
 );
 
 export const conversationTypeEnum = pgEnum("conversation_type", ["direct"]);
+export const messagingModeEnum = pgEnum("messaging_mode", [
+  "progressive",
+  "udp",
+]);
 
 export const conversations = pgTable(
   "conversations",
@@ -190,6 +194,9 @@ export const conversations = pgTable(
       .$defaultFn(() => randomUUID()),
     type: conversationTypeEnum("type").notNull().default("direct"),
     directKey: text("direct_key"),
+    messagingMode: messagingModeEnum("messaging_mode")
+      .notNull()
+      .default("progressive"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

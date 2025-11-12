@@ -10,6 +10,7 @@ import {
   messages,
   users,
 } from "./schema";
+import type { MessagingMode } from "@/lib/messaging-mode-shared";
 
 const DIRECT_CONVERSATION = "direct" satisfies
   (typeof conversationTypeEnum.enumValues)[number];
@@ -568,4 +569,26 @@ export async function ensureConversationParticipant(
   userId: string,
 ) {
   await assertParticipant(conversationId, userId);
+}
+
+export async function updateConversationMessagingMode(
+  conversationId: string,
+  userId: string,
+  mode: MessagingMode,
+) {
+  await assertParticipant(conversationId, userId);
+
+  const [updated] = await db
+    .update(conversations)
+    .set({ messagingMode: mode })
+    .where(eq(conversations.id, conversationId))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Conversation not found");
+  }
+
+  const participants = await getParticipants(conversationId);
+
+  return { ...updated, participants };
 }
