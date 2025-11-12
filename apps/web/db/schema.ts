@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -179,6 +180,83 @@ export const friendships = pgTable(
   }),
 );
 
+export const conversationTypeEnum = pgEnum("conversation_type", ["direct"]);
+
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    type: conversationTypeEnum("type").notNull().default("direct"),
+    directKey: text("direct_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => ({
+    directKeyUnique: uniqueIndex("conversations_direct_key_unique")
+      .on(table.directKey)
+      .where(sql`${table.type} = 'direct'`),
+    directKeyCheck: check(
+      "conversations_direct_key_check",
+      sql`(${table.type} <> 'direct') OR ${table.directKey} IS NOT NULL`,
+    ),
+  }),
+);
+
+export const conversationParticipants = pgTable(
+  "conversation_participants",
+  {
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.conversationId, table.userId] }),
+  }),
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => ({
+    conversationCreatedIndex: index("messages_conversation_created_idx").on(
+      table.conversationId,
+      table.createdAt,
+      table.id,
+    ),
+  }),
+);
+
 export const appSchema = {
   users,
   accounts,
@@ -187,6 +265,9 @@ export const appSchema = {
   authenticators,
   friendRequests,
   friendships,
+  conversations,
+  conversationParticipants,
+  messages,
 };
 
 export const authAdapterTables = {
