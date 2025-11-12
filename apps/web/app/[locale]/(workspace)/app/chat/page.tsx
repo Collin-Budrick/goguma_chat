@@ -1,121 +1,135 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+
+import ChatClient from "@/components/chat/ChatClient";
+import type { FriendSummary } from "@/components/contacts/types";
+import {
+  getDirectConversation,
+  listConversationMessages,
+  serializeConversation,
+  serializeMessage,
+} from "@/db/conversations";
+import { getFriendState } from "@/db/friends";
+import { auth } from "@/lib/auth";
+
+import type {
+  ChatConversation,
+  ChatMessage,
+  ChatUserProfile,
+} from "@/components/chat/types";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ friendId?: string }>;
 };
 
-const THREADS = [
-  { id: "4821", customer: "Avery C.", key: "shipping" },
-  { id: "4820", customer: "Lucia R.", key: "webhook" },
-  { id: "4819", customer: "DevOps Channel", key: "handoff" },
-] as const;
-
-const ACTIVE_MESSAGES = [
-  { from: "Avery", role: "customer" as const, key: "customerGreeting" },
-  { from: "Mina", role: "agent" as const, key: "agentUpdate" },
-  { from: "Avery", role: "customer" as const, key: "customerThanks" },
-] as const;
-
-export default async function ChatPage({ params }: PageProps) {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Chat" });
+  return {
+    title: t("sidebar.title"),
+  };
+}
+
+function toISODate(value: Date | string | null | undefined) {
+  if (!value) return new Date().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+function serializeFriends(
+  friends: Awaited<ReturnType<typeof getFriendState>>["friends"],
+): FriendSummary[] {
+  return friends.map((friend) => ({
+    friendshipId: friend.friendshipId,
+    friendId: friend.friendId,
+    email: friend.email,
+    firstName: friend.firstName,
+    lastName: friend.lastName,
+    image: friend.image,
+    createdAt: toISODate(friend.createdAt),
+  }));
+}
+
+function buildViewerProfile(session: Awaited<ReturnType<typeof auth>>): ChatUserProfile {
+  return {
+    id: session?.user?.id ?? "",
+    email: typeof session?.user?.email === "string" ? session.user.email : null,
+    firstName:
+      typeof session?.user?.firstName === "string" ? session.user.firstName : null,
+    lastName:
+      typeof session?.user?.lastName === "string" ? session.user.lastName : null,
+    image: typeof session?.user?.image === "string" ? session.user.image : null,
+  };
+}
+
+async function loadInitialConversation(
+  viewerId: string,
+  friendId: string,
+): Promise<{
+  conversation: ChatConversation | null;
+  messages: ChatMessage[];
+  nextCursor: string | null;
+}> {
+  try {
+    const conversation = await getDirectConversation(viewerId, friendId);
+    const page = await listConversationMessages(conversation.id, viewerId);
+    return {
+      conversation: serializeConversation(conversation),
+      messages: page.messages.map((message) => serializeMessage(message)),
+      nextCursor: page.nextCursor,
+    };
+  } catch (error) {
+    console.error("Failed to load initial conversation", error);
+    return { conversation: null, messages: [], nextCursor: null };
+  }
+}
+
+export default async function ChatPage({ params, searchParams }: PageProps) {
+  const { locale } = await params;
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    redirect(`/${locale}/login`);
+  }
+
+  const viewerId = session.user.id;
+  const viewerProfile = buildViewerProfile(session);
+  const friendState = await getFriendState(viewerId);
+  const friends = serializeFriends(friendState.friends);
+  const search = await searchParams;
+
+  const requestedFriendId = search.friendId;
+  const availableFriendIds = new Set(friends.map((friend) => friend.friendId));
+  const initialFriendId =
+    requestedFriendId && availableFriendIds.has(requestedFriendId)
+      ? requestedFriendId
+      : friends[0]?.friendId ?? null;
+
+  let initialConversation: ChatConversation | null = null;
+  let initialMessages: ChatMessage[] = [];
+  let initialCursor: string | null = null;
+
+  if (initialFriendId) {
+    const loaded = await loadInitialConversation(viewerId, initialFriendId);
+    initialConversation = loaded.conversation;
+    initialMessages = loaded.messages;
+    initialCursor = loaded.nextCursor;
+  }
 
   return (
-    <div className="grid min-h-[540px] gap-6 lg:grid-cols-[280px,1fr]">
-      <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 text-sm">
-        <header className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/40">
-          <span>{t("sidebar.title")}</span>
-          <span>{t("sidebar.new")}</span>
-        </header>
-        <ul className="space-y-3">
-          {THREADS.map((thread, index) => (
-            <li
-              key={thread.id}
-              className={`rounded-2xl border border-white/10 px-4 py-3 ${
-                index === 0 ? "bg-white text-black" : "bg-black text-white"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs">
-                <span
-                  className={index === 0 ? "text-black/60" : "text-white/60"}
-                >
-                  {thread.id}
-                </span>
-                <span
-                  className={index === 0 ? "text-black/60" : "text-white/60"}
-                >
-                  {t(`threads.${thread.key}.time`)}
-                </span>
-              </div>
-              <p className="mt-2 text-sm font-semibold">{thread.customer}</p>
-              <p
-                className={`mt-1 text-xs ${
-                  index === 0 ? "text-black/60" : "text-white/60"
-                }`}
-              >
-                {t(`threads.${thread.key}.preview`)}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <section className="flex flex-col rounded-3xl border border-white/10 bg-white/[0.02]">
-        <header className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/40">
-              {t("activeThread.participant")}
-            </p>
-            <p className="text-sm text-white/70">{t("activeThread.topic")}</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-white/50">
-            <span className="rounded-full border border-white/20 px-3 py-1">
-              {t("activeThread.badges.transcript")}
-            </span>
-            <span className="rounded-full border border-white/20 px-3 py-1">
-              {t("activeThread.badges.macros")}
-            </span>
-          </div>
-        </header>
-        <div className="flex-1 space-y-4 px-6 py-6">
-          {ACTIVE_MESSAGES.map((message, index) => {
-            const isAgent = message.role === "agent";
-            return (
-              <div
-                key={`${message.from}-${index}`}
-                className={`max-w-lg rounded-2xl border px-4 py-3 text-sm leading-6 ${
-                  isAgent
-                    ? "ml-auto border-white/40 bg-white text-black"
-                    : "border-white/10 bg-black text-white"
-                }`}
-              >
-                <div
-                  className={`mb-1 text-xs uppercase tracking-[0.3em] ${
-                    isAgent ? "text-black/50" : "text-white/50"
-                  }`}
-                >
-                  {message.from}
-                </div>
-                <p>{t(`messages.${message.key}`)}</p>
-              </div>
-            );
-          })}
-        </div>
-        <footer className="border-t border-white/10 px-6 py-4">
-          <form className="flex items-center gap-3">
-            <textarea
-              rows={1}
-              placeholder={t("composer.placeholder")}
-              className="flex-1 resize-none rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-white/90"
-            >
-              {t("composer.send")}
-            </button>
-          </form>
-        </footer>
-      </section>
-    </div>
+    <ChatClient
+      viewerId={viewerId}
+      viewerProfile={viewerProfile}
+      friends={friends}
+      initialFriendId={initialFriendId}
+      initialConversation={initialConversation}
+      initialMessages={initialMessages}
+      initialCursor={initialCursor}
+    />
   );
 }
