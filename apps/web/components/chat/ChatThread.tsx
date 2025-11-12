@@ -38,6 +38,7 @@ import {
   type MessagingMode,
   DEFAULT_MESSAGING_MODE,
 } from "@/lib/messaging-mode";
+import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
 
 import type {
   ChatConversation,
@@ -868,6 +869,17 @@ export default function ChatThread({
   const clearedHistoryCutoff = clearedHistoryAt
     ? toDate(clearedHistoryAt).getTime()
     : null;
+
+  useEffect(() => {
+    if (!conversationId) {
+      return;
+    }
+    void postServiceWorkerMessage({
+      type: "peer:conversation-opened",
+      conversationId,
+    });
+  }, [conversationId]);
+
   const visibleMessages = useMemo(() => {
     if (!conversationId || !clearedHistoryCutoff) {
       return messages;

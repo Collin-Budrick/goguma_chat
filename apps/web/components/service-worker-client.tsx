@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 
+const PEER_SYNC_TAG = "peer-channel-flush";
+const PEER_PERIODIC_TAG = "peer-channel-refresh";
+
 const SERVICE_WORKER_PATH = "/sw.js";
 
 export function ServiceWorkerClient() {
@@ -21,6 +24,96 @@ export function ServiceWorkerClient() {
     }
 
     let isMounted = true;
+
+    const applyAppBadge = async (count: number) => {
+      const nav = navigator as Navigator & {
+        setAppBadge?: (count?: number) => Promise<void>;
+        clearAppBadge?: () => Promise<void>;
+      };
+
+      if (typeof nav.setAppBadge !== "function") {
+        return;
+      }
+
+      try {
+        if (count > 0) {
+          await nav.setAppBadge(count);
+        } else if (typeof nav.clearAppBadge === "function") {
+          await nav.clearAppBadge();
+        } else {
+          await nav.setAppBadge();
+        }
+      } catch (error) {
+        console.warn("[sw] Failed to update app badge", error);
+      }
+    };
+
+    const handleBadgeBroadcast = (event: Event) => {
+      const detail = (event as CustomEvent<{ count?: number }>).detail;
+      if (!detail) return;
+      void applyAppBadge(Number.isFinite(detail.count) ? Number(detail.count) : 0);
+    };
+
+    window.addEventListener("peer-badge-count", handleBadgeBroadcast as EventListener);
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      const payload = event.data;
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+
+      if (payload.type === "peer:badge-count") {
+        const count = Number(payload.count) || 0;
+        void applyAppBadge(count);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
+
+    const ensureBackgroundCapabilities = async (registration: ServiceWorkerRegistration) => {
+      const permissions = (navigator as Navigator & {
+        permissions?: {
+          query(options: PermissionDescriptor): Promise<PermissionStatus>;
+        };
+      }).permissions;
+
+      const queryPermission = async (name: PermissionName) => {
+        if (!permissions) return;
+        try {
+          const status = await permissions.query({ name });
+          console.info(`[sw] Permission '${name}' status:`, status.state);
+        } catch {
+          // ignore unsupported permissions
+        }
+      };
+
+      await queryPermission("notifications");
+      await queryPermission("periodic-background-sync" as PermissionName);
+
+      if (registration.sync) {
+        try {
+          await registration.sync.register(PEER_SYNC_TAG);
+        } catch (error) {
+          console.info("[sw] Background sync unavailable", error);
+        }
+      }
+
+      if (registration.periodicSync) {
+        try {
+          await registration.periodicSync.register(PEER_PERIODIC_TAG, {
+            minInterval: 15 * 60 * 1000,
+          });
+        } catch (error) {
+          if (error?.name !== "NotAllowedError") {
+            console.info("[sw] Periodic sync unavailable", error);
+          }
+        }
+      }
+
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        console.info("[sw] Notifications permission has not been granted yet.");
+      }
+    };
 
     navigator.serviceWorker
       .register(SERVICE_WORKER_PATH)
@@ -45,6 +138,8 @@ export function ServiceWorkerClient() {
             });
           }
         });
+
+        void ensureBackgroundCapabilities(registration);
       })
       .catch((error) => {
         if (isMounted) {
@@ -54,6 +149,8 @@ export function ServiceWorkerClient() {
 
     return () => {
       isMounted = false;
+      window.removeEventListener("peer-badge-count", handleBadgeBroadcast as EventListener);
+      navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
     };
   }, []);
 
