@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const APP_SHELL_ASSETS = [
@@ -103,6 +103,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   const isSameOrigin = url.origin === self.location.origin;
+
+  if (
+    isSameOrigin &&
+    (url.pathname.startsWith("/api/") ||
+      request.headers.get("accept") === "text/event-stream")
+  ) {
+    return;
+  }
   const isStaticAsset =
     isSameOrigin &&
     (url.pathname.startsWith("/_next/static/") ||
