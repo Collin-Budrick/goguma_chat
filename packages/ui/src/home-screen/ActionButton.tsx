@@ -3,11 +3,11 @@ import { Pressable, StyleProp, Text, ViewStyle } from "react-native";
 import styles from "../home-screen.styles";
 import type { ActionTarget } from "../home-screen.data";
 
-type ActionButtonProps = {
+interface ActionButtonProps {
   target: ActionTarget;
   onPress: (target: ActionTarget) => Promise<void> | void;
   style?: StyleProp<ViewStyle>;
-};
+}
 
 export function ActionButton({ target, onPress, style }: ActionButtonProps) {
   return (
