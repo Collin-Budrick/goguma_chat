@@ -573,6 +573,12 @@
         "on": "On",
         "off": "Off"
       }
+    },
+    "session": {
+      "title": "Session",
+      "description": "Leave the lounge and clear this device's cookies.",
+      "logout": "Log out",
+      "loggingOut": "Logging out…"
     }
   },
   "Profile": {

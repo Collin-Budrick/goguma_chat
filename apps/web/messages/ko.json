@@ -573,6 +573,12 @@
         "on": "켜짐",
         "off": "꺼짐"
       }
+    },
+    "session": {
+      "title": "세션",
+      "description": "라운지를 떠나고 이 기기의 쿠키를 정리해요.",
+      "logout": "로그아웃",
+      "loggingOut": "로그아웃 중…"
     }
   },
   "Profile": {

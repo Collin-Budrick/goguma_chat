@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "@/components/transition-context";
@@ -11,7 +12,7 @@ import {
   loadDisplaySettings,
   persistDisplaySettings,
 } from "@/lib/display-settings";
-import { type Locale } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
 
 const PREFERENCE_IDS = ["notifications", "aiDrafts", "presence"] as const;
 
@@ -31,6 +32,7 @@ export default function SettingsPage() {
     aiDrafts: true,
     presence: false,
   });
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const preferenceCopy = PREFERENCE_IDS.map((id) => ({
     id,
     label: t(`preferences.items.${id}.label`),
@@ -78,6 +80,14 @@ export default function SettingsPage() {
     },
     [locale, pathname, router, setDirection],
   );
+
+  const handleSignOut = useCallback(async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const loginPath = locale === routing.defaultLocale ? "/login" : `/${locale}/login`;
+    await signOut({ callbackUrl: loginPath });
+  }, [isSigningOut, locale]);
+
 
   const displayEntries = [
     {
@@ -225,6 +235,21 @@ export default function SettingsPage() {
             );
           })}
         </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <header className="mb-6">
+          <h2 className="text-xl font-semibold text-white">{t("session.title")}</h2>
+          <p className="text-sm text-white/60">{t("session.description")}</p>
+        </header>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="w-full rounded-2xl border border-white/20 bg-gradient-to-r from-white/10 to-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSigningOut ? t("session.loggingOut") : t("session.logout")}
+        </button>
       </section>
     </div>
   );
