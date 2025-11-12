@@ -12,6 +12,12 @@ import {
   loadDisplaySettings,
   persistDisplaySettings,
 } from "@/lib/display-settings";
+import {
+  type MessagingMode,
+  MESSAGING_MODE_EVENT,
+  loadMessagingMode,
+  persistMessagingMode,
+} from "@/lib/messaging-mode";
 import { routing, type Locale } from "@/i18n/routing";
 
 const PREFERENCE_IDS = ["notifications", "aiDrafts", "presence"] as const;
@@ -24,6 +30,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setDirection } = useTransitionDirection();
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
+  const [messagingMode, setMessagingMode] = useState<MessagingMode>(() => loadMessagingMode());
 
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [motion, setMotion] = useState(true);
@@ -67,6 +74,18 @@ export default function SettingsPage() {
     };
     window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
     return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const next = (event as CustomEvent<MessagingMode>).detail;
+      setMessagingMode((prev) => (prev === next ? prev : next));
+    };
+
+    window.addEventListener(MESSAGING_MODE_EVENT, handler);
+    return () => window.removeEventListener(MESSAGING_MODE_EVENT, handler);
   }, []);
 
   const handleLocaleToggle = useCallback(
@@ -133,6 +152,16 @@ export default function SettingsPage() {
     },
   ];
 
+  const messagingOptions: Array<{
+    id: MessagingMode;
+    label: string;
+    description: string;
+  }> = (["udp", "progressive"] satisfies MessagingMode[]).map((value) => ({
+    id: value,
+    label: t(`messaging.options.${value}`),
+    description: t(`messaging.helper.${value}`),
+  }));
+
   const isLightThemeEnabled = displaySettings.theme === "light";
   const cardTone = isLightThemeEnabled
     ? {
@@ -196,6 +225,39 @@ export default function SettingsPage() {
                 >
                   {entry.description}
                 </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <header className="mb-6">
+          <h2 className="text-xl font-semibold text-white">{t("messaging.title")}</h2>
+          <p className="text-sm text-white/60">{t("messaging.description")}</p>
+        </header>
+        <div className="space-y-4">
+          {messagingOptions.map((option) => {
+            const active = messagingMode === option.id;
+            const tone = active ? cardTone.active : cardTone.inactive;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  if (option.id === messagingMode) return;
+                  setMessagingMode(option.id);
+                  persistMessagingMode(option.id);
+                }}
+                className={"w-full rounded-2xl border px-4 py-4 text-left transition " + tone.container}
+              >
+                <div className="flex items-center justify-between text-sm font-medium">
+                  <span>{option.label}</span>
+                  <span className="text-xs uppercase tracking-[0.3em]">
+                    {active ? t("preferences.state.on") : t("preferences.state.off")}
+                  </span>
+                </div>
+                <p className={"mt-2 text-xs " + tone.description}>{option.description}</p>
               </button>
             );
           })}
