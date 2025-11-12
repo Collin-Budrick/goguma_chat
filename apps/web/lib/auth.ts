@@ -101,6 +101,7 @@ export const authConfig = {
         password: { label: "Password", type: "password" },
         firstName: { label: "First name", type: "text" },
         lastName: { label: "Last name", type: "text" },
+        mode: { label: "Form mode", type: "text" },
       },
       async authorize(credentials) {
         const email =
@@ -125,6 +126,12 @@ export const authConfig = {
             ? toNullable(credentials.lastName)
             : null;
 
+        const formMode =
+          typeof credentials?.mode === "string"
+            ? credentials.mode.toLowerCase()
+            : null;
+        const isSignup = formMode === "signup";
+
         const [existing] = await db
           .select()
           .from(users)
@@ -134,6 +141,10 @@ export const authConfig = {
         const now = new Date();
 
         if (!existing) {
+          if (!isSignup) {
+            return null;
+          }
+
           const passwordHash = await hashPassword(password);
           const id = randomUUID();
           const newUser = {

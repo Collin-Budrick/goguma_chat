@@ -1,9 +1,20 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+
+import { usePathname, useRouter } from "@/i18n/navigation";
+
+
+function buildLocalizedPath(localeSegment: string | null, pathname: string) {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (!localeSegment) {
+    return normalized;
+  }
+  return `/${localeSegment}${normalized}`;
+}
 
 interface AuthFormProps {
   mode: "login" | "signup";
@@ -13,14 +24,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const params = useParams<{ locale?: string }>();
-  const localeSegment =
-    typeof params?.locale === "string" && params.locale.length > 0
-      ? params.locale
-      : null;
-  const fallbackCallback = localeSegment
-    ? `/${localeSegment}/app/dashboard`
-    : "/app/dashboard";
+  const locale = useLocale();
+  const localeSegment = typeof locale === "string" && locale.length > 0 ? locale : null;
+  const fallbackCallback = buildLocalizedPath(localeSegment, "/app/dashboard");
   const callbackUrl = searchParams.get("callbackUrl") ?? fallbackCallback;
   const t = useTranslations("Auth.form");
   const isLogin = mode === "login";
@@ -65,6 +71,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       email,
       redirect: false,
       callbackUrl,
+      mode,
     };
     signInPayload.password = password ?? undefined;
     if (!isLogin) {
@@ -184,3 +191,5 @@ export default function AuthForm({ mode }: AuthFormProps) {
     </form>
   );
 }
+
+
