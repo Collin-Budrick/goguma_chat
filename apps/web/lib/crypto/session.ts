@@ -334,14 +334,29 @@ const normalizeTransportMessage = async (
 const decodeTransportMessage = (bytes: Uint8Array): TransportMessage =>
   textDecoder.decode(bytes);
 
+const compareUint8Arrays = (left: Uint8Array, right: Uint8Array): number => {
+  const length = Math.min(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = left[index] - right[index];
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return left.length - right.length;
+};
+
 const combineSalts = (
   localSalt: Uint8Array,
   localRotation: number,
   remoteSalt: Uint8Array,
   remoteRotation: number,
 ): Uint8Array => {
-  const first = localRotation <= remoteRotation ? localSalt : remoteSalt;
-  const second = localRotation <= remoteRotation ? remoteSalt : localSalt;
+  const rotationsMatch = localRotation === remoteRotation;
+  const localFirst = rotationsMatch
+    ? compareUint8Arrays(localSalt, remoteSalt) <= 0
+    : localRotation <= remoteRotation;
+  const first = localFirst ? localSalt : remoteSalt;
+  const second = localFirst ? remoteSalt : localSalt;
   const combined = new Uint8Array(first.length + second.length);
   combined.set(first, 0);
   combined.set(second, first.length);
