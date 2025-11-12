@@ -124,6 +124,8 @@ export default function SiteDock() {
       ),
     [baseDockItems],
   );
+  const isChatPath = pathname.startsWith("/app/chat");
+  const isContactsPath = pathname.startsWith("/app/contacts");
   const dockItems = useMemo(() => {
     if (!shouldHydrateAppIndicators) {
       return baseDockItems;
@@ -358,8 +360,6 @@ export default function SiteDock() {
   const range = displaySettings.magnify ? 180 : 120;
   const panelHeight = 74;
   const dockHeight = 110;
-  const isChatPath = pathname.startsWith("/app/chat");
-  const isContactsPath = pathname.startsWith("/app/contacts");
 
   const { mouseX, rowHeight, height, handlers: hoverHandlers } = useDockHoverAnimation({
     panelHeight,
