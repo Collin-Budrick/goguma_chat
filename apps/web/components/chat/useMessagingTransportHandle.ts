@@ -114,7 +114,12 @@ export function useMessagingTransportHandle(): MessagingTransportStatus {
       // ignore storage failures
     }
 
-    const instance = initializeMessagingTransport({ dependencies });
+    const instance = initializeMessagingTransport({
+      dependencies,
+      connectOptions: {
+        metadata: { peerSessionId: snapshot.sessionId },
+      },
+    });
     instanceRef.current = instance;
     let cancelled = false;
 

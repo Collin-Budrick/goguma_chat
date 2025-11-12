@@ -6,6 +6,10 @@ import {
   loadMessagingMode,
 } from "./messaging-mode";
 import type { PeerPresenceUpdate } from "./messaging-schema";
+import {
+  createPeerCryptoSession,
+  type PeerCryptoSession,
+} from "./crypto/session";
 
 export type TransportMessage =
   | string
@@ -54,6 +58,20 @@ const createEmitter = <T>() => {
       return () => listeners.delete(listener);
     },
   };
+};
+
+const PEER_SESSION_DEFAULT_ID = "default-peer-session";
+
+const resolvePeerSessionId = (options?: TransportConnectOptions): string => {
+  const metadata = options?.metadata as { peerSessionId?: unknown } | undefined;
+  const candidate = metadata?.peerSessionId;
+  if (typeof candidate === "string" && candidate.trim()) {
+    return candidate.trim();
+  }
+  if (typeof options?.roomId === "string" && options.roomId.trim()) {
+    return `room:${options.roomId.trim()}`;
+  }
+  return PEER_SESSION_DEFAULT_ID;
 };
 
 export type PeerPresenceListener = (update: PeerPresenceUpdate) => void;
@@ -106,6 +124,8 @@ const createTransportHandle = (
 ): TransportHandle => {
   let state: TransportState = "idle";
   let connection: DriverConnection | null = null;
+  let rawConnection: DriverConnection | null = null;
+  let cryptoSession: PeerCryptoSession | null = null;
   let controller = new AbortController();
   let lastConnectOptions: TransportConnectOptions | undefined;
   let readyResolve: (() => void) | undefined;
@@ -158,13 +178,55 @@ const createTransportHandle = (
     updateState(nextState);
 
     try {
+      const cryptoId = resolvePeerSessionId(resolvedOptions);
+      cryptoSession = await createPeerCryptoSession({
+        sessionId: cryptoId,
+        onPlaintext: (payload) => messageEmitter.emit(payload),
+        onError: (error) => errorEmitter.emit(error),
+      });
+
       connection = await driver.start({
         signal: controller.signal,
         options: resolvedOptions,
-        emitMessage: (payload) => messageEmitter.emit(payload),
+        emitMessage: (payload) => {
+          if (cryptoSession) {
+            void cryptoSession.receive(payload);
+          }
+        },
         emitState: updateState,
         emitError: (error) => errorEmitter.emit(error),
       });
+
+      const baseConnection = connection;
+      rawConnection = baseConnection;
+
+      if (!cryptoSession) {
+        throw new Error("Failed to initialize peer crypto session");
+      }
+
+      cryptoSession.attachTransmitter(async (payload) => {
+        if (!baseConnection) return;
+        await baseConnection.send(payload);
+      });
+
+      await cryptoSession.whenReady();
+
+      connection = {
+        async send(payload) {
+          if (!cryptoSession) {
+            throw new Error("Peer crypto session is not available");
+          }
+          await cryptoSession.send(payload);
+        },
+        async close() {
+          if (baseConnection?.close) {
+            await baseConnection.close();
+          }
+          if (cryptoSession) {
+            await cryptoSession.teardown();
+          }
+        },
+      } satisfies DriverConnection;
 
       if (controller.signal.aborted) {
         throw createAbortError();
@@ -177,6 +239,14 @@ const createTransportHandle = (
       const normalized = normalizeError(error);
       errorEmitter.emit(normalized);
       rejectReady(normalized);
+      if (cryptoSession) {
+        await cryptoSession.teardown().catch(() => undefined);
+      }
+      if (rawConnection?.close) {
+        await rawConnection.close().catch(() => undefined);
+      }
+      cryptoSession = null;
+      rawConnection = null;
       throw normalized;
     }
   };
@@ -187,10 +257,16 @@ const createTransportHandle = (
     controller.abort();
     const activeConnection = connection;
     connection = null;
+    rawConnection = null;
+    const activeCrypto = cryptoSession;
+    cryptoSession = null;
 
     try {
       if (activeConnection?.close) {
         await activeConnection.close();
+      }
+      if (activeCrypto) {
+        await activeCrypto.teardown();
       }
     } finally {
       updateState("closed");
