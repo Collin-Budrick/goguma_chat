@@ -13,8 +13,11 @@ import type {
   TypingEvent,
 } from "./types";
 import { mergeMessages } from "./message-utils";
-
-const STORAGE_PREFIX = "chat:peer-conversation:";
+import {
+  getConversationStorage,
+  type ConversationSnapshot,
+  type ConversationStorage,
+} from "./conversation-storage";
 const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 
@@ -33,12 +36,6 @@ type ChannelEvent =
   | { type: "error"; error: Error };
 
 type ChannelListener = (event: ChannelEvent) => void;
-
-type StoredConversation = {
-  conversation: ChatConversation | null;
-  messages: ChatMessage[];
-  nextCursor: string | null;
-};
 
 type PendingEntry<T> = {
   resolve(value: T): void;
@@ -131,14 +128,12 @@ type PeerFrame =
 
 type PendingMap<T> = Map<string, PendingEntry<T>>;
 
-const fallbackConversation: StoredConversation = {
+const fallbackConversation: ConversationSnapshot = {
   conversation: null,
   messages: [],
   nextCursor: null,
+  updatedAt: 0,
 };
-
-const getStorageKey = (conversationId: string) =>
-  `${STORAGE_PREFIX}${conversationId}`;
 
 const parseTransportMessage = (payload: TransportMessage): PeerFrame | null => {
   try {
@@ -176,13 +171,67 @@ export function usePeerConversationChannel(options: {
 }) {
   const transportRef = useRef<TransportHandle | null>(options.transport);
   const listenersRef = useRef<Map<string, Set<ChannelListener>>>(new Map());
-  const cacheRef = useRef<Map<string, StoredConversation>>(new Map());
+  const cacheRef = useRef<Map<string, ConversationSnapshot>>(new Map());
+  const storagePromiseRef = useRef<
+    Promise<ConversationStorage | null> | null
+  >(null);
   const pendingAcksRef = useRef<PendingMap<ChatMessage>>(new Map());
   const pendingHistoryRef = useRef<PendingMap<SyncHistoryResult>>(new Map());
   const pendingLoadRef = useRef<PendingMap<LoadMoreResult>>(new Map());
 
+  const dispatchHydration = useCallback(
+    (conversationId: string, snapshot: ConversationSnapshot) => {
+      const listeners = listenersRef.current.get(conversationId);
+      if (!listeners?.size) {
+        return;
+      }
+
+      if (snapshot.conversation) {
+        listeners.forEach((listener) => {
+          try {
+            listener({
+              type: "conversation",
+              conversation: snapshot.conversation!,
+            });
+          } catch (error) {
+            console.error("Peer listener failed", error);
+          }
+        });
+      }
+
+      if (snapshot.messages.length) {
+        listeners.forEach((listener) => {
+          try {
+            listener({
+              type: "history",
+              mode: "replace",
+              messages: snapshot.messages,
+              nextCursor: snapshot.nextCursor,
+            });
+          } catch (error) {
+            console.error("Peer listener failed", error);
+          }
+        });
+      }
+    },
+    [],
+  );
+
+  const ensureStorage = useCallback(() => {
+    if (storagePromiseRef.current) {
+      return storagePromiseRef.current;
+    }
+
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    storagePromiseRef.current = getConversationStorage();
+    return storagePromiseRef.current;
+  }, []);
+
   const readStored = useCallback(
-    (conversationId: string): StoredConversation => {
+    (conversationId: string): ConversationSnapshot => {
       if (!conversationId) {
         return fallbackConversation;
       }
@@ -192,61 +241,89 @@ export function usePeerConversationChannel(options: {
         return cache.get(conversationId)!;
       }
 
-      if (typeof window === "undefined") {
-        return fallbackConversation;
+      const placeholder: ConversationSnapshot = { ...fallbackConversation };
+      cache.set(conversationId, placeholder);
+
+      const storagePromise = ensureStorage();
+      if (storagePromise) {
+        storagePromise
+          .then((storage) => storage?.read(conversationId))
+          .then((snapshot) => {
+            if (!snapshot) {
+              return;
+            }
+            cacheRef.current.set(conversationId, snapshot);
+            dispatchHydration(conversationId, snapshot);
+          })
+          .catch((error) => {
+            console.error("Failed to hydrate conversation from storage", error);
+          });
       }
 
-      try {
-        const raw = window.localStorage.getItem(
-          getStorageKey(conversationId),
-        );
-        if (!raw) {
-          cache.set(conversationId, { ...fallbackConversation });
-          return cache.get(conversationId)!;
-        }
-        const parsed = JSON.parse(raw) as Partial<StoredConversation>;
-        const normalized: StoredConversation = {
-          conversation: parsed.conversation ?? null,
-          messages: Array.isArray(parsed.messages) ? parsed.messages : [],
-          nextCursor:
-            typeof parsed.nextCursor === "string"
-              ? parsed.nextCursor
-              : parsed?.nextCursor ?? null,
-        };
-        cache.set(conversationId, normalized);
-        return normalized;
-      } catch (error) {
-        console.error("Failed to read cached messages", error);
-        cache.set(conversationId, { ...fallbackConversation });
-        return cache.get(conversationId)!;
-      }
+      return placeholder;
     },
-    [readStored],
+    [dispatchHydration, ensureStorage],
   );
 
   const writeStored = useCallback(
-    (conversationId: string, value: StoredConversation) => {
+    (conversationId: string, value: ConversationSnapshot) => {
       if (!conversationId) {
         return;
       }
       cacheRef.current.set(conversationId, value);
-      if (typeof window === "undefined") {
-        return;
-      }
-      try {
-        window.localStorage.setItem(
-          getStorageKey(conversationId),
-          JSON.stringify(value),
-        );
-      } catch (error) {
-        console.error("Failed to persist chat history", error);
+      const storagePromise = ensureStorage();
+      if (storagePromise) {
+        storagePromise
+          .then((storage) => storage?.write(conversationId, value))
+          .catch((error) => {
+            console.error("Failed to persist chat history", error);
+          });
       }
     },
-    [],
+    [ensureStorage],
+  );
+
+  const readStoredAsync = useCallback(
+    async (conversationId: string): Promise<ConversationSnapshot> => {
+      const cached = readStored(conversationId);
+      if (!conversationId) {
+        return cached;
+      }
+
+      if (cached.updatedAt > 0 || cached.messages.length) {
+        return cached;
+      }
+
+      const storagePromise = ensureStorage();
+      if (!storagePromise) {
+        return cached;
+      }
+
+      try {
+        const storage = await storagePromise;
+        if (!storage) {
+          return cached;
+        }
+        const snapshot = await storage.read(conversationId);
+        if (snapshot) {
+          cacheRef.current.set(conversationId, snapshot);
+          dispatchHydration(conversationId, snapshot);
+          return snapshot;
+        }
+      } catch (error) {
+        console.error("Failed to read conversation from storage", error);
+      }
+
+      return cacheRef.current.get(conversationId) ?? fallbackConversation;
+    },
+    [dispatchHydration, ensureStorage, readStored],
   );
 
   const updateMessages = useCallback(
-    (conversationId: string, incoming: ChatMessage[]): StoredConversation => {
+    (
+      conversationId: string,
+      incoming: ChatMessage[],
+    ): ConversationSnapshot => {
       const stored = readStored(conversationId);
       if (!incoming.length) {
         return stored;
@@ -256,7 +333,8 @@ export function usePeerConversationChannel(options: {
         conversation: stored.conversation,
         messages: merged,
         nextCursor: stored.nextCursor,
-      } satisfies StoredConversation;
+        updatedAt: Date.now(),
+      } satisfies ConversationSnapshot;
       writeStored(conversationId, next);
       return next;
     },
@@ -267,7 +345,7 @@ export function usePeerConversationChannel(options: {
     (
       conversationId: string,
       nextCursor: string | null,
-    ): StoredConversation => {
+    ): ConversationSnapshot => {
       const stored = readStored(conversationId);
       if (stored.nextCursor === nextCursor) {
         return stored;
@@ -276,7 +354,8 @@ export function usePeerConversationChannel(options: {
         conversation: stored.conversation,
         messages: stored.messages,
         nextCursor,
-      } satisfies StoredConversation;
+        updatedAt: Date.now(),
+      } satisfies ConversationSnapshot;
       writeStored(conversationId, next);
       return next;
     },
@@ -287,13 +366,14 @@ export function usePeerConversationChannel(options: {
     (
       conversationId: string,
       conversation: ChatConversation | null,
-    ): StoredConversation => {
+    ): ConversationSnapshot => {
       const stored = readStored(conversationId);
       const next = {
         conversation,
         messages: stored.messages,
         nextCursor: stored.nextCursor,
-      } satisfies StoredConversation;
+        updatedAt: Date.now(),
+      } satisfies ConversationSnapshot;
       writeStored(conversationId, next);
       return next;
     },
@@ -665,7 +745,7 @@ export function usePeerConversationChannel(options: {
 
       const transport = transportRef.current;
       if (!transport) {
-        const cached = readStored(conversationId);
+        const cached = await readStoredAsync(conversationId);
         return {
           messages: cached.messages,
           nextCursor: cached.nextCursor,
@@ -712,7 +792,7 @@ export function usePeerConversationChannel(options: {
           });
       });
     },
-    [readStored, registerPending],
+    [readStoredAsync, registerPending],
   );
 
   const syncHistory = useCallback(
@@ -754,7 +834,7 @@ export function usePeerConversationChannel(options: {
       const transport = transportRef.current;
       if (!transport) {
         if (candidateConversationId) {
-          const cached = readStored(candidateConversationId);
+          const cached = await readStoredAsync(candidateConversationId);
           return {
             conversation: cached.conversation,
             messages: cached.messages,
@@ -807,6 +887,7 @@ export function usePeerConversationChannel(options: {
     [
       notify,
       readStored,
+      readStoredAsync,
       registerPending,
       updateConversation,
       updateCursor,
