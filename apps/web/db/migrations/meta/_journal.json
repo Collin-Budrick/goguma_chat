@@ -29,6 +29,13 @@
       "when": 1762928019608,
       "tag": "0003_ambiguous_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763004221950,
+      "tag": "0004_add_conversation_reads",
+      "breakpoints": true
     }
   ]
 }
