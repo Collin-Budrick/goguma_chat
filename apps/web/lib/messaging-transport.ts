@@ -434,6 +434,8 @@ export type PeerSignalingSnapshot = {
   localAnswer: string | null;
   localOfferToken: string | null;
   localAnswerToken: string | null;
+  localOfferCreatedAt: number | null;
+  localAnswerCreatedAt: number | null;
   remoteInvite: string | null;
   remoteAnswer: string | null;
   awaitingOffer: boolean;
@@ -482,6 +484,8 @@ type PersistentPeerState = {
   localAnswer: string | null;
   localOfferToken: string | null;
   localAnswerToken: string | null;
+  localOfferCreatedAt: number | null;
+  localAnswerCreatedAt: number | null;
   remoteInvite: string | null;
   remoteAnswer: string | null;
   awaitingOffer: boolean;
@@ -526,6 +530,8 @@ const snapshotFromPersistentState = (
   localAnswer: persistent?.localAnswer ?? null,
   localOfferToken: persistent?.localOfferToken ?? null,
   localAnswerToken: persistent?.localAnswerToken ?? null,
+  localOfferCreatedAt: persistent?.localOfferCreatedAt ?? null,
+  localAnswerCreatedAt: persistent?.localAnswerCreatedAt ?? null,
   remoteInvite: persistent?.remoteInvite ?? null,
   remoteAnswer: persistent?.remoteAnswer ?? null,
   awaitingOffer:
@@ -587,6 +593,8 @@ const loadPersistentPeerState = (storageKey: string): PersistentPeerState | null
       localAnswer: parsed.localAnswer ?? null,
       localOfferToken: parsed.localOfferToken ?? null,
       localAnswerToken: parsed.localAnswerToken ?? null,
+      localOfferCreatedAt: parsed.localOfferCreatedAt ?? null,
+      localAnswerCreatedAt: parsed.localAnswerCreatedAt ?? null,
       remoteInvite,
       remoteAnswer: parsed.remoteAnswer ?? null,
       awaitingOffer,
@@ -783,11 +791,15 @@ export const createPeerSignalingController = (
   const queueHandshake = (
     handshake: PeerHandshakeFrame["handshake"],
     stop: () => boolean,
+    createdAtOverride?: number | null,
   ) => {
     const key = `${handshake.kind}:${handshake.token}`;
     const existing = pendingHandshakes.get(key);
     if (existing) {
       existing.stop = stop;
+      if (typeof createdAtOverride === "number") {
+        existing.createdAt = createdAtOverride;
+      }
       if (!existing.timeoutId) {
         existing.timeoutId = setTimeout(() => {
           void attemptHandshakeSend(key);
@@ -796,14 +808,16 @@ export const createPeerSignalingController = (
       return;
     }
 
-    let createdAt = now();
-    try {
-      const payload = deserializePeerToken(handshake.token);
-      if (typeof payload.createdAt === "number") {
-        createdAt = payload.createdAt;
+    let createdAt = typeof createdAtOverride === "number" ? createdAtOverride : now();
+    if (typeof createdAtOverride !== "number") {
+      try {
+        const payload = deserializePeerToken(handshake.token);
+        if (typeof payload.createdAt === "number") {
+          createdAt = payload.createdAt;
+        }
+      } catch {
+        // Ignore malformed tokens and fall back to the current timestamp
       }
-    } catch {
-      // Ignore malformed tokens and fall back to the current timestamp
     }
 
     pendingHandshakes.set(key, {
@@ -819,6 +833,7 @@ export const createPeerSignalingController = (
   type HandshakeReplayEntry = {
     handshake: PeerHandshakeFrame["handshake"];
     stop: () => boolean;
+    createdAt: number | null;
   };
 
   let pendingRehydratedHandshakes: HandshakeReplayEntry[] | null = null;
@@ -830,7 +845,7 @@ export const createPeerSignalingController = (
     }
 
     pendingRehydratedHandshakes.forEach((entry) => {
-      queueHandshake(entry.handshake, entry.stop);
+      queueHandshake(entry.handshake, entry.stop, entry.createdAt);
     });
     pendingRehydratedHandshakes = null;
   };
@@ -842,6 +857,7 @@ export const createPeerSignalingController = (
       entries.push({
         handshake: { kind: "offer", token: snapshot.localOfferToken },
         stop: () => !currentState.awaitingAnswer || Boolean(currentState.remoteAnswer),
+        createdAt: snapshot.localOfferCreatedAt ?? null,
       });
     }
 
@@ -849,6 +865,7 @@ export const createPeerSignalingController = (
       entries.push({
         handshake: { kind: "answer", token: snapshot.localAnswerToken },
         stop: () => Boolean(currentState.connected),
+        createdAt: snapshot.localAnswerCreatedAt ?? null,
       });
     }
 
@@ -875,6 +892,8 @@ export const createPeerSignalingController = (
       localAnswer: currentState.localAnswer,
       localOfferToken: currentState.localOfferToken,
       localAnswerToken: currentState.localAnswerToken,
+      localOfferCreatedAt: currentState.localOfferCreatedAt,
+      localAnswerCreatedAt: currentState.localAnswerCreatedAt,
       remoteInvite: currentState.remoteInvite,
       remoteAnswer: currentState.remoteAnswer,
       awaitingOffer: currentState.awaitingOffer,
@@ -897,6 +916,8 @@ export const createPeerSignalingController = (
     | "localAnswer"
     | "localOfferToken"
     | "localAnswerToken"
+    | "localOfferCreatedAt"
+    | "localAnswerCreatedAt"
     | "remoteInvite"
     | "remoteAnswer"
     | "awaitingOffer"
@@ -908,6 +929,8 @@ export const createPeerSignalingController = (
     localAnswer: null,
     localOfferToken: null,
     localAnswerToken: null,
+    localOfferCreatedAt: null,
+    localAnswerCreatedAt: null,
     remoteInvite: null,
     remoteAnswer: null,
     awaitingOffer: role === "guest",
@@ -987,6 +1010,7 @@ export const createPeerSignalingController = (
   ) => {
     clearAwaitingAnswerState();
     ensureSession();
+    const createdAt = now();
     const token = serializePeerToken({
       type: "goguma-peer-invite",
       kind: "offer",
@@ -995,17 +1019,19 @@ export const createPeerSignalingController = (
       roomId:
         typeof connectOptions?.roomId === "string" ? connectOptions.roomId : undefined,
       metadata: connectOptions?.metadata,
-      createdAt: now(),
+      createdAt,
     });
 
     queueHandshake(
       { kind: "offer", token },
       () => !currentState.awaitingAnswer || Boolean(currentState.remoteAnswer),
+      createdAt,
     );
 
     commitState({
       localInvite: "[automatic peer handshake]",
       localOfferToken: token,
+      localOfferCreatedAt: createdAt,
       awaitingAnswer: true,
       inviteExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -1017,6 +1043,7 @@ export const createPeerSignalingController = (
   const handleAnswerGenerated = (description: RTCSessionDescriptionInit) => {
     clearAwaitingOfferState();
     ensureSession();
+    const createdAt = now();
     const token = serializePeerToken({
       type: "goguma-peer-invite",
       kind: "answer",
@@ -1024,17 +1051,19 @@ export const createPeerSignalingController = (
       sessionId: currentState.sessionId,
       roomId: undefined,
       metadata: undefined,
-      createdAt: now(),
+      createdAt,
     });
 
     queueHandshake(
       { kind: "answer", token },
       () => Boolean(currentState.connected),
+      createdAt,
     );
 
     commitState({
       localAnswer: "[automatic peer handshake]",
       localAnswerToken: token,
+      localAnswerCreatedAt: createdAt,
       awaitingOffer: false,
       answerExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -1383,6 +1412,8 @@ export const createPeerSignalingController = (
         commitState({
           remoteInvite: token.trim(),
           awaitingOffer: false,
+          localAnswerToken: null,
+          localAnswerCreatedAt: null,
           error: null,
           lastUpdated: now(),
         });
@@ -1403,6 +1434,7 @@ export const createPeerSignalingController = (
           remoteAnswer: token.trim(),
           awaitingAnswer: false,
           localOfferToken: null,
+          localOfferCreatedAt: null,
           error: null,
           answerExpiresAt: payload.createdAt + INVITE_TTL_MS,
           lastUpdated: now(),
@@ -1454,6 +1486,7 @@ export const createPeerSignalingController = (
       commitState({
         localInvite: null,
         localOfferToken: null,
+        localOfferCreatedAt: null,
         awaitingAnswer: false,
         inviteExpiresAt: null,
         connected: false,
@@ -1465,6 +1498,7 @@ export const createPeerSignalingController = (
       commitState({
         localAnswer: null,
         localAnswerToken: null,
+        localAnswerCreatedAt: null,
         answerExpiresAt: null,
         error: "Peer answer expired. Re-apply the remote invite to continue.",
         lastUpdated: now(),
