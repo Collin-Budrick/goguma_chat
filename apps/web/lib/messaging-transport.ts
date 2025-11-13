@@ -615,12 +615,23 @@ export const createPeerSignalingController = (
 
   let pendingNegotiation: PeerNegotiationEntry | null = null;
 
-  const HANDSHAKE_RETRY_LIMIT = 5;
-  const HANDSHAKE_RETRY_INTERVAL_MS = 5_000;
+  const DEFAULT_HANDSHAKE_RETRY_INTERVAL_MS = 5_000;
+
+  const getHandshakeRetryInterval = () => {
+    if (typeof globalThis === "object" && globalThis) {
+      const override = (globalThis as {
+        __PEER_HANDSHAKE_RETRY_INTERVAL__?: unknown;
+      }).__PEER_HANDSHAKE_RETRY_INTERVAL__;
+      if (typeof override === "number" && Number.isFinite(override) && override > 0) {
+        return override;
+      }
+    }
+    return DEFAULT_HANDSHAKE_RETRY_INTERVAL_MS;
+  };
 
   type HandshakeEntry = {
     handshake: PeerHandshakeFrame["handshake"];
-    attempts: number;
+    createdAt: number;
     timeoutId: ReturnType<typeof setTimeout> | null;
     stop: () => boolean;
   };
@@ -646,26 +657,44 @@ export const createPeerSignalingController = (
   const isAbortError = (error: Error) =>
     error.name === "AbortError" || error.message === "The operation was aborted.";
 
+  const getHandshakeExpiration = (entry: HandshakeEntry) => {
+    const ttlDeadline = entry.createdAt + INVITE_TTL_MS;
+    const stateDeadline =
+      entry.handshake.kind === "offer"
+        ? currentState.inviteExpiresAt
+        : currentState.answerExpiresAt;
+    if (typeof stateDeadline === "number") {
+      return Math.min(stateDeadline, ttlDeadline);
+    }
+    return ttlDeadline;
+  };
+
+  const hasHandshakeExpired = (entry: HandshakeEntry) => now() >= getHandshakeExpiration(entry);
+
   const attemptHandshakeSend = async (key: string) => {
     const entry = pendingHandshakes.get(key);
     if (!entry) return;
     entry.timeoutId = null;
 
-    if (entry.stop()) {
+    if (entry.stop() || hasHandshakeExpired(entry)) {
       clearHandshakeEntry(key);
       return;
     }
 
     const transport = activeTransport;
     if (!transport) {
+      if (entry.stop() || hasHandshakeExpired(entry)) {
+        clearHandshakeEntry(key);
+        return;
+      }
       entry.timeoutId = setTimeout(() => {
         void attemptHandshakeSend(key);
-      }, HANDSHAKE_RETRY_INTERVAL_MS);
+      }, getHandshakeRetryInterval());
       return;
     }
 
     const scheduleRetry = (delay: number) => {
-      if (entry.stop()) {
+      if (entry.stop() || hasHandshakeExpired(entry)) {
         clearHandshakeEntry(key);
         return;
       }
@@ -697,19 +726,12 @@ export const createPeerSignalingController = (
       console.error("Failed to send peer handshake frame", normalized);
     }
 
-    entry.attempts += 1;
-
-    if (entry.stop() || entry.attempts >= HANDSHAKE_RETRY_LIMIT) {
-      clearHandshakeEntry(key);
-      return;
-    }
-
-    scheduleRetry(HANDSHAKE_RETRY_INTERVAL_MS);
+    scheduleRetry(getHandshakeRetryInterval());
   };
 
   const evaluateHandshakeQueue = () => {
     pendingHandshakes.forEach((entry, key) => {
-      if (entry.stop()) {
+      if (entry.stop() || hasHandshakeExpired(entry)) {
         clearHandshakeEntry(key);
         return;
       }
@@ -750,10 +772,20 @@ export const createPeerSignalingController = (
       return;
     }
 
+    let createdAt = now();
+    try {
+      const payload = deserializePeerToken(handshake.token);
+      if (typeof payload.createdAt === "number") {
+        createdAt = payload.createdAt;
+      }
+    } catch {
+      // Ignore malformed tokens and fall back to the current timestamp
+    }
+
     pendingHandshakes.set(key, {
       handshake,
       stop,
-      attempts: 0,
+      createdAt,
       timeoutId: setTimeout(() => {
         void attemptHandshakeSend(key);
       }, 0),

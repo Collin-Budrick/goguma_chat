@@ -659,4 +659,125 @@ describe("initializeMessagingTransport", () => {
     },
     10_000,
   );
+
+  it(
+    "keeps sending handshake frames until the peer responds even after many retries",
+    async () => {
+      const globalScope = globalThis as {
+        __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+      };
+      const previousRetryInterval = globalScope.__PEER_HANDSHAKE_RETRY_INTERVAL__;
+      globalScope.__PEER_HANDSHAKE_RETRY_INTERVAL__ = 10;
+
+      const signalingController = createPeerSignalingController();
+      signalingController.setRole("host");
+
+      const manualDependencies = signalingController.createDependencies();
+      const decodeBase64 = (value: string) => Buffer.from(value, "base64").toString("utf-8");
+      const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+
+      const ignoredHandshakes = 5;
+      const handshakeFrames: PeerHandshakeFrame["handshake"][] = [];
+      let handshakeCount = 0;
+      let offerToken: string | null = null;
+      let answered = false;
+
+      const transport: TransportHandle = {
+        mode: "manual",
+        state: "connecting",
+        ready: Promise.resolve(),
+        async connect() {},
+        async disconnect() {},
+        async send(payload) {
+          if (typeof payload === "string") {
+            try {
+              const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+              if (parsed?.type === "handshake") {
+                handshakeFrames.push(parsed.handshake);
+                handshakeCount += 1;
+                if (!offerToken && parsed.handshake.kind === "offer") {
+                  offerToken = parsed.handshake.token;
+                }
+                if (handshakeCount > ignoredHandshakes) {
+                  await respondWithAnswer();
+                }
+                return;
+              }
+            } catch {
+              // Ignore parse failures
+            }
+          }
+        },
+        onMessage() {
+          return () => undefined;
+        },
+        onStateChange() {
+          return () => undefined;
+        },
+        onError() {
+          return () => undefined;
+        },
+      };
+
+      const respondWithAnswer = async () => {
+        if (answered || !offerToken) return;
+        answered = true;
+        transport.state = "connected";
+        const offerPayload = JSON.parse(decodeBase64(offerToken));
+        const answerToken = encodeBase64(
+          JSON.stringify({
+            type: "goguma-peer-invite",
+            kind: "answer",
+            description: { type: "answer", sdp: "slow-answer" },
+            sessionId: offerPayload.sessionId,
+            createdAt: Date.now(),
+          }),
+        );
+        await signalingController.setRemoteAnswer(answerToken);
+      };
+
+      const negotiationPromise = manualDependencies.signaling?.negotiate(
+        { type: "offer", sdp: "slow-offer" },
+        { metadata: { peerSessionId: "slow-retry-session" } },
+      );
+      if (!negotiationPromise) {
+        throw new Error("Manual signaling was not initialized");
+      }
+
+      try {
+        signalingController.setActiveTransport(transport);
+
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Handshake retries did not complete"));
+          }, 2_000);
+
+          const verify = () => {
+            if (handshakeCount > ignoredHandshakes && answered) {
+              clearTimeout(timeout);
+              resolve();
+              return;
+            }
+            setTimeout(verify, 10);
+          };
+
+          verify();
+        });
+
+        await negotiationPromise;
+
+        expect(handshakeCount).toBeGreaterThan(ignoredHandshakes);
+        expect(handshakeFrames.length).toBeGreaterThan(ignoredHandshakes);
+        expect(answered).toBe(true);
+      } finally {
+        signalingController.setActiveTransport(null);
+        if (previousRetryInterval === undefined) {
+          delete globalScope.__PEER_HANDSHAKE_RETRY_INTERVAL__;
+        } else {
+          globalScope.__PEER_HANDSHAKE_RETRY_INTERVAL__ = previousRetryInterval;
+        }
+      }
+    },
+    5_000,
+  );
 });
