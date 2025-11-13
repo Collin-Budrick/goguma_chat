@@ -643,6 +643,9 @@ export const createPeerSignalingController = (
     return message.toLowerCase().includes("not connected");
   };
 
+  const isAbortError = (error: Error) =>
+    error.name === "AbortError" || error.message === "The operation was aborted.";
+
   const attemptHandshakeSend = async (key: string) => {
     const entry = pendingHandshakes.get(key);
     if (!entry) return;
@@ -678,13 +681,20 @@ export const createPeerSignalingController = (
       };
       await transport.send(JSON.stringify(frame));
     } catch (error) {
-      const initializingState =
-        transport.state === "connecting" || transport.state === "recovering";
-      if (initializingState || isBootstrappingSendError(error)) {
+      const normalized = normalizeError(error);
+      if (isAbortError(normalized)) {
         scheduleRetry(0);
         return;
       }
-      console.error("Failed to send peer handshake frame", error);
+
+      const initializingState =
+        transport.state === "connecting" || transport.state === "recovering";
+      if (initializingState || isBootstrappingSendError(normalized)) {
+        scheduleRetry(0);
+        return;
+      }
+
+      console.error("Failed to send peer handshake frame", normalized);
     }
 
     entry.attempts += 1;
