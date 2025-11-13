@@ -480,6 +480,8 @@ type PersistentPeerState = {
   localAnswer: string | null;
   remoteInvite: string | null;
   remoteAnswer: string | null;
+  awaitingOffer: boolean;
+  awaitingAnswer: boolean;
   connected: boolean;
   inviteExpiresAt: number | null;
   answerExpiresAt: number | null;
@@ -520,8 +522,11 @@ const snapshotFromPersistentState = (
   localAnswer: persistent?.localAnswer ?? null,
   remoteInvite: persistent?.remoteInvite ?? null,
   remoteAnswer: persistent?.remoteAnswer ?? null,
-  awaitingOffer: persistent?.role === "guest" && !persistent?.remoteInvite,
-  awaitingAnswer: false,
+  awaitingOffer:
+    typeof persistent?.awaitingOffer === "boolean"
+      ? persistent.awaitingOffer
+      : persistent?.role === "guest" && !persistent?.remoteInvite,
+  awaitingAnswer: persistent?.awaitingAnswer ?? false,
   connected: persistent?.connected ?? false,
   error: null,
   inviteExpiresAt: persistent?.inviteExpiresAt ?? null,
@@ -560,13 +565,24 @@ const loadPersistentPeerState = (storageKey: string): PersistentPeerState | null
     if (!stored) return null;
     const parsed = JSON.parse(stored) as PersistentPeerState;
     if (!parsed || typeof parsed !== "object") return null;
+    const role = parsed.role ?? null;
+    const remoteInvite = parsed.remoteInvite ?? null;
+    const awaitingOffer =
+      typeof parsed.awaitingOffer === "boolean"
+        ? parsed.awaitingOffer
+        : role === "guest" && !remoteInvite;
+    const awaitingAnswer =
+      typeof parsed.awaitingAnswer === "boolean" ? parsed.awaitingAnswer : false;
+
     return {
-      role: parsed.role ?? null,
+      role,
       sessionId: parsed.sessionId ?? createSessionId(),
       localInvite: parsed.localInvite ?? null,
       localAnswer: parsed.localAnswer ?? null,
-      remoteInvite: parsed.remoteInvite ?? null,
+      remoteInvite,
       remoteAnswer: parsed.remoteAnswer ?? null,
+      awaitingOffer,
+      awaitingAnswer,
       connected: Boolean(parsed.connected),
       inviteExpiresAt: parsed.inviteExpiresAt ?? null,
       answerExpiresAt: parsed.answerExpiresAt ?? null,
@@ -811,6 +827,8 @@ export const createPeerSignalingController = (
       localAnswer: currentState.localAnswer,
       remoteInvite: currentState.remoteInvite,
       remoteAnswer: currentState.remoteAnswer,
+      awaitingOffer: currentState.awaitingOffer,
+      awaitingAnswer: currentState.awaitingAnswer,
       connected: currentState.connected,
       inviteExpiresAt: currentState.inviteExpiresAt,
       answerExpiresAt: currentState.answerExpiresAt,
