@@ -839,6 +839,60 @@ export const createPeerSignalingController = (
     notify();
   };
 
+  const buildHandshakeResetState = (
+    role: PeerSignalingRole | null = currentState.role,
+  ): Pick<
+    PeerSignalingSnapshot,
+    | "localInvite"
+    | "localAnswer"
+    | "remoteInvite"
+    | "remoteAnswer"
+    | "awaitingOffer"
+    | "awaitingAnswer"
+    | "inviteExpiresAt"
+    | "answerExpiresAt"
+  > => ({
+    localInvite: null,
+    localAnswer: null,
+    remoteInvite: null,
+    remoteAnswer: null,
+    awaitingOffer: role === "guest",
+    awaitingAnswer: false,
+    inviteExpiresAt: null,
+    answerExpiresAt: null,
+  });
+
+  const clearAwaitingAnswerState = () => {
+    if (
+      currentState.remoteAnswer ||
+      currentState.awaitingAnswer ||
+      currentState.answerExpiresAt
+    ) {
+      commitState({
+        remoteAnswer: null,
+        awaitingAnswer: false,
+        answerExpiresAt: null,
+        lastUpdated: now(),
+      });
+    }
+  };
+
+  const clearAwaitingOfferState = () => {
+    if (
+      currentState.remoteInvite ||
+      currentState.awaitingOffer ||
+      currentState.inviteExpiresAt
+    ) {
+      const awaitingOffer = currentState.role === "guest";
+      commitState({
+        remoteInvite: null,
+        awaitingOffer,
+        inviteExpiresAt: null,
+        lastUpdated: now(),
+      });
+    }
+  };
+
   const hydratePersistentState = () => {
     if (hasHydratedPersistentState) {
       return;
@@ -876,6 +930,7 @@ export const createPeerSignalingController = (
     description: RTCSessionDescriptionInit,
     connectOptions?: TransportConnectOptions,
   ) => {
+    clearAwaitingAnswerState();
     ensureSession();
     const token = serializePeerToken({
       type: "goguma-peer-invite",
@@ -904,6 +959,7 @@ export const createPeerSignalingController = (
   };
 
   const handleAnswerGenerated = (description: RTCSessionDescriptionInit) => {
+    clearAwaitingOfferState();
     ensureSession();
     const token = serializePeerToken({
       type: "goguma-peer-invite",
@@ -1255,14 +1311,7 @@ export const createPeerSignalingController = (
       commitState({
         role,
         sessionId: createSessionId(),
-        localInvite: null,
-        localAnswer: null,
-        remoteInvite: null,
-        remoteAnswer: null,
-        awaitingOffer: role === "guest",
-        awaitingAnswer: false,
-        inviteExpiresAt: null,
-        answerExpiresAt: null,
+        ...buildHandshakeResetState(role),
         connected: false,
         error: null,
         lastUpdated: now(),
@@ -1319,14 +1368,7 @@ export const createPeerSignalingController = (
       resetNegotiation();
       clearPendingHandshakes();
       commitState({
-        localInvite: null,
-        localAnswer: null,
-        remoteInvite: null,
-        remoteAnswer: null,
-        awaitingOffer: currentState.role === "guest",
-        awaitingAnswer: false,
-        inviteExpiresAt: null,
-        answerExpiresAt: null,
+        ...buildHandshakeResetState(),
         connected: false,
         error: null,
         lastUpdated: now(),
@@ -1336,7 +1378,11 @@ export const createPeerSignalingController = (
       commitState({ connected: true, error: null, lastUpdated: now() });
     },
     markDisconnected() {
-      commitState({ connected: false, lastUpdated: now() });
+      commitState({
+        ...buildHandshakeResetState(),
+        connected: false,
+        lastUpdated: now(),
+      });
     },
     shouldInitialize() {
       return currentState.role !== null;

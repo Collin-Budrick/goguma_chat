@@ -781,6 +781,121 @@ describe("initializeMessagingTransport", () => {
     5_000,
   );
 
+  it("clears stale remote answers when reconnecting before negotiating again", async () => {
+    const signalingController = createPeerSignalingController();
+    signalingController.setRole("host");
+    const manualDependencies = signalingController.createDependencies();
+
+    const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+    const decodeBase64 = (value: string) => Buffer.from(value, "base64").toString("utf-8");
+
+    const initialSession = signalingController.getSnapshot().sessionId;
+    const staleAnswerToken = encodeBase64(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "answer",
+        description: { type: "answer", sdp: "stale-answer" },
+        sessionId: initialSession,
+        createdAt: Date.now() - 1_000,
+      }),
+    );
+
+    await signalingController.setRemoteAnswer(staleAnswerToken);
+    expect(signalingController.getSnapshot().remoteAnswer).toBe(staleAnswerToken);
+
+    signalingController.markDisconnected();
+    const disconnectedSnapshot = signalingController.getSnapshot();
+    expect(disconnectedSnapshot.remoteAnswer).toBeNull();
+    expect(disconnectedSnapshot.awaitingAnswer).toBe(false);
+
+    const handshakeFrames: PeerHandshakeFrame["handshake"][] = [];
+    const transport: TransportHandle = {
+      mode: "progressive" as MessagingMode,
+      state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              handshakeFrames.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+    signalingController.setActiveTransport(transport);
+
+    const negotiationPromise = manualDependencies.signaling?.negotiate(
+      { type: "offer", sdp: "reconnect-offer" },
+      { metadata: { peerSessionId: "reconnect-session" } },
+    );
+    if (!negotiationPromise) {
+      throw new Error("Manual signaling was not initialized");
+    }
+
+    let resolved = false;
+    negotiationPromise
+      .then(() => {
+        resolved = true;
+      })
+      .catch(() => undefined);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Handshake frame was not sent"));
+      }, 500);
+
+      const verify = () => {
+        if (handshakeFrames.length > 0) {
+          clearTimeout(timeout);
+          resolve();
+          return;
+        }
+        setTimeout(verify, 10);
+      };
+
+      verify();
+    });
+
+    expect(handshakeFrames.length).toBeGreaterThan(0);
+    expect(resolved).toBe(false);
+    expect(signalingController.getSnapshot().remoteAnswer).toBeNull();
+
+    const offerPayload = JSON.parse(decodeBase64(handshakeFrames[0].token));
+    const freshAnswerToken = encodeBase64(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "answer",
+        description: { type: "answer", sdp: "fresh-answer" },
+        sessionId: offerPayload.sessionId,
+        createdAt: Date.now(),
+      }),
+    );
+
+    await signalingController.setRemoteAnswer(freshAnswerToken);
+
+    const negotiatedAnswer = await negotiationPromise;
+    expect(negotiatedAnswer.sdp).toBe("fresh-answer");
+
+    signalingController.setActiveTransport(null);
+  });
+
   it("restores awaitingOffer state from persisted peer signaling data", () => {
     const storageKey = "peer-signaling-state-awaiting-offer";
     const controller = createPeerSignalingController(storageKey);
