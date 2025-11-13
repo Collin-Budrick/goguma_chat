@@ -780,4 +780,39 @@ describe("initializeMessagingTransport", () => {
     },
     5_000,
   );
+
+  it("restores awaitingOffer state from persisted peer signaling data", () => {
+    const storageKey = "peer-signaling-state-awaiting-offer";
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("guest");
+
+    expect(controller.getSnapshot().awaitingOffer).toBe(true);
+
+    const restored = createPeerSignalingController(storageKey);
+    restored.hydrateFromStorage();
+
+    const snapshot = restored.getSnapshot();
+    expect(snapshot.awaitingOffer).toBe(true);
+    expect(snapshot.role).toBe("guest");
+  });
+
+  it("restores awaitingAnswer state from persisted peer signaling data", () => {
+    const storageKey = "peer-signaling-state-awaiting-answer";
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("host");
+
+    const dependencies = controller.createDependencies();
+    dependencies.signaling
+      ?.negotiate({ type: "offer", sdp: "dummy-offer" })
+      .catch(() => undefined);
+
+    expect(controller.getSnapshot().awaitingAnswer).toBe(true);
+
+    const restored = createPeerSignalingController(storageKey);
+    restored.hydrateFromStorage();
+
+    const snapshot = restored.getSnapshot();
+    expect(snapshot.awaitingAnswer).toBe(true);
+    expect(snapshot.role).toBe("host");
+  });
 });
