@@ -432,6 +432,8 @@ export type PeerSignalingSnapshot = {
   sessionId: string;
   localInvite: string | null;
   localAnswer: string | null;
+  localOfferToken: string | null;
+  localAnswerToken: string | null;
   remoteInvite: string | null;
   remoteAnswer: string | null;
   awaitingOffer: boolean;
@@ -478,6 +480,8 @@ type PersistentPeerState = {
   sessionId: string;
   localInvite: string | null;
   localAnswer: string | null;
+  localOfferToken: string | null;
+  localAnswerToken: string | null;
   remoteInvite: string | null;
   remoteAnswer: string | null;
   awaitingOffer: boolean;
@@ -520,6 +524,8 @@ const snapshotFromPersistentState = (
   sessionId: persistent?.sessionId ?? createSessionId(),
   localInvite: persistent?.localInvite ?? null,
   localAnswer: persistent?.localAnswer ?? null,
+  localOfferToken: persistent?.localOfferToken ?? null,
+  localAnswerToken: persistent?.localAnswerToken ?? null,
   remoteInvite: persistent?.remoteInvite ?? null,
   remoteAnswer: persistent?.remoteAnswer ?? null,
   awaitingOffer:
@@ -579,6 +585,8 @@ const loadPersistentPeerState = (storageKey: string): PersistentPeerState | null
       sessionId: parsed.sessionId ?? createSessionId(),
       localInvite: parsed.localInvite ?? null,
       localAnswer: parsed.localAnswer ?? null,
+      localOfferToken: parsed.localOfferToken ?? null,
+      localAnswerToken: parsed.localAnswerToken ?? null,
       remoteInvite,
       remoteAnswer: parsed.remoteAnswer ?? null,
       awaitingOffer,
@@ -808,6 +816,45 @@ export const createPeerSignalingController = (
     });
   };
 
+  type HandshakeReplayEntry = {
+    handshake: PeerHandshakeFrame["handshake"];
+    stop: () => boolean;
+  };
+
+  let pendingRehydratedHandshakes: HandshakeReplayEntry[] | null = null;
+
+  const queueRehydratedHandshakes = () => {
+    if (!pendingRehydratedHandshakes?.length) {
+      pendingRehydratedHandshakes = null;
+      return;
+    }
+
+    pendingRehydratedHandshakes.forEach((entry) => {
+      queueHandshake(entry.handshake, entry.stop);
+    });
+    pendingRehydratedHandshakes = null;
+  };
+
+  const prepareHandshakeRehydrate = (snapshot: PeerSignalingSnapshot) => {
+    const entries: HandshakeReplayEntry[] = [];
+
+    if (snapshot.localOfferToken && snapshot.awaitingAnswer && !snapshot.remoteAnswer) {
+      entries.push({
+        handshake: { kind: "offer", token: snapshot.localOfferToken },
+        stop: () => !currentState.awaitingAnswer || Boolean(currentState.remoteAnswer),
+      });
+    }
+
+    if (snapshot.localAnswerToken && !snapshot.connected) {
+      entries.push({
+        handshake: { kind: "answer", token: snapshot.localAnswerToken },
+        stop: () => Boolean(currentState.connected),
+      });
+    }
+
+    pendingRehydratedHandshakes = entries.length ? entries : null;
+  };
+
   const notify = () => {
     listeners.forEach((listener) => {
       try {
@@ -820,11 +867,14 @@ export const createPeerSignalingController = (
 
   const commitState = (update: Partial<PeerSignalingSnapshot>) => {
     currentState = { ...currentState, ...update };
+    queueRehydratedHandshakes();
     const nextPersistent: PersistentPeerState = {
       role: currentState.role,
       sessionId: currentState.sessionId,
       localInvite: currentState.localInvite,
       localAnswer: currentState.localAnswer,
+      localOfferToken: currentState.localOfferToken,
+      localAnswerToken: currentState.localAnswerToken,
       remoteInvite: currentState.remoteInvite,
       remoteAnswer: currentState.remoteAnswer,
       awaitingOffer: currentState.awaitingOffer,
@@ -845,6 +895,8 @@ export const createPeerSignalingController = (
     PeerSignalingSnapshot,
     | "localInvite"
     | "localAnswer"
+    | "localOfferToken"
+    | "localAnswerToken"
     | "remoteInvite"
     | "remoteAnswer"
     | "awaitingOffer"
@@ -854,6 +906,8 @@ export const createPeerSignalingController = (
   > => ({
     localInvite: null,
     localAnswer: null,
+    localOfferToken: null,
+    localAnswerToken: null,
     remoteInvite: null,
     remoteAnswer: null,
     awaitingOffer: role === "guest",
@@ -905,6 +959,7 @@ export const createPeerSignalingController = (
     }
 
     const hydratedSnapshot = snapshotFromPersistentState(pendingPersistentState);
+    prepareHandshakeRehydrate(hydratedSnapshot);
     pendingPersistentState = null;
     commitState(hydratedSnapshot);
   };
@@ -950,6 +1005,7 @@ export const createPeerSignalingController = (
 
     commitState({
       localInvite: "[automatic peer handshake]",
+      localOfferToken: token,
       awaitingAnswer: true,
       inviteExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -978,6 +1034,7 @@ export const createPeerSignalingController = (
 
     commitState({
       localAnswer: "[automatic peer handshake]",
+      localAnswerToken: token,
       awaitingOffer: false,
       answerExpiresAt: now() + INVITE_TTL_MS,
       lastUpdated: now(),
@@ -1345,6 +1402,7 @@ export const createPeerSignalingController = (
         commitState({
           remoteAnswer: token.trim(),
           awaitingAnswer: false,
+          localOfferToken: null,
           error: null,
           answerExpiresAt: payload.createdAt + INVITE_TTL_MS,
           lastUpdated: now(),
@@ -1395,6 +1453,7 @@ export const createPeerSignalingController = (
       }
       commitState({
         localInvite: null,
+        localOfferToken: null,
         awaitingAnswer: false,
         inviteExpiresAt: null,
         connected: false,
@@ -1405,6 +1464,7 @@ export const createPeerSignalingController = (
     expireLocalAnswer() {
       commitState({
         localAnswer: null,
+        localAnswerToken: null,
         answerExpiresAt: null,
         error: "Peer answer expired. Re-apply the remote invite to continue.",
         lastUpdated: now(),
