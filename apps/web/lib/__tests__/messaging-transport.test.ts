@@ -1055,6 +1055,126 @@ describe("initializeMessagingTransport", () => {
     }
   });
 
+  it("continues resending persisted offers after hydration until a remote answer arrives", async () => {
+    const storageKey = `peer-signaling-state:offer-retry-${Date.now()}`;
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("host");
+
+    const dependencies = controller.createDependencies();
+    dependencies.signaling
+      ?.negotiate(
+        { type: "offer", sdp: "persisted-offer" },
+        { metadata: { peerSessionId: "persisted-offer-session" } },
+      )
+      .catch(() => undefined);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("offer not persisted")), 500);
+      const verify = () => {
+        if (controller.getSnapshot().localOfferToken) {
+          clearTimeout(timeout);
+          resolve();
+          return;
+        }
+        setTimeout(verify, 10);
+      };
+      verify();
+    });
+
+    controller.setActiveTransport(null);
+
+    const previousInterval = (globalThis as {
+      __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+    }).__PEER_HANDSHAKE_RETRY_INTERVAL__;
+    (globalThis as {
+      __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+    }).__PEER_HANDSHAKE_RETRY_INTERVAL__ = 10;
+
+    const decodeBase64 = (value: string) => Buffer.from(value, "base64").toString("utf-8");
+    const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+
+    const restoredController = createPeerSignalingController(storageKey);
+    const resentHandshakes: PeerHandshakeFrame["handshake"][] = [];
+    const restoredTransport: TransportHandle = {
+      mode: "manual" as MessagingMode,
+      state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              resentHandshakes.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+    const teardown = () => {
+      (globalThis.window.localStorage as { storage: Map<string, string> }).storage.delete(storageKey);
+      (globalThis as {
+        __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+      }).__PEER_HANDSHAKE_RETRY_INTERVAL__ = previousInterval;
+    };
+
+    try {
+      restoredController.setActiveTransport(restoredTransport);
+      restoredController.hydrateFromStorage();
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("offer did not retry")), 500);
+        const verify = () => {
+          if (resentHandshakes.length >= 2) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 5);
+        };
+        verify();
+      });
+
+      const lastOffer = resentHandshakes[resentHandshakes.length - 1]!;
+      const offerPayload = JSON.parse(decodeBase64(lastOffer.token)) as {
+        sessionId: string;
+      };
+      const answerToken = encodeBase64(
+        JSON.stringify({
+          type: "goguma-peer-invite",
+          kind: "answer",
+          description: { type: "answer", sdp: "persisted-answer" },
+          sessionId: offerPayload.sessionId,
+          createdAt: Date.now(),
+        }),
+      );
+
+      await restoredController.setRemoteAnswer(answerToken);
+
+      const countAfterAnswer = resentHandshakes.length;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(resentHandshakes.length).toBe(countAfterAnswer);
+
+      restoredController.setActiveTransport(null);
+    } finally {
+      teardown();
+    }
+  });
+
   it("resends persisted answer handshakes after hydration", async () => {
     const storageKey = `peer-signaling-state:guest-${Date.now()}`;
     const controller = createPeerSignalingController(storageKey);
@@ -1247,6 +1367,185 @@ describe("initializeMessagingTransport", () => {
         delete (globalThis as Record<string, unknown>).RTCPeerConnection;
       }
       (globalThis.window.localStorage as { storage: Map<string, string> }).storage.delete(storageKey);
+    }
+  });
+
+  it("continues resending persisted answers after hydration until the connection is established", async () => {
+    const storageKey = `peer-signaling-state:answer-retry-${Date.now()}`;
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("guest");
+
+    const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+    const offerToken = encodeBase64(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "offer",
+        description: { type: "offer", sdp: "persisted-offer" },
+        sessionId: "persisted-offer-session",
+        createdAt: Date.now(),
+      }),
+    );
+
+    await controller.setRemoteInvite(offerToken);
+
+    const manualDependencies = controller.createDependencies();
+
+    class MockRTCDataChannel {
+      readyState: "open" = "open";
+      binaryType = "arraybuffer";
+      #listeners = new Map<string, Set<(event: Event) => void>>();
+
+      addEventListener(type: string, listener: (event: Event) => void) {
+        if (!this.#listeners.has(type)) {
+          this.#listeners.set(type, new Set());
+        }
+        this.#listeners.get(type)!.add(listener);
+        if (type === "open") {
+          setTimeout(() => listener({ type: "open" } as Event), 0);
+        }
+      }
+
+      removeEventListener(type: string, listener: (event: Event) => void) {
+        this.#listeners.get(type)?.delete(listener);
+      }
+
+      send() {}
+
+      close() {
+        this.#listeners.get("close")?.forEach((handler) => handler({ type: "close" } as Event));
+      }
+    }
+
+    class MockRTCPeerConnection {
+      ondatachannel: ((event: { channel: MockRTCDataChannel }) => void) | null = null;
+      #channel = new MockRTCDataChannel();
+
+      async setRemoteDescription() {
+        setTimeout(() => {
+          this.ondatachannel?.({ channel: this.#channel });
+        }, 0);
+      }
+
+      async createAnswer() {
+        return { type: "answer", sdp: "persisted-answer" } as RTCSessionDescriptionInit;
+      }
+
+      async setLocalDescription() {}
+
+      close() {}
+    }
+
+    const previousRTC = (globalThis as { RTCPeerConnection?: unknown }).RTCPeerConnection;
+    (globalThis as { RTCPeerConnection: unknown }).RTCPeerConnection = MockRTCPeerConnection;
+
+    try {
+      const connectionPromise = manualDependencies.createWebRTC?.({
+        signal: new AbortController().signal,
+        emitMessage() {},
+        emitState() {},
+        emitError() {},
+        options: {},
+      });
+
+      if (!connectionPromise) {
+        throw new Error("Manual WebRTC dependencies were not created");
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("answer not persisted")), 500);
+        const verify = () => {
+          if (controller.getSnapshot().localAnswerToken) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 10);
+        };
+        verify();
+      });
+
+      const connection = await connectionPromise;
+      await connection.close();
+    } finally {
+      if (previousRTC) {
+        (globalThis as { RTCPeerConnection: unknown }).RTCPeerConnection = previousRTC;
+      } else {
+        delete (globalThis as Record<string, unknown>).RTCPeerConnection;
+      }
+    }
+
+    const previousInterval = (globalThis as {
+      __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+    }).__PEER_HANDSHAKE_RETRY_INTERVAL__;
+    (globalThis as {
+      __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+    }).__PEER_HANDSHAKE_RETRY_INTERVAL__ = 10;
+
+    const restoredController = createPeerSignalingController(storageKey);
+    const resentHandshakes: PeerHandshakeFrame["handshake"][] = [];
+    const restoredTransport: TransportHandle = {
+      mode: "manual" as MessagingMode,
+      state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              resentHandshakes.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+    const teardown = () => {
+      (globalThis.window.localStorage as { storage: Map<string, string> }).storage.delete(storageKey);
+      (globalThis as {
+        __PEER_HANDSHAKE_RETRY_INTERVAL__?: number;
+      }).__PEER_HANDSHAKE_RETRY_INTERVAL__ = previousInterval;
+    };
+
+    try {
+      restoredController.setActiveTransport(restoredTransport);
+      restoredController.hydrateFromStorage();
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("answer did not retry")), 500);
+        const verify = () => {
+          if (resentHandshakes.length >= 2) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 5);
+        };
+        verify();
+      });
+
+      restoredController.markConnected();
+
+      const countAfterConnected = resentHandshakes.length;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(resentHandshakes.length).toBe(countAfterConnected);
+
+      restoredController.setActiveTransport(null);
+    } finally {
+      teardown();
     }
   });
 });
