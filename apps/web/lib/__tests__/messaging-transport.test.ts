@@ -930,4 +930,323 @@ describe("initializeMessagingTransport", () => {
     expect(snapshot.awaitingAnswer).toBe(true);
     expect(snapshot.role).toBe("host");
   });
+
+  it("resends persisted offer handshakes after hydration", async () => {
+    const storageKey = `peer-signaling-state:host-${Date.now()}`;
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("host");
+    const manualDependencies = controller.createDependencies();
+
+    const capturedHandshakes: PeerHandshakeFrame["handshake"][] = [];
+    const transport: TransportHandle = {
+      mode: "manual" as MessagingMode,
+      state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              capturedHandshakes.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+    controller.setActiveTransport(transport);
+    manualDependencies.signaling
+      ?.negotiate(
+        { type: "offer", sdp: "persisted-offer" },
+        { metadata: { peerSessionId: "persisted-offer-session" } },
+      )
+      .catch(() => undefined);
+
+    const teardown = () => {
+      (globalThis.window.localStorage as { storage: Map<string, string> }).storage.delete(storageKey);
+    };
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("handshake not captured")), 500);
+        const verify = () => {
+          if (capturedHandshakes.length > 0) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 10);
+        };
+        verify();
+      });
+
+      const originalHandshake = capturedHandshakes[0];
+      expect(originalHandshake.kind).toBe("offer");
+
+      controller.setActiveTransport(null);
+
+      const restoredController = createPeerSignalingController(storageKey);
+      const resentHandshakes: PeerHandshakeFrame["handshake"][] = [];
+      const restoredTransport: TransportHandle = {
+        mode: "manual" as MessagingMode,
+        state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              resentHandshakes.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+      restoredController.setActiveTransport(restoredTransport);
+      restoredController.hydrateFromStorage();
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("handshake not resent")), 500);
+        const verify = () => {
+          if (resentHandshakes.length > 0) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 10);
+        };
+        verify();
+      });
+
+      expect(resentHandshakes[0]?.token).toBe(originalHandshake.token);
+
+      restoredController.setActiveTransport(null);
+    } finally {
+      teardown();
+    }
+  });
+
+  it("resends persisted answer handshakes after hydration", async () => {
+    const storageKey = `peer-signaling-state:guest-${Date.now()}`;
+    const controller = createPeerSignalingController(storageKey);
+    controller.setRole("guest");
+
+    const encodeBase64 = (value: string) => Buffer.from(value, "utf-8").toString("base64");
+    const offerToken = encodeBase64(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "offer",
+        description: { type: "offer", sdp: "persisted-offer" },
+        sessionId: "persisted-offer-session",
+        createdAt: Date.now(),
+      }),
+    );
+
+    await controller.setRemoteInvite(offerToken);
+
+    const capturedHandshakes: PeerHandshakeFrame["handshake"][] = [];
+    const transport: TransportHandle = {
+      mode: "manual" as MessagingMode,
+      state: "connecting",
+      ready: Promise.resolve(),
+      async connect() {},
+      async disconnect() {},
+      async send(payload) {
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+            if (parsed?.type === "handshake") {
+              capturedHandshakes.push(parsed.handshake);
+              return;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      },
+      onMessage() {
+        return () => undefined;
+      },
+      onStateChange() {
+        return () => undefined;
+      },
+      onError() {
+        return () => undefined;
+      },
+    };
+
+    controller.setActiveTransport(transport);
+    const manualDependencies = controller.createDependencies();
+
+    class MockRTCDataChannel {
+      readyState: "open" = "open";
+      binaryType = "arraybuffer";
+      #listeners = new Map<string, Set<(event: Event) => void>>();
+
+      addEventListener(type: string, listener: (event: Event) => void) {
+        if (!this.#listeners.has(type)) {
+          this.#listeners.set(type, new Set());
+        }
+        this.#listeners.get(type)!.add(listener);
+        if (type === "open") {
+          setTimeout(() => listener({ type: "open" } as Event), 0);
+        }
+      }
+
+      removeEventListener(type: string, listener: (event: Event) => void) {
+        this.#listeners.get(type)?.delete(listener);
+      }
+
+      send() {}
+
+      close() {
+        this.#listeners.get("close")?.forEach((handler) => handler({ type: "close" } as Event));
+      }
+    }
+
+    class MockRTCPeerConnection {
+      ondatachannel: ((event: { channel: MockRTCDataChannel }) => void) | null = null;
+      #channel = new MockRTCDataChannel();
+
+      async setRemoteDescription() {
+        setTimeout(() => {
+          this.ondatachannel?.({ channel: this.#channel });
+        }, 0);
+      }
+
+      async createAnswer() {
+        return { type: "answer", sdp: "persisted-answer" } as RTCSessionDescriptionInit;
+      }
+
+      async setLocalDescription() {}
+
+      close() {}
+    }
+
+    const previousRTC = (globalThis as { RTCPeerConnection?: unknown }).RTCPeerConnection;
+    (globalThis as { RTCPeerConnection: unknown }).RTCPeerConnection = MockRTCPeerConnection;
+
+    try {
+      const connectionPromise = manualDependencies.createWebRTC?.({
+        signal: new AbortController().signal,
+        emitMessage() {},
+        emitState() {},
+        emitError() {},
+        options: {},
+      });
+
+      if (!connectionPromise) {
+        throw new Error("Manual WebRTC dependencies were not created");
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("answer handshake not captured")), 500);
+        const verify = () => {
+          if (capturedHandshakes.length > 0) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 10);
+        };
+        verify();
+      });
+
+      const originalHandshake = capturedHandshakes[0];
+      expect(originalHandshake.kind).toBe("answer");
+
+      const connection = await connectionPromise;
+      await connection.close();
+
+      controller.setActiveTransport(null);
+
+      const restoredController = createPeerSignalingController(storageKey);
+      const resentHandshakes: PeerHandshakeFrame["handshake"][] = [];
+      const restoredTransport: TransportHandle = {
+        mode: "manual" as MessagingMode,
+        state: "connecting",
+        ready: Promise.resolve(),
+        async connect() {},
+        async disconnect() {},
+        async send(payload) {
+          if (typeof payload === "string") {
+            try {
+              const parsed = JSON.parse(payload) as PeerHandshakeFrame;
+              if (parsed?.type === "handshake") {
+                resentHandshakes.push(parsed.handshake);
+                return;
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        },
+        onMessage() {
+          return () => undefined;
+        },
+        onStateChange() {
+          return () => undefined;
+        },
+        onError() {
+          return () => undefined;
+        },
+      };
+
+      restoredController.setActiveTransport(restoredTransport);
+      restoredController.hydrateFromStorage();
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("answer handshake not resent")), 500);
+        const verify = () => {
+          if (resentHandshakes.length > 0) {
+            clearTimeout(timeout);
+            resolve();
+            return;
+          }
+          setTimeout(verify, 10);
+        };
+        verify();
+      });
+
+      expect(resentHandshakes[0]?.token).toBe(originalHandshake.token);
+
+      restoredController.setActiveTransport(null);
+    } finally {
+      if (previousRTC) {
+        (globalThis as { RTCPeerConnection: unknown }).RTCPeerConnection = previousRTC;
+      } else {
+        delete (globalThis as Record<string, unknown>).RTCPeerConnection;
+      }
+      (globalThis.window.localStorage as { storage: Map<string, string> }).storage.delete(storageKey);
+    }
+  });
 });
