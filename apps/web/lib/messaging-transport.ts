@@ -124,6 +124,17 @@ const createTransportHandle = (
 ): TransportHandle => {
   const createNotConnectedError = () => new Error("Transport is not connected");
 
+  const logDebug = (message: string, meta?: unknown) => {
+    if (typeof console === "undefined" || typeof console.debug !== "function") {
+      return;
+    }
+    if (meta !== undefined) {
+      console.debug(`[transport:${mode}] ${message}`, meta);
+      return;
+    }
+    console.debug(`[transport:${mode}] ${message}`);
+  };
+
   let state: TransportState = "idle";
   let connection: DriverConnection | null = null;
   let rawConnection: DriverConnection | null = null;
@@ -189,6 +200,7 @@ const createTransportHandle = (
   const errorEmitter = createEmitter<Error>();
 
   const updateState = (next: TransportState) => {
+    logDebug("state change", next);
     state = next;
     stateEmitter.emit(next);
   };
@@ -208,7 +220,10 @@ const createTransportHandle = (
   };
 
   const connect: TransportHandle["connect"] = async (options) => {
-    if (state === "connected" && !options) return;
+    if (state === "connected" && !options) {
+      logDebug("connect invoked but already connected, ignoring");
+      return;
+    }
 
     if (controller.signal.aborted) {
       controller = new AbortController();
@@ -223,6 +238,11 @@ const createTransportHandle = (
       state === "degraded" || state === "recovering"
         ? "recovering"
         : "connecting";
+    logDebug("connect invoked", {
+      options: resolvedOptions,
+      previousState: state,
+      nextState,
+    });
     updateState(nextState);
 
     try {
@@ -233,6 +253,7 @@ const createTransportHandle = (
         onError: (error) => errorEmitter.emit(error),
       });
 
+      logDebug("starting driver", resolvedOptions);
       connection = await driver.start({
         signal: controller.signal,
         options: resolvedOptions,
@@ -284,9 +305,11 @@ const createTransportHandle = (
 
       updateState("connected");
       fulfillReady();
+      logDebug("connected");
     } catch (error) {
-      updateState("error");
       const normalized = normalizeError(error);
+      logDebug("connect failed", normalized);
+      updateState("error");
       errorEmitter.emit(normalized);
       rejectReady(normalized);
       rejectPendingSends(normalized);
@@ -1710,6 +1733,14 @@ const defaultCreateWebRTC = async (
 ): Promise<DriverConnection> => {
   const { signal, emitMessage, emitError, emitState, dependencies, options } = startOptions;
 
+  if (typeof console !== "undefined" && typeof console.debug === "function") {
+    console.debug("[transport:webrtc] initializing default WebRTC driver", {
+      roomId: options?.roomId,
+      hasSignaling: Boolean(dependencies.signaling),
+      signalAborted: signal.aborted,
+    });
+  }
+
   if (typeof RTCPeerConnection !== "function") {
     throw new TransportUnavailableError("WebRTC is not supported in this environment");
   }
@@ -2116,6 +2147,13 @@ const defaultCreateWebTransport = async (
       | (new (url: string) => WebTransportLike)
       | undefined);
 
+  if (typeof console !== "undefined" && typeof console.debug === "function") {
+    console.debug("[transport:webtransport] starting connection", {
+      endpoint: endpointCandidate,
+      hasConstructor: Boolean(WebTransportCtor),
+    });
+  }
+
   if (!WebTransportCtor) {
     throw new TransportUnavailableError("WebTransport is not supported in this environment");
   }
@@ -2199,6 +2237,13 @@ const createProgressiveDriver = (
   async start(startOptions) {
     const withDependencies = { ...startOptions, dependencies };
 
+    if (typeof console !== "undefined" && typeof console.debug === "function") {
+      console.debug("[transport:progressive] starting progressive driver", {
+        options: startOptions.options,
+        mode: "progressive",
+      });
+    }
+
     const webrtcFactory =
       dependencies.createWebRTC ?? ((options) => defaultCreateWebRTC(options));
     try {
@@ -2213,6 +2258,12 @@ const createProgressiveDriver = (
           : dependencies.webTransportEndpoint;
 
       if (dependencies.createWebTransport || endpoint) {
+        if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug("[transport:progressive] WebRTC failed, falling back to WebTransport", {
+            error: normalized.message,
+            endpoint,
+          });
+        }
         const webTransportFactory =
           dependencies.createWebTransport ?? ((options) => defaultCreateWebTransport(options));
 
