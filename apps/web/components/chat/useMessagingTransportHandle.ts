@@ -134,7 +134,9 @@ export function useMessagingTransportHandle(
     }
 
     if (!shouldInitialize) {
-      attachHandle(null, { force: true });
+      scheduleMicrotask(() => {
+        attachHandle(null, { force: true });
+      });
       return () => undefined;
     }
 
@@ -187,7 +189,15 @@ export function useMessagingTransportHandle(
       void instance.teardown();
       instanceRef.current = null;
     };
-  }, [attachHandle, controller, dependencies, detachListeners, shouldInitialize, snapshot.sessionId]);
+  }, [
+    attachHandle,
+    controller,
+    dependencies,
+    detachListeners,
+    scheduleMicrotask,
+    shouldInitialize,
+    snapshot.sessionId,
+  ]);
 
   const restart = useCallback(async () => {
     const handle = transportRef.current;
@@ -244,7 +254,9 @@ export function useMessagingTransportHandle(
     handshakeUpgradeKeyRef.current = key;
 
     if (transportRef.current) {
-      void restart();
+      scheduleMicrotask(() => {
+        void restart();
+      });
       return;
     }
 
@@ -252,7 +264,15 @@ export function useMessagingTransportHandle(
     if (instance) {
       void instance.refresh();
     }
-  }, [restart, snapshot.connected, snapshot.localAnswer, snapshot.remoteAnswer, snapshot.role, snapshot.sessionId]);
+  }, [
+    restart,
+    scheduleMicrotask,
+    snapshot.connected,
+    snapshot.localAnswer,
+    snapshot.remoteAnswer,
+    snapshot.role,
+    snapshot.sessionId,
+  ]);
 
   return useMemo(
     () => ({

@@ -877,7 +877,7 @@ export function usePeerConversationChannel(options: {
     [
       ensurePeerTrusted,
       notify,
-      peerSignalingController,
+      publishServiceWorkerEvent,
       readStored,
       rejectPending,
       resolvePending,
@@ -886,6 +886,8 @@ export function usePeerConversationChannel(options: {
       updateMessages,
     ],
   );
+
+  const { transport: transportOption, onHeartbeatTimeout } = options;
 
   useEffect(() => {
     transportRef.current = options.transport;
@@ -945,7 +947,7 @@ export function usePeerConversationChannel(options: {
         }
         heartbeatRecoveryRef.current = true;
         try {
-          await options.onHeartbeatTimeout?.();
+        await onHeartbeatTimeout?.();
         } catch (error) {
           console.error("Heartbeat recovery failed", error);
         } finally {
@@ -1010,7 +1012,7 @@ export function usePeerConversationChannel(options: {
         heartbeatTimeoutRef.current = null;
       }
     };
-  }, [options.onHeartbeatTimeout, options.transport]);
+  }, [onHeartbeatTimeout, transportOption]);
 
   const subscribeMessages = useCallback(
     (conversationId: string, listener: ChannelListener) => {
@@ -1130,7 +1132,7 @@ export function usePeerConversationChannel(options: {
         console.error("Failed to send presence update", error);
       }
     },
-    [],
+    [readStored],
   );
 
   const sendPresenceTyping = useCallback(
@@ -1370,7 +1372,6 @@ export function usePeerConversationChannel(options: {
     },
     [
       notify,
-      readStored,
       readStoredAsync,
       registerPending,
       updateConversation,

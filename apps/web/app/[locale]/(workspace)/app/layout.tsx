@@ -2,7 +2,6 @@ import type { PropsWithChildren } from "react";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import UserMenu from "@/components/user-menu";
 
 export const metadata = {
   title: "Workspace | Goguma Chat",

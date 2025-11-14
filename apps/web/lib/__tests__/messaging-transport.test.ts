@@ -16,7 +16,6 @@ import { type MessagingMode } from "../messaging-mode";
 type ListenerMap = Map<string, Set<(event: Event) => void>>;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __testWindowListeners: ListenerMap | undefined;
 }
 
@@ -1279,7 +1278,7 @@ describe("initializeMessagingTransport", () => {
     const manualDependencies = controller.createDependencies();
 
     class MockRTCDataChannel {
-      readyState: "open" = "open";
+      readonly readyState = "open" as const;
       binaryType = "arraybuffer";
       #listeners = new Map<string, Set<(event: Event) => void>>();
 
@@ -1442,7 +1441,7 @@ describe("initializeMessagingTransport", () => {
     const manualDependencies = controller.createDependencies();
 
     class MockRTCDataChannel {
-      readyState: "open" = "open";
+      readonly readyState = "open" as const;
       binaryType = "arraybuffer";
       #listeners = new Map<string, Set<(event: Event) => void>>();
 

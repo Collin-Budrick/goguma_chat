@@ -39,17 +39,19 @@ const deriveStatus = (snapshot: PeerSignalingSnapshot): PeerSignalingStatus => {
   return "idle";
 };
 
-const scheduleExpiration = (
-  snapshot: PeerSignalingSnapshot,
+const sequenceExpiration = (
   controller: PeerSignalingController,
+  expires: { inviteExpiresAt: number | null; answerExpiresAt: number | null },
 ) => {
-  if (typeof window === "undefined") return () => undefined;
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
 
   const timers: number[] = [];
   const now = Date.now();
 
-  if (snapshot.inviteExpiresAt) {
-    const remaining = snapshot.inviteExpiresAt - now;
+  if (expires.inviteExpiresAt) {
+    const remaining = expires.inviteExpiresAt - now;
     if (remaining <= 0) {
       controller.expireLocalInvite();
     } else {
@@ -57,8 +59,8 @@ const scheduleExpiration = (
     }
   }
 
-  if (snapshot.answerExpiresAt) {
-    const remaining = snapshot.answerExpiresAt - now;
+  if (expires.answerExpiresAt) {
+    const remaining = expires.answerExpiresAt - now;
     if (remaining <= 0) {
       controller.expireLocalAnswer();
     } else {
@@ -85,6 +87,37 @@ type RemoteTokenPayload = {
 };
 
 const POLL_INTERVAL_MS = 3_000;
+const COUNTDOWN_INTERVAL_MS = 1_000;
+
+const scheduleMicrotask =
+  typeof queueMicrotask === "function"
+    ? queueMicrotask
+    : (callback: () => void) => {
+        Promise.resolve()
+          .then(callback)
+          .catch(() => undefined);
+      };
+
+function useRemainingTime(target: number | null) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || target == null) {
+      scheduleMicrotask(() => setRemaining(null));
+      return () => undefined;
+    }
+
+    const update = () => setRemaining(Math.max(0, target - Date.now()));
+    update();
+    const timer = window.setInterval(update, COUNTDOWN_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [target]);
+
+  return remaining;
+}
 
 export const deriveShouldInitializeTransport = (
   controllerReady: boolean,
@@ -272,14 +305,20 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     setStatus(deriveStatus(snapshot));
   }, [snapshot]);
 
+  const { inviteExpiresAt, answerExpiresAt } = snapshot;
+
   useEffect(
-    () => scheduleExpiration(snapshot, controller),
-    [controller, snapshot.inviteExpiresAt, snapshot.answerExpiresAt],
+    () =>
+      sequenceExpiration(controller, {
+        inviteExpiresAt,
+        answerExpiresAt,
+      }),
+    [controller, inviteExpiresAt, answerExpiresAt],
   );
 
   const dependencies = useMemo(
     () => controller.createDependencies(),
-    [controller, snapshot.sessionId],
+    [controller],
   );
 
   const selectRole = useCallback(
@@ -313,18 +352,11 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
   const shouldInitialize = useMemo(
     () => deriveShouldInitializeTransport(controller.shouldInitialize(), snapshot),
-    [controller, snapshot.role, snapshot.remoteInvite],
+    [controller, snapshot],
   );
 
-  const inviteExpiresIn = useMemo(() => {
-    if (!snapshot.inviteExpiresAt) return null;
-    return Math.max(0, snapshot.inviteExpiresAt - Date.now());
-  }, [snapshot.inviteExpiresAt]);
-
-  const answerExpiresIn = useMemo(() => {
-    if (!snapshot.answerExpiresAt) return null;
-    return Math.max(0, snapshot.answerExpiresAt - Date.now());
-  }, [snapshot.answerExpiresAt]);
+  const inviteExpiresIn = useRemainingTime(snapshot.inviteExpiresAt);
+  const answerExpiresIn = useRemainingTime(snapshot.answerExpiresAt);
 
   return {
     controller,

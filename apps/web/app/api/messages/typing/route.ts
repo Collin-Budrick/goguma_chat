@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   try {
     body = (await request.json()) as TypingPayload;
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 

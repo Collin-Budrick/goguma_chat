@@ -32,7 +32,7 @@ async function handlePost(request: Request) {
 
   try {
     body = await request.json();
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 

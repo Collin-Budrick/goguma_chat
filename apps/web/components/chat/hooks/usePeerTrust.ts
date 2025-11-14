@@ -17,19 +17,32 @@ const emptyState: PeerTrustState = {
   lastRotation: null,
 };
 
+const scheduleMicrotask =
+  typeof queueMicrotask === "function"
+    ? queueMicrotask
+    : (callback: () => void) => {
+        Promise.resolve()
+          .then(callback)
+          .catch(() => undefined);
+      };
+
 export function usePeerTrust(sessionId: string | null) {
   const [state, setState] = useState<PeerTrustState>(emptyState);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(() => Boolean(sessionId));
 
   useEffect(() => {
     let cancelled = false;
     if (!sessionId) {
-      setState(emptyState);
-      setLoading(false);
+      scheduleMicrotask(() => {
+        setState(emptyState);
+        setLoading(false);
+      });
       return () => undefined;
     }
 
-    setLoading(true);
+    scheduleMicrotask(() => {
+      setLoading(true);
+    });
 
     void getPeerTrustState(sessionId)
       .then((snapshot) => {
@@ -72,5 +85,8 @@ export function usePeerTrust(sessionId: string | null) {
     [sessionId],
   );
 
-  return { state, loading, ...actions } as const;
+  const effectiveState = sessionId ? state : emptyState;
+  const effectiveLoading = sessionId ? loading : false;
+
+  return { state: effectiveState, loading: effectiveLoading, ...actions } as const;
 }

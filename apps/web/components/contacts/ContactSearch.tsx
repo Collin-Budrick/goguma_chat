@@ -117,8 +117,9 @@ export default function ContactSearch({
     setPendingMatches((previous) => ({ ...previous, [match.id]: true }));
     const success = await onSendRequest(match);
     setPendingMatches((previous) => {
-      const { [match.id]: _removed, ...rest } = previous;
-      return rest;
+      const next = { ...previous };
+      delete next[match.id];
+      return next;
     });
 
     if (success) {

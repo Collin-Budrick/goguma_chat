@@ -26,7 +26,7 @@ function formatDate(value: string, locale: string) {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
-  } catch (error) {
+  } catch {
     return value;
   }
 }

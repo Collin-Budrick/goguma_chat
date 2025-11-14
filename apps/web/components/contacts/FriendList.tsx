@@ -25,7 +25,7 @@ function formatDate(value: string, locale: string) {
     return new Intl.DateTimeFormat(locale, {
       dateStyle: "medium",
     }).format(date);
-  } catch (error) {
+  } catch {
     return value;
   }
 }

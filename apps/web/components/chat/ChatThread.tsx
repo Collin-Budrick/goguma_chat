@@ -44,7 +44,6 @@ import type {
   ChatConversation,
   ChatMessage,
   ChatUserProfile,
-  TypingEvent,
 } from "./types";
 import { mergeMessages, toDate } from "./message-utils";
 import {
@@ -103,7 +102,7 @@ function formatMessageTime(value: string, locale: string) {
       hour: "2-digit",
       minute: "2-digit",
     }).format(toDate(value));
-  } catch (error) {
+  } catch {
     return value;
   }
 }

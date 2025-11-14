@@ -144,7 +144,7 @@ const createTransportHandle = (
   let readyResolve: (() => void) | undefined;
   let readyReject: ((reason: unknown) => void) | undefined;
   let readySettled = false;
-  let readyPromise: Promise<void> = new Promise((resolve, reject) => {
+  const readyPromise: Promise<void> = new Promise((resolve, reject) => {
     readyResolve = resolve;
     readyReject = reject;
   });
@@ -1189,8 +1189,6 @@ export const createPeerSignalingController = (
     return negotiationPromise;
   };
 
-  let controller: PeerSignalingController;
-
   const createDependencies = (): TransportDependencies => {
     const createManualWebRTC: NonNullable<TransportDependencies["createWebRTC"]> = async (
       startOptions,
@@ -1469,7 +1467,7 @@ export const createPeerSignalingController = (
     } satisfies TransportDependencies;
   };
 
-  controller = {
+  const controller: PeerSignalingController = {
     getSnapshot: () => currentState,
     subscribe(listener) {
       listeners.add(listener);

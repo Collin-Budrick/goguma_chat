@@ -7,7 +7,6 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTransitionDirection } from "@/components/transition-context";
 import {
   DisplaySettings,
-  DEFAULT_DISPLAY_SETTINGS,
   DISPLAY_SETTINGS_EVENT,
   loadDisplaySettings,
   persistDisplaySettings,
@@ -23,7 +22,9 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const router = useRouter();
   const { setDirection } = useTransitionDirection();
-  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => DEFAULT_DISPLAY_SETTINGS);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() =>
+    loadDisplaySettings(),
+  );
 
   const [mode, setMode] = useState<"light" | "dark">("dark");
   const [motion, setMotion] = useState(true);
@@ -52,8 +53,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = loadDisplaySettings();
-    setDisplaySettings(stored);
 
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<DisplaySettings>).detail;

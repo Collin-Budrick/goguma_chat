@@ -54,7 +54,7 @@ function formatRosterTime(value: string, locale: string) {
       hour: "numeric",
       minute: "2-digit",
     }).format(toDate(value));
-  } catch (error) {
+  } catch {
     return value;
   }
 }
@@ -98,17 +98,44 @@ export default function ChatClient({
   }, [friends, search]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleUpdate = (value: string | null) => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        setActiveFriendId(value);
+      }, 0);
+    };
+
     if (!friends.length) {
-      setActiveFriendId(null);
-      return;
+      scheduleUpdate(null);
+      return () => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      };
     }
+
     if (
       activeFriendId &&
       friends.some((friend) => friend.friendId === activeFriendId)
     ) {
-      return;
+      return () => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      };
     }
-    setActiveFriendId(friends[0]?.friendId ?? null);
+
+    scheduleUpdate(friends[0]?.friendId ?? null);
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
   }, [activeFriendId, friends]);
 
   const handleNewChatClick = useCallback(() => {

@@ -209,7 +209,7 @@ function formatTimestamp(value: string | null | undefined, locale: string) {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
-  } catch (error) {
+  } catch {
     return value;
   }
 }
@@ -229,8 +229,9 @@ export default function ContactsClient({ cacheKey, viewerId, initialState }: Con
         return { ...previous, [id]: true };
       }
 
-      const { [id]: _removed, ...rest } = previous;
-      return rest;
+      const next = { ...previous };
+      delete next[id];
+      return next;
     });
   };
 

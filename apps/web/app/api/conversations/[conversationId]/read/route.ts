@@ -35,7 +35,7 @@ export async function POST(
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     payload = {};
   }
 
