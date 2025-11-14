@@ -21,14 +21,24 @@ type MessagingTransportStatus = {
 const toError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value));
 
-export function useMessagingTransportHandle(): MessagingTransportStatus {
+type MessagingTransportOptions = {
+  conversationId?: string | null;
+  viewerId?: string | null;
+};
+
+export function useMessagingTransportHandle(
+  options?: MessagingTransportOptions,
+): MessagingTransportStatus {
   const [transport, setTransport] = useState<TransportHandle | null>(null);
   const [state, setState] = useState<TransportState>("idle");
   const [lastDegradedAt, setLastDegradedAt] = useState<number | null>(null);
   const [lastRecoveredAt, setLastRecoveredAt] = useState<number | null>(null);
   const [lastError, setLastError] = useState<Error | null>(null);
 
-  const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling();
+  const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling({
+    conversationId: options?.conversationId ?? null,
+    viewerId: options?.viewerId ?? null,
+  });
 
   const instanceRef = useRef<ReturnType<typeof initializeMessagingTransport> | null>(null);
   const transportRef = useRef<TransportHandle | null>(null);
