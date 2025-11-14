@@ -86,6 +86,21 @@ type RemoteTokenPayload = {
 
 const POLL_INTERVAL_MS = 3_000;
 
+export const deriveShouldInitializeTransport = (
+  controllerReady: boolean,
+  snapshot: PeerSignalingSnapshot,
+) => {
+  if (!controllerReady) {
+    return false;
+  }
+
+  if (snapshot.role === "guest") {
+    return Boolean(snapshot.remoteInvite);
+  }
+
+  return Boolean(snapshot.role);
+};
+
 export function usePeerSignaling(options?: PeerSignalingOptions) {
   const conversationId = options?.conversationId ?? null;
   const viewerId = options?.viewerId ?? null;
@@ -296,21 +311,10 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     [controller],
   );
 
-  const shouldInitialize = useMemo(() => {
-    if (!controller.shouldInitialize()) {
-      return false;
-    }
-
-    if (snapshot.role === "host") {
-      return Boolean(snapshot.remoteAnswer);
-    }
-
-    if (snapshot.role === "guest") {
-      return Boolean(snapshot.remoteInvite);
-    }
-
-    return false;
-  }, [controller, snapshot.remoteAnswer, snapshot.remoteInvite, snapshot.role]);
+  const shouldInitialize = useMemo(
+    () => deriveShouldInitializeTransport(controller.shouldInitialize(), snapshot),
+    [controller, snapshot.role, snapshot.remoteInvite],
+  );
 
   const inviteExpiresIn = useMemo(() => {
     if (!snapshot.inviteExpiresAt) return null;
