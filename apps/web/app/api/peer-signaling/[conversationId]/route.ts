@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import { ensureConversationParticipant } from "@/db/conversations";
 import { auth } from "@/lib/auth";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 const HEARTBEAT_INTERVAL = 25_000;
 
