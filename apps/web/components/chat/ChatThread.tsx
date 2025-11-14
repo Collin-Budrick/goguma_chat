@@ -264,7 +264,10 @@ export default function ChatThread({
     lastRecoveredAt: transportRecoveredAt,
     lastError: transportError,
     restart: restartTransport,
-  } = useMessagingTransportHandle();
+  } = useMessagingTransportHandle({
+    conversationId: conversation?.id ?? null,
+    viewerId,
+  });
   const {
     sendMessage: sendPeerMessage,
     subscribeMessages,
