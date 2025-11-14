@@ -20,6 +20,53 @@ declare global {
   var __testWindowListeners: ListenerMap | undefined;
 }
 
+type BroadcastListener = (event: { data: unknown }) => void;
+
+class MockBroadcastChannel {
+  static instances = new Map<string, Set<MockBroadcastChannel>>();
+
+  readonly name: string;
+  private listeners = new Set<BroadcastListener>();
+
+  constructor(name: string) {
+    this.name = name;
+    if (!MockBroadcastChannel.instances.has(name)) {
+      MockBroadcastChannel.instances.set(name, new Set());
+    }
+    MockBroadcastChannel.instances.get(name)!.add(this);
+  }
+
+  postMessage(data: unknown) {
+    const peers = MockBroadcastChannel.instances.get(this.name);
+    if (!peers) return;
+    peers.forEach((peer) => {
+      peer.listeners.forEach((listener) => {
+        listener({ data });
+      });
+    });
+  }
+
+  addEventListener(type: string, listener: BroadcastListener) {
+    if (type !== "message") return;
+    this.listeners.add(listener);
+  }
+
+  removeEventListener(type: string, listener: BroadcastListener) {
+    if (type !== "message") return;
+    this.listeners.delete(listener);
+  }
+
+  close() {
+    const peers = MockBroadcastChannel.instances.get(this.name);
+    peers?.delete(this);
+    this.listeners.clear();
+  }
+
+  static reset() {
+    MockBroadcastChannel.instances.clear();
+  }
+}
+
 const installWindow = () => {
   const listeners: ListenerMap = new Map();
   globalThis.__testWindowListeners = listeners;
@@ -57,17 +104,21 @@ const installWindow = () => {
       setTimeout: globalThis.setTimeout.bind(globalThis),
       btoa: (value: string) => Buffer.from(value, "utf-8").toString("base64"),
       atob: (value: string) => Buffer.from(value, "base64").toString("utf-8"),
+      BroadcastChannel: MockBroadcastChannel as unknown as typeof BroadcastChannel,
     },
+    BroadcastChannel: MockBroadcastChannel as unknown as typeof BroadcastChannel,
   });
 };
 
 const uninstallWindow = () => {
   delete (globalThis as Record<string, unknown>).window;
   delete globalThis.__testWindowListeners;
+  delete (globalThis as Record<string, unknown>).BroadcastChannel;
 };
 
 describe("initializeMessagingTransport", () => {
   beforeEach(() => {
+    MockBroadcastChannel.reset();
     installWindow();
   });
 
@@ -1547,5 +1598,87 @@ describe("initializeMessagingTransport", () => {
     } finally {
       teardown();
     }
+  });
+  it("applies offer handshakes delivered via broadcast channel", async () => {
+    const hostController = createPeerSignalingController("broadcast-offer-host");
+    hostController.setRole("host");
+    const guestController = createPeerSignalingController("broadcast-offer-guest");
+    guestController.setRole("guest");
+
+    const hostSessionId = hostController.getSnapshot().sessionId;
+    const offerToken = Buffer.from(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "offer",
+        description: { type: "offer", sdp: "broadcast-offer" },
+        sessionId: hostSessionId,
+        createdAt: Date.now(),
+      }),
+      "utf-8",
+    ).toString("base64");
+
+    const waitForInvite = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Offer handshake not applied")), 500);
+      const unsubscribe = guestController.subscribe((snapshot) => {
+        if (snapshot.remoteInvite === offerToken) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    const channel = new BroadcastChannel("goguma-peer-handshake");
+    channel.postMessage({
+      handshake: { kind: "offer", token: offerToken },
+      senderSessionId: hostSessionId,
+      timestamp: Date.now(),
+    });
+
+    await waitForInvite;
+    expect(guestController.getSnapshot().remoteInvite).toBe(offerToken);
+  });
+
+  it("applies answer handshakes delivered via broadcast channel", async () => {
+    const hostController = createPeerSignalingController("broadcast-answer-host");
+    hostController.setRole("host");
+    const guestController = createPeerSignalingController("broadcast-answer-guest");
+    guestController.setRole("guest");
+
+    const manualDependencies = hostController.createDependencies();
+    void manualDependencies.signaling?.negotiate({ type: "offer", sdp: "need-answer" });
+
+    const guestSessionId = guestController.getSnapshot().sessionId;
+    const answerToken = Buffer.from(
+      JSON.stringify({
+        type: "goguma-peer-invite",
+        kind: "answer",
+        description: { type: "answer", sdp: "broadcast-answer" },
+        sessionId: guestSessionId,
+        createdAt: Date.now(),
+      }),
+      "utf-8",
+    ).toString("base64");
+
+    const waitForAnswer = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Answer handshake not applied")), 500);
+      const unsubscribe = hostController.subscribe((snapshot) => {
+        if (snapshot.remoteAnswer === answerToken) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    const channel = new BroadcastChannel("goguma-peer-handshake");
+    channel.postMessage({
+      handshake: { kind: "answer", token: answerToken },
+      senderSessionId: guestSessionId,
+      timestamp: Date.now(),
+    });
+
+    await waitForAnswer;
+    expect(hostController.getSnapshot().remoteAnswer).toBe(answerToken);
   });
 });
