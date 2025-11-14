@@ -519,9 +519,17 @@ type PersistentPeerState = {
   lastUpdated: number | null;
 };
 
-const PEER_SIGNALING_STORAGE_KEY = "peer-signaling-state";
+type HandshakeSignal = {
+  handshake: PeerHandshakeFrame["handshake"];
+  senderSessionId: string;
+  timestamp: number;
+};
+
+export const PEER_SIGNALING_STORAGE_KEY = "peer-signaling-state";
 
 const INVITE_TTL_MS = 10 * 60 * 1000;
+const PEER_HANDSHAKE_CHANNEL = "goguma-peer-handshake";
+const PEER_HANDSHAKE_STORAGE_KEY = "peer-handshake-signal";
 
 const now = () => Date.now();
 
@@ -669,6 +677,10 @@ export const createPeerSignalingController = (
   let currentState: PeerSignalingSnapshot = snapshotFromPersistentState(null);
 
   let pendingNegotiation: PeerNegotiationEntry | null = null;
+  let handshakeChannel: BroadcastChannel | null = null;
+  let pendingExternalHandshakes: HandshakeSignal[] = [];
+  let applyExternalHandshakeSignal: ((signal: HandshakeSignal) => boolean) | null = null;
+  const appliedHandshakeTokens = new Set<string>();
 
   const DEFAULT_HANDSHAKE_RETRY_INTERVAL_MS = 5_000;
 
@@ -693,6 +705,55 @@ export const createPeerSignalingController = (
 
   let activeTransport: TransportHandle | null = null;
   const pendingHandshakes = new Map<string, HandshakeEntry>();
+
+  const broadcastHandshakeSignal = (handshake: PeerHandshakeFrame["handshake"]) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const signal: HandshakeSignal = {
+      handshake,
+      senderSessionId: currentState.sessionId,
+      timestamp: Date.now(),
+    };
+
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        if (!handshakeChannel) {
+          handshakeChannel = new BroadcastChannel(PEER_HANDSHAKE_CHANNEL);
+        }
+        handshakeChannel.postMessage(signal);
+      } catch (error) {
+        console.warn("Failed to broadcast handshake via channel", error);
+      }
+    }
+
+    try {
+      window.localStorage.setItem(PEER_HANDSHAKE_STORAGE_KEY, JSON.stringify(signal));
+      window.localStorage.removeItem(PEER_HANDSHAKE_STORAGE_KEY);
+    } catch {
+      // ignore storage failures
+    }
+  };
+
+  const enqueueExternalHandshake = (signal: HandshakeSignal) => {
+    if (!signal?.handshake) {
+      return;
+    }
+    pendingExternalHandshakes.push(signal);
+    flushExternalHandshakes();
+  };
+
+  const flushExternalHandshakes = () => {
+    if (!pendingExternalHandshakes.length || !applyExternalHandshakeSignal) {
+      return;
+    }
+
+    pendingExternalHandshakes = pendingExternalHandshakes.filter((signal) => {
+      const applied = applyExternalHandshakeSignal?.(signal) ?? false;
+      return !applied;
+    });
+  };
 
   const clearHandshakeEntry = (key: string) => {
     const entry = pendingHandshakes.get(key);
@@ -851,6 +912,8 @@ export const createPeerSignalingController = (
         void attemptHandshakeSend(key);
       }, 0),
     });
+
+    broadcastHandshakeSignal(handshake);
   };
 
   type HandshakeReplayEntry = {
@@ -929,6 +992,7 @@ export const createPeerSignalingController = (
     persistPeerState(storageKey, nextPersistent);
     evaluateHandshakeQueue();
     notify();
+    flushExternalHandshakes();
   };
 
   const buildHandshakeResetState = (
@@ -1531,6 +1595,66 @@ export const createPeerSignalingController = (
       hydratePersistentState();
     },
   } satisfies PeerSignalingController;
+
+  applyExternalHandshakeSignal = (signal) => {
+    if (!signal?.handshake) {
+      return true;
+    }
+
+    if (signal.senderSessionId === currentState.sessionId) {
+      return true;
+    }
+
+    if (appliedHandshakeTokens.has(signal.handshake.token)) {
+      return true;
+    }
+
+    const expectedRole: PeerSignalingRole =
+      signal.handshake.kind === "offer" ? "guest" : "host";
+
+    if (currentState.role !== expectedRole) {
+      return false;
+    }
+
+    appliedHandshakeTokens.add(signal.handshake.token);
+
+    const applyPromise =
+      signal.handshake.kind === "offer"
+        ? controller.setRemoteInvite(signal.handshake.token)
+        : controller.setRemoteAnswer(signal.handshake.token);
+
+    applyPromise.catch((error) => {
+      console.error("Failed to apply broadcast handshake", error);
+    });
+
+    return true;
+  };
+
+  if (typeof window !== "undefined") {
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        handshakeChannel = handshakeChannel ?? new BroadcastChannel(PEER_HANDSHAKE_CHANNEL);
+        handshakeChannel.addEventListener("message", (event) => {
+          enqueueExternalHandshake((event as MessageEvent<HandshakeSignal>).data);
+        });
+      } catch (error) {
+        console.warn("Failed to initialize handshake broadcast channel", error);
+      }
+    }
+
+    window.addEventListener("storage", (event) => {
+      if (event.key !== PEER_HANDSHAKE_STORAGE_KEY || !event.newValue) {
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(event.newValue) as HandshakeSignal;
+        enqueueExternalHandshake(parsed);
+      } catch {
+        // ignore parse failures
+      }
+    });
+  }
 
   return controller;
 };
