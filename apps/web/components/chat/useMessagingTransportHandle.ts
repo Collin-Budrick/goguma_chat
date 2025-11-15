@@ -259,7 +259,7 @@ export function useMessagingTransportHandle(
   }, [attachHandle, scheduleMicrotask]);
 
   useEffect(() => {
-    if (!snapshot.role || !snapshot.connected) {
+    if (!snapshot.role) {
       handshakeUpgradeKeyRef.current = null;
       return;
     }
@@ -274,6 +274,11 @@ export function useMessagingTransportHandle(
     }
 
     const key = `${snapshot.sessionId ?? ""}:${handshakeToken}`;
+
+    if (!snapshot.connected) {
+      return;
+    }
+
     if (handshakeUpgradeKeyRef.current === key) {
       return;
     }
