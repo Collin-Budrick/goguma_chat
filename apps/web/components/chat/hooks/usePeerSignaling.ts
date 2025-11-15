@@ -167,11 +167,11 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
   useEffect(() => {
     publishedTokensRef.current.offer = null;
     publishedTokensRef.current.answer = null;
-  }, [conversationId, viewerId]);
+  }, [conversationId, viewerId, snapshot.sessionId]);
 
   useEffect(() => {
     remoteTokensRef.current.clear();
-  }, [conversationId, snapshot.role]);
+  }, [conversationId, snapshot.role, snapshot.sessionId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
