@@ -963,9 +963,7 @@ export function usePeerConversationChannel(options: {
       }
 
       const state = handle.state;
-      const canAttempt =
-        state === "connected" || state === "connecting" || state === "recovering";
-      if (!canAttempt) {
+      if (state !== "connected") {
         awaitingHeartbeatAckRef.current = false;
         return;
       }

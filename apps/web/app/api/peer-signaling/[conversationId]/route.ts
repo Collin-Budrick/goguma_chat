@@ -39,6 +39,11 @@ type TokenStore = {
 
 const stores = new Map<string, TokenStore>();
 
+const logPeerSignalingServer = (message: string, meta?: Record<string, unknown>) => {
+  const payload = meta ? JSON.stringify(meta) : "";
+  console.info(`[peer-signaling:server] ${message}${payload ? ` ${payload}` : ""}`);
+};
+
 const getStore = (conversationId: string): TokenStore => {
   if (!stores.has(conversationId)) {
     stores.set(conversationId, { tokens: [], subscribers: new Set() });
@@ -59,6 +64,14 @@ const pruneExpiredTokens = (conversationId: string) => {
 const enqueueToken = (token: PendingToken) => {
   const store = getStore(token.conversationId);
   store.tokens.push(token);
+  logPeerSignalingServer("enqueued token", {
+    conversationId: token.conversationId,
+    id: token.id,
+    kind: token.kind,
+    fromRole: token.fromRole,
+    toRole: token.toRole,
+    viewerId: token.viewerId,
+  });
   deliverPendingTokens(token.conversationId, token.toRole);
 };
 
@@ -73,11 +86,22 @@ const deliverPendingTokens = (conversationId: string, role: PeerSignalingRole) =
   const store = stores.get(conversationId);
   if (!store) return;
   const pending = store.tokens.filter((token) => token.toRole === role);
+  logPeerSignalingServer("attempting delivery", {
+    conversationId,
+    role,
+    pendingCount: pending.length,
+    subscriberCount: store.subscribers.size,
+  });
   if (!pending.length) return;
 
   for (const token of pending) {
     for (const subscriber of store.subscribers) {
       if (subscriber.role !== role) continue;
+      logPeerSignalingServer("delivering token to subscriber", {
+        conversationId,
+        role,
+        tokenId: token.id,
+      });
       subscriber.notify(token);
     }
     consumeToken(conversationId, token.id);
@@ -90,9 +114,19 @@ const subscribeToTokens = (
 ): (() => void) => {
   const store = getStore(conversationId);
   store.subscribers.add(subscriber);
+  logPeerSignalingServer("subscriber added", {
+    conversationId,
+    role: subscriber.role,
+    subscriberCount: store.subscribers.size,
+  });
   return () => {
     const nextStore = stores.get(conversationId);
     nextStore?.subscribers.delete(subscriber);
+    logPeerSignalingServer("subscriber removed", {
+      conversationId,
+      role: subscriber.role,
+      subscriberCount: nextStore?.subscribers.size ?? 0,
+    });
     pruneExpiredTokens(conversationId);
   };
 };
@@ -178,6 +212,13 @@ export async function POST(
     createdAt: Date.now(),
   };
   enqueueToken(entry);
+  logPeerSignalingServer("token published", {
+    conversationId,
+    id: entry.id,
+    kind: entry.kind,
+    fromRole: entry.fromRole,
+    toRole: entry.toRole,
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -223,6 +264,11 @@ export async function GET(
   const subscriber: TokenSubscriber = {
     role,
     notify: (token) => {
+      logPeerSignalingServer("emitting token to stream", {
+        conversationId,
+        role,
+        tokenId: token.id,
+      });
       writeEvent(writer, formatTokenEvent(token));
     },
   };
@@ -236,6 +282,7 @@ export async function GET(
   }, HEARTBEAT_INTERVAL);
 
   const close = () => {
+    logPeerSignalingServer("closing SSE stream", { conversationId, role });
     unsubscribe();
     clearInterval(heartbeat);
     writer.close().catch(() => undefined);

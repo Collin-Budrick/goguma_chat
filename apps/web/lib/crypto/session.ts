@@ -481,7 +481,12 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       const envelope = JSON.parse(decoded) as CryptoEnvelope;
 
       if (envelope.version !== 1 || envelope.sessionId !== this.sessionId) {
-        throw new Error("Invalid crypto envelope");
+        console.warn("Peer crypto ignored envelope for mismatched session", {
+          expected: this.sessionId,
+          received: envelope.sessionId,
+          kind: envelope.kind,
+        });
+        return;
       }
 
       if (isHandshakeEnvelope(envelope)) {

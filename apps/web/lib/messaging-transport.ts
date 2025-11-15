@@ -110,10 +110,72 @@ type TransportDriver = {
   start: (options: DriverStartOptions) => Promise<DriverConnection>;
 };
 
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+  { urls: ["stun:stun.cloudflare.com:3478"] },
+  { urls: ["stun:stun.l.google.com:19302"] },
+];
+
 const createAbortError = () =>
   typeof DOMException !== "undefined"
     ? new DOMException("The operation was aborted.", "AbortError")
     : new Error("The operation was aborted.");
+
+const resolvePeerIceServers = (): RTCIceServer[] => {
+  const globalScope =
+    typeof globalThis === "object" && globalThis
+      ? (globalThis as { __gogumaIceServers__?: unknown })
+      : null;
+  const fromGlobal = globalScope?.__gogumaIceServers__;
+  const fromNavigator =
+    typeof navigator !== "undefined"
+      ? (navigator as unknown as { gogumaIceServers?: unknown }).gogumaIceServers
+      : undefined;
+  const candidate = Array.isArray(fromNavigator) ? fromNavigator : fromGlobal;
+  if (Array.isArray(candidate) && candidate.length) {
+    return candidate as RTCIceServer[];
+  }
+  return DEFAULT_ICE_SERVERS;
+};
+
+const waitForIceGatheringComplete = async (
+  peer: RTCPeerConnection,
+  signal: AbortSignal,
+) => {
+  if (peer.iceGatheringState === "complete") {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      peer.removeEventListener("icecandidate", handleCandidate);
+      peer.removeEventListener("icegatheringstatechange", handleStateChange);
+      signal.removeEventListener("abort", handleAbort);
+    };
+
+    const handleAbort = () => {
+      cleanup();
+      reject(createAbortError());
+    };
+
+    const handleCandidate = (event: RTCPeerConnectionIceEvent) => {
+      if (!event.candidate) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    const handleStateChange = () => {
+      if (peer.iceGatheringState === "complete") {
+        cleanup();
+        resolve();
+      }
+    };
+
+    peer.addEventListener("icecandidate", handleCandidate);
+    peer.addEventListener("icegatheringstatechange", handleStateChange);
+    signal.addEventListener("abort", handleAbort, { once: true });
+  });
+};
 
 const normalizeError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
@@ -767,7 +829,12 @@ export const createPeerSignalingController = (
   const isBootstrappingSendError = (error: unknown) => {
     const normalized = normalizeError(error);
     const message = typeof normalized.message === "string" ? normalized.message : "";
-    return message.toLowerCase().includes("not connected");
+    const lower = message.toLowerCase();
+    return (
+      lower.includes("not connected") ||
+      lower.includes("not ready to transmit") ||
+      lower.includes("data channel is not open")
+    );
   };
 
   const isAbortError = (error: Error) =>
@@ -820,6 +887,7 @@ export const createPeerSignalingController = (
     };
 
     try {
+      await transport.ready.catch(() => undefined);
       const frame: PeerHandshakeFrame = {
         type: "handshake",
         handshake: entry.handshake,
@@ -1085,7 +1153,11 @@ export const createPeerSignalingController = (
     pendingNegotiation = null;
   };
 
-  const ensureSession = () => {
+  const ensureSession = (nextSessionId?: string | null) => {
+    if (nextSessionId && nextSessionId !== currentState.sessionId) {
+      commitState({ sessionId: nextSessionId });
+      return;
+    }
     if (!currentState.sessionId) {
       commitState({ sessionId: createSessionId() });
     }
@@ -1193,7 +1265,7 @@ export const createPeerSignalingController = (
     const createManualWebRTC: NonNullable<TransportDependencies["createWebRTC"]> = async (
       startOptions,
     ) => {
-      const { signal, emitMessage, emitError } = startOptions;
+      const { signal, emitMessage, emitError, emitState } = startOptions;
 
       if (typeof RTCPeerConnection !== "function") {
         throw new TransportUnavailableError("WebRTC is not supported in this environment");
@@ -1201,7 +1273,7 @@ export const createPeerSignalingController = (
 
       const snapshot = controller.getSnapshot();
       const role = snapshot.role ?? "host";
-      const peer = new RTCPeerConnection({ iceServers: [] });
+      const peer = new RTCPeerConnection({ iceServers: resolvePeerIceServers() });
 
       const normalize = (value: unknown): Error =>
         value instanceof Error ? value : new Error(String(value));
@@ -1212,8 +1284,63 @@ export const createPeerSignalingController = (
         channel.addEventListener("error", (event) => {
           const errorEvent = event as ErrorEvent;
           emitError(normalize(errorEvent.error ?? new Error("WebRTC data channel error")));
+          emitState("error");
+        });
+        channel.addEventListener("close", () => {
+          emitState("closed");
         });
       };
+
+      const registerConnectionStateListeners = () => {
+        const handleIceStateChange = () => {
+          switch (peer.iceConnectionState) {
+            case "connected":
+            case "completed":
+              emitState("connected");
+              break;
+            case "disconnected":
+              emitState("degraded");
+              break;
+            case "failed":
+              emitState("recovering");
+              break;
+            case "closed":
+              emitState("closed");
+              break;
+            default:
+              break;
+          }
+        };
+
+        const handleConnectionStateChange = () => {
+          switch (peer.connectionState) {
+            case "connected":
+              emitState("connected");
+              break;
+            case "disconnected":
+              emitState("degraded");
+              break;
+            case "failed":
+              emitState("recovering");
+              break;
+            case "closed":
+              emitState("closed");
+              break;
+            default:
+              break;
+          }
+        };
+
+        peer.addEventListener("iceconnectionstatechange", handleIceStateChange);
+        peer.addEventListener("connectionstatechange", handleConnectionStateChange);
+
+        return () => {
+          peer.removeEventListener("iceconnectionstatechange", handleIceStateChange);
+          peer.removeEventListener("connectionstatechange", handleConnectionStateChange);
+        };
+      };
+
+      const cleanupConnectionState = registerConnectionStateListeners();
 
       if (role === "guest") {
         const waitForRemoteInvite = async (): Promise<string> => {
@@ -1295,7 +1422,9 @@ export const createPeerSignalingController = (
 
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-        handleAnswerGenerated(answer);
+        await waitForIceGatheringComplete(peer, signal);
+        const preparedAnswer = peer.localDescription ?? answer;
+        handleAnswerGenerated(preparedAnswer);
 
         const channel = await channelPromise;
 
@@ -1335,6 +1464,8 @@ export const createPeerSignalingController = (
           signal.addEventListener("abort", handleAbort, { once: true });
         });
 
+        emitState("connected");
+
         signal.addEventListener(
           "abort",
           () => {
@@ -1343,6 +1474,7 @@ export const createPeerSignalingController = (
             } finally {
               peer.close();
             }
+            cleanupConnectionState();
           },
           { once: true },
         );
@@ -1357,6 +1489,7 @@ export const createPeerSignalingController = (
           async close() {
             channel.close();
             peer.close();
+            cleanupConnectionState();
           },
         } satisfies DriverConnection;
       }
@@ -1375,10 +1508,12 @@ export const createPeerSignalingController = (
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      await waitForIceGatheringComplete(peer, signal);
+      const preparedOffer = peer.localDescription ?? offer;
 
       let answer: RTCSessionDescriptionInit;
       try {
-        answer = await negotiate(offer, startOptions.options);
+        answer = await negotiate(preparedOffer, startOptions.options);
       } catch (error) {
         if (isNegotiationCancelledError(error)) {
           throw createAbortError();
@@ -1428,6 +1563,7 @@ export const createPeerSignalingController = (
         channel.addEventListener("error", handleError, { once: true });
         signal.addEventListener("abort", handleAbort, { once: true });
       });
+      emitState("connected");
 
       signal.addEventListener(
         "abort",
@@ -1437,6 +1573,7 @@ export const createPeerSignalingController = (
           } finally {
             peer.close();
           }
+          cleanupConnectionState();
         },
         { once: true },
       );
@@ -1451,6 +1588,7 @@ export const createPeerSignalingController = (
         async close() {
           channel.close();
           peer.close();
+          cleanupConnectionState();
         },
       } satisfies DriverConnection;
     };
@@ -1460,7 +1598,7 @@ export const createPeerSignalingController = (
       createWebRTC: createManualWebRTC,
       signaling: {
         negotiate: (offer, options) => negotiate(offer, options),
-        iceServers: [],
+        iceServers: resolvePeerIceServers(),
       },
       webTransportEndpoint: undefined,
       WebTransportConstructor: undefined,
@@ -1494,7 +1632,12 @@ export const createPeerSignalingController = (
         if (payload.kind !== "offer") {
           throw new Error("Provided token is not an offer");
         }
+        const nextSessionId =
+          payload.sessionId && typeof payload.sessionId === "string"
+            ? payload.sessionId
+            : currentState.sessionId ?? createSessionId();
         commitState({
+          sessionId: nextSessionId,
           remoteInvite: token.trim(),
           awaitingOffer: false,
           localAnswerToken: null,

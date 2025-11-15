@@ -35,10 +35,39 @@ export function useMessagingTransportHandle(
   const [lastRecoveredAt, setLastRecoveredAt] = useState<number | null>(null);
   const [lastError, setLastError] = useState<Error | null>(null);
 
+  const conversationId = options?.conversationId ?? null;
   const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling({
-    conversationId: options?.conversationId ?? null,
+    conversationId,
     viewerId: options?.viewerId ?? null,
   });
+
+  const peerSessionId = useMemo(() => {
+    if (!snapshot.role) {
+      return snapshot.sessionId ?? null;
+    }
+    if (snapshot.role === "host") {
+      return snapshot.sessionId ?? null;
+    }
+    if (snapshot.remoteInvite) {
+      try {
+        const payload = controller.decodeToken(snapshot.remoteInvite);
+        if (payload.sessionId) {
+          return payload.sessionId;
+        }
+      } catch (error) {
+        console.error("Failed to decode remote invite token", error);
+      }
+    }
+    return snapshot.sessionId ?? null;
+  }, [controller, snapshot.remoteInvite, snapshot.role, snapshot.sessionId]);
+
+  const connectOptions = useMemo(
+    () => ({
+      roomId: conversationId ?? undefined,
+      metadata: peerSessionId ? { peerSessionId } : undefined,
+    }),
+    [conversationId, peerSessionId],
+  );
 
   const instanceRef = useRef<ReturnType<typeof initializeMessagingTransport> | null>(null);
   const transportRef = useRef<TransportHandle | null>(null);
@@ -148,9 +177,7 @@ export function useMessagingTransportHandle(
 
     const instance = initializeMessagingTransport({
       dependencies,
-      connectOptions: {
-        metadata: { peerSessionId: snapshot.sessionId },
-      },
+      connectOptions,
     });
     instanceRef.current = instance;
     let cancelled = false;
@@ -196,7 +223,7 @@ export function useMessagingTransportHandle(
     detachListeners,
     scheduleMicrotask,
     shouldInitialize,
-    snapshot.sessionId,
+    connectOptions,
   ]);
 
   const restart = useCallback(async () => {

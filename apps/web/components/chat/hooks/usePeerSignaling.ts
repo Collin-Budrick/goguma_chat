@@ -190,7 +190,7 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
           role: snapshot.role,
           sessionId: snapshot.sessionId,
         });
-        await fetch(`/api/peer-signaling/${conversationId}`, {
+        const response = await fetch(`/api/peer-signaling/${conversationId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -201,6 +201,16 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
             token,
           }),
         });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          logPeerSignaling("failed to publish peer signaling token", {
+            kind,
+            status: response.status,
+            error: payload?.error ?? "unknown error",
+          });
+        } else {
+          logPeerSignaling("published peer signaling token", { kind });
+        }
       } catch (error) {
         console.error("Failed to publish peer signaling token", error);
       }
