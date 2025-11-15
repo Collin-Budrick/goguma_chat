@@ -9,6 +9,17 @@ import {
   type PeerSignalingSnapshot,
 } from "@/lib/messaging-transport";
 
+const logPeerSignaling = (message: string, meta?: unknown) => {
+  if (typeof console === "undefined" || typeof console.info !== "function") {
+    return;
+  }
+  if (meta !== undefined) {
+    console.info(`[peer-signaling] ${message}`, meta);
+    return;
+  }
+  console.info(`[peer-signaling] ${message}`);
+};
+
 export type PeerSignalingStatus =
   | "idle"
   | "hosting"
@@ -173,6 +184,12 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
     const publishToken = async (kind: "offer" | "answer", token: string) => {
       try {
+        logPeerSignaling("publishing peer signaling token", {
+          conversationId,
+          kind,
+          role: snapshot.role,
+          sessionId: snapshot.sessionId,
+        });
         await fetch(`/api/peer-signaling/${conversationId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -249,27 +266,57 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     }
     const baseUrl = `/api/peer-signaling/${conversationId}?${params.toString()}`;
 
+    logPeerSignaling("subscribing to remote peer tokens", {
+      role: snapshot.role,
+      mode: typeof window.EventSource === "function" ? "sse" : "poll",
+      baseUrl,
+      viewerId,
+      sessionId: snapshot.sessionId,
+    });
+
     if (typeof window.EventSource === "function") {
       const source = new window.EventSource(baseUrl);
+      const handleOpen = () => {
+        logPeerSignaling("remote token EventSource opened", { baseUrl });
+      };
+      const handleError = (event: Event) => {
+        logPeerSignaling("remote token EventSource error", {
+          baseUrl,
+          eventType: event.type,
+        });
+      };
       const tokenListener = (event: MessageEvent) => {
         try {
           const payload = JSON.parse(event.data ?? "{}") as RemoteTokenPayload;
+          logPeerSignaling("received remote peer token", {
+            kind: payload.kind,
+            fromRole: payload.fromRole,
+            sessionId: payload.sessionId,
+            createdAt: payload.createdAt,
+            baseUrl,
+          });
           handlePayload(payload);
         } catch (error) {
           console.error("Failed to parse remote signaling token", error);
         }
       };
 
+      source.addEventListener("open", handleOpen);
+      source.addEventListener("error", handleError);
       source.addEventListener("token", tokenListener as EventListener);
 
       return () => {
+        logPeerSignaling("closing remote token EventSource", { baseUrl });
         source.removeEventListener("token", tokenListener as EventListener);
+        source.removeEventListener("open", handleOpen);
+        source.removeEventListener("error", handleError);
         source.close();
       };
     }
 
     const abortController = new AbortController();
 
+    logPeerSignaling("polling remote peer tokens", { baseUrl });
     const poll = async () => {
       while (!abortController.signal.aborted) {
         try {
@@ -280,10 +327,18 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
             const payload = (await response.json()) as {
               tokens?: RemoteTokenPayload[];
             };
+            logPeerSignaling("polled remote peer tokens", {
+              baseUrl,
+              count: payload.tokens?.length ?? 0,
+            });
             payload.tokens?.forEach((token) => handlePayload(token));
           }
         } catch (error) {
           if (!abortController.signal.aborted) {
+            logPeerSignaling("failed to poll remote peer tokens", {
+              baseUrl,
+              error,
+            });
             console.error("Failed to poll peer signaling tokens", error);
           }
         }
