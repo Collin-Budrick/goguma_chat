@@ -2912,12 +2912,13 @@ const defaultCreatePush = async (
         };
 
         if (parsed.type === "message:send" && parsed.conversationId && parsed.body) {
-          const response = await fetch("/api/messages", {
+          const response = await fetch("/api/chat/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              conversationId: parsed.conversationId,
-              body: parsed.body,
+              friendId: parsed.conversationId,
+              content: parsed.body,
+              mode: "push",
               clientMessageId: parsed.clientMessageId,
             }),
           });
@@ -2934,12 +2935,41 @@ const defaultCreatePush = async (
             return;
           }
 
-          const json = (await response.json()) as { message?: unknown };
+          const json = (await response.json()) as {
+            conversationId?: string;
+            message?:
+              | null
+              | {
+                  id: string;
+                  authorId: string;
+                  body: string;
+                  sentAt: string;
+                };
+          };
+
+          const normalizedMessage = json.message
+            ? {
+                id: json.message.id,
+                conversationId: json.conversationId ?? parsed.conversationId,
+                senderId: json.message.authorId,
+                body: json.message.body,
+                createdAt: json.message.sentAt,
+                updatedAt: json.message.sentAt,
+                sender: {
+                  id: json.message.authorId,
+                  email: null,
+                  firstName: null,
+                  lastName: null,
+                  image: null,
+                },
+              }
+            : undefined;
+
           forwardFrame({
             type: "message:ack",
-            conversationId: parsed.conversationId,
+            conversationId: json.conversationId ?? parsed.conversationId,
             clientMessageId: parsed.clientMessageId ?? null,
-            message: json.message,
+            message: normalizedMessage ?? undefined,
           });
           return;
         }
