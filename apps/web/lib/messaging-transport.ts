@@ -2807,7 +2807,26 @@ const defaultCreatePush = async (
     }
   };
 
-  const source: EventSourceLike = new EventSourceCtor(endpointCandidate);
+  let readySettled = false;
+
+  const clearSource = () => {
+    while (sourceCleanup.length) {
+      sourceCleanup.pop()?.();
+    }
+    if (source) {
+      source.close();
+      source = null;
+    }
+  };
+
+  const teardown = () => {
+    closed = true;
+    clearReconnectTimer();
+    clearSource();
+    while (persistentCleanup.length) {
+      persistentCleanup.pop()?.();
+    }
+  };
 
   const readyPromise = new Promise<void>((resolve, reject) => {
     let hasConnected = false;
@@ -2845,9 +2864,10 @@ const defaultCreatePush = async (
       }
     };
 
-    source.addEventListener("open", handleReady);
-    source.addEventListener("ready", handleReady as never);
-    source.addEventListener("error", handleError as never);
+    const connectSource = () => {
+      if (closed || signal.aborted) {
+        return;
+      }
 
     readyCleanupListeners.push(() => {
       source.removeEventListener("open", handleReady);
@@ -2855,47 +2875,90 @@ const defaultCreatePush = async (
       source.removeEventListener("error", handleError as never);
     });
 
-    const handleMessageEvent = (event: MessageEvent<unknown>) => {
-      try {
-        const parsed = typeof event.data === "string"
-          ? JSON.parse(event.data)
-          : (event.data as unknown);
-        if (event.type === "message") {
-          forwardFrame({
-            type: "message",
-            conversationId: roomId,
-            clientMessageId:
-              typeof (parsed as { clientMessageId?: unknown }).clientMessageId === "string"
-                ? (parsed as { clientMessageId: string }).clientMessageId
-                : null,
-            message: (parsed as { message?: unknown }).message ?? parsed,
-          });
+      const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
+      source = localSource;
+
+      const handleReady = () => {
+        reconnectAttempts = 0;
+        startOptions.emitState("connected");
+        if (readySettled) return;
+        readySettled = true;
+        resolve();
+      };
+
+      const handleError = (event: Event | Error) => {
+        const normalized = normalizeError(
+          event instanceof ErrorEvent ? event.error ?? event : event,
+        );
+        startOptions.emitError(normalized);
+
+        if (closed || signal.aborted) {
           return;
         }
 
-        if (event.type === "typing") {
-          forwardFrame({
-            type: "typing",
-            conversationId: roomId,
-            typing: parsed,
-          });
-          return;
-        }
+        startOptions.emitState("recovering");
+        scheduleReconnect();
+      };
 
-      } catch (error) {
-        startOptions.emitError(normalizeError(error));
-      }
+      localSource.addEventListener("open", handleReady);
+      localSource.addEventListener("ready", handleReady as never);
+      localSource.addEventListener("error", handleError as never);
+
+      sourceCleanup.push(() => {
+        localSource.removeEventListener("open", handleReady);
+        localSource.removeEventListener("ready", handleReady as never);
+        localSource.removeEventListener("error", handleError as never);
+      });
+
+      const handleMessageEvent = (event: MessageEvent<unknown>) => {
+        try {
+          const parsed = typeof event.data === "string"
+            ? JSON.parse(event.data)
+            : (event.data as unknown);
+          if (event.type === "message") {
+            forwardFrame({
+              type: "message",
+              conversationId: roomId,
+              clientMessageId:
+                typeof (parsed as { clientMessageId?: unknown }).clientMessageId === "string"
+                  ? (parsed as { clientMessageId: string }).clientMessageId
+                  : null,
+              message: (parsed as { message?: unknown }).message ?? parsed,
+            });
+            return;
+          }
+
+          if (event.type === "typing") {
+            forwardFrame({
+              type: "typing",
+              conversationId: roomId,
+              typing: parsed,
+            });
+            return;
+          }
+
+        } catch (error) {
+          startOptions.emitError(normalizeError(error));
+        }
+      };
+
+      ["message", "typing"].forEach((eventName) => {
+        localSource.addEventListener(eventName, handleMessageEvent as never);
+        sourceCleanup.push(() =>
+          localSource.removeEventListener(eventName, handleMessageEvent as never),
+        );
+      });
     };
 
-    ["message", "typing"].forEach((eventName) => {
-      source.addEventListener(eventName, handleMessageEvent as never);
-      cleanupListeners.push(() =>
-        source.removeEventListener(eventName, handleMessageEvent as never),
-      );
-    });
+    connectSource();
   });
 
-  await readyPromise;
+  try {
+    await readyPromise;
+  } catch (error) {
+    teardown();
+    throw error;
+  }
 
   const handleRuntimeError = (event: Event | Error) => {
     startOptions.emitError(
@@ -3024,10 +3087,7 @@ const defaultCreatePush = async (
       }
     },
     async close() {
-      cleanupListeners.forEach((cleanup) => cleanup());
-      if (source) {
-        source.close();
-      }
+      teardown();
     },
   } satisfies DriverConnection;
 };
@@ -3213,6 +3273,13 @@ export function initializeMessagingTransport(options: {
       lastErrorWasAbort = isAbortError(normalized);
       await nextHandle.disconnect().catch(() => undefined);
       currentHandle = previousHandle;
+      if (
+        mode === "push" &&
+        normalized instanceof TransportUnavailableError &&
+        currentMode !== "progressive"
+      ) {
+        return executeSwitch("progressive");
+      }
       return false;
     }
   };
