@@ -1502,10 +1502,6 @@ export const createPeerSignalingController = (
       );
       attachChannel(channel);
 
-      channel.addEventListener("close", () => {
-        emitError(new Error("WebRTC data channel closed"));
-      });
-
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
       await waitForIceGatheringComplete(peer, signal);
@@ -2019,7 +2015,7 @@ const defaultCreateWebRTC = async (
   };
 
   channel.onclose = () => {
-    emitError(new Error("WebRTC data channel closed"));
+    emitState("closed");
   };
 
   channel.onerror = (event) => {
