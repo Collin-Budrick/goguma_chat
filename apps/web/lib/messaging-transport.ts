@@ -306,6 +306,20 @@ const createTransportHandle = (
     stateEmitter.emit(next);
   };
 
+  const handleDriverStateChange = (next: TransportState) => {
+    updateState(next);
+
+    if (next === "closed" || next === "error") {
+      const activeCrypto = cryptoSession;
+      cryptoSession = null;
+      connection = null;
+      rawConnection = null;
+
+      rejectPendingSends(createNotConnectedError());
+      activeCrypto?.teardown().catch(() => undefined);
+    }
+  };
+
   const fulfillReady = () => {
     if (!readySettled && readyResolve) {
       readySettled = true;
@@ -363,7 +377,7 @@ const createTransportHandle = (
             void cryptoSession.receive(payload);
           }
         },
-        emitState: updateState,
+        emitState: handleDriverStateChange,
         emitError: (error) => errorEmitter.emit(error),
       });
 
@@ -453,6 +467,10 @@ const createTransportHandle = (
   };
 
   const send: TransportHandle["send"] = async (payload) => {
+    if (state === "closed" || state === "error") {
+      throw createNotConnectedError();
+    }
+
     if (connection) {
       await connection.send(payload);
       return;
