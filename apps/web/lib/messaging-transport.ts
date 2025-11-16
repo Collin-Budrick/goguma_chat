@@ -1696,11 +1696,7 @@ export const createPeerSignalingController = (
       commitState({ connected: true, error: null, lastUpdated: now() });
     },
     markDisconnected() {
-      commitState({
-        ...buildHandshakeResetState(),
-        connected: false,
-        lastUpdated: now(),
-      });
+      commitState({ connected: false, lastUpdated: now() });
     },
     shouldInitialize() {
       return currentState.role !== null;
