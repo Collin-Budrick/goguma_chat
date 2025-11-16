@@ -2773,18 +2773,26 @@ const defaultCreatePush = async (
   }
 
   const roomId = options?.roomId ?? null;
-  const sourceCleanup: Array<() => void> = [];
-  const persistentCleanup: Array<() => void> = [];
-  let source: EventSourceLike | null = null;
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let reconnectAttempts = 0;
-  let closed = false;
+  const cleanupListeners: Array<() => void> = [];
+  const readyCleanupListeners: Array<() => void> = [];
+  const textDecoder = new TextDecoder();
 
-  const clearReconnectTimer = () => {
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
+  const decodePayloadToString = (payload: unknown): string => {
+    if (typeof payload === "string") {
+      return payload;
     }
+
+    if (payload instanceof ArrayBuffer) {
+      return textDecoder.decode(payload);
+    }
+
+    if (ArrayBuffer.isView(payload)) {
+      return textDecoder.decode(
+        payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength),
+      );
+    }
+
+    return String(payload);
   };
 
   const forwardFrame = (frame: unknown) => {
@@ -2821,30 +2829,39 @@ const defaultCreatePush = async (
   };
 
   const readyPromise = new Promise<void>((resolve, reject) => {
+    let hasConnected = false;
+
     const handleAbort = () => {
-      if (readySettled) return;
-      readySettled = true;
-      teardown();
+      readyCleanupListeners.forEach((cleanup) => cleanup());
+      cleanupListeners.forEach((cleanup) => cleanup());
+      source.close();
       reject(createAbortError());
     };
 
     signal.addEventListener("abort", handleAbort, { once: true });
-    persistentCleanup.push(() => signal.removeEventListener("abort", handleAbort));
+    readyCleanupListeners.push(() => signal.removeEventListener("abort", handleAbort));
 
-    const scheduleReconnect = () => {
-      if (closed || signal.aborted) {
-        return;
+    const handleReady = () => {
+      hasConnected = true;
+      startOptions.emitState("connected");
+      readyCleanupListeners.forEach((cleanup) => cleanup());
+      resolve();
+    };
+
+    const handleError = (event: Event | Error) => {
+      const normalizedError = normalizeError(
+        event instanceof ErrorEvent ? event.error ?? event : event,
+      );
+
+      startOptions.emitError(normalizedError);
+
+      if (!hasConnected) {
+        startOptions.emitState("error");
+        readyCleanupListeners.forEach((cleanup) => cleanup());
+        cleanupListeners.forEach((cleanup) => cleanup());
+        reject(normalizedError);
+        source.close();
       }
-
-      const delay = Math.min(250 * 2 ** reconnectAttempts, 10_000);
-      reconnectAttempts += 1;
-
-      clearReconnectTimer();
-
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        connectSource();
-      }, delay);
     };
 
     const connectSource = () => {
@@ -2852,7 +2869,11 @@ const defaultCreatePush = async (
         return;
       }
 
-      clearSource();
+    readyCleanupListeners.push(() => {
+      source.removeEventListener("open", handleReady);
+      source.removeEventListener("ready", handleReady as never);
+      source.removeEventListener("error", handleError as never);
+    });
 
       const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
       source = localSource;
@@ -2939,6 +2960,17 @@ const defaultCreatePush = async (
     throw error;
   }
 
+  const handleRuntimeError = (event: Event | Error) => {
+    startOptions.emitError(
+      normalizeError(event instanceof ErrorEvent ? event.error ?? event : event),
+    );
+  };
+
+  source.addEventListener("error", handleRuntimeError as never);
+  cleanupListeners.push(() =>
+    source.removeEventListener("error", handleRuntimeError as never),
+  );
+
   return {
     async send(payload) {
       if (dependencies.deliverPushPayload) {
@@ -2969,16 +3001,7 @@ const defaultCreatePush = async (
       }
 
       try {
-        const asString =
-          typeof payload === "string"
-            ? payload
-            : payload instanceof ArrayBuffer || ArrayBuffer.isView(payload)
-              ? new TextDecoder().decode(
-                  payload instanceof ArrayBuffer
-                    ? payload
-                    : payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength),
-                )
-              : String(payload);
+        const asString = decodePayloadToString(payload);
 
         const parsed = JSON.parse(asString) as {
           type?: string;

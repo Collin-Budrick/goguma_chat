@@ -227,15 +227,34 @@ const runStoreRequest = (db, mode, executor) =>
     tx.onerror = () => reject(tx.error ?? new Error("Unread message transaction failed"));
   });
 
+const getUnreadRecordById = async (id) => {
+  if (!id) return null;
+
+  const db = await getUnreadDatabase();
+  if (!db) return null;
+
+  const record = await runStoreRequest(db, "readonly", (store) => store.get(id)).catch((error) => {
+    console.warn("[sw] Failed to lookup unread message", error);
+    return null;
+  });
+
+  return record && typeof record === "object" ? record : null;
+};
+
 const putUnreadRecord = async (record) => {
   const db = await getUnreadDatabase();
-  if (!db) return;
+  if (!db) return false;
+
+  const existing = await getUnreadRecordById(record.id);
+  if (existing) return false;
 
   await runStoreRequest(db, "readwrite", (store) => {
     store.put(record);
   }).catch((error) => {
     console.warn("[sw] Failed to persist unread message", error);
   });
+
+  return true;
 };
 
 const markMessagesDelivered = async (ids) => {
@@ -395,6 +414,10 @@ const maybeShowNotification = async (record) => {
     url: record.url ?? "/",
   };
 
+  if (!self.registration?.showNotification) {
+    return;
+  }
+
   try {
     await self.registration.showNotification(title, {
       body,
@@ -470,9 +493,11 @@ const handlePeerMessageEvent = async (payload) => {
     delivered: false,
   };
 
-  await putUnreadRecord(record);
+  const stored = await putUnreadRecord(record);
   await updateAppBadge();
-  await maybeShowNotification(record);
+  if (stored) {
+    await maybeShowNotification(record);
+  }
   await scheduleBackgroundSync();
   await flushQueuedMessages();
 };
