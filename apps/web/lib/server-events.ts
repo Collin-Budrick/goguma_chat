@@ -1,6 +1,10 @@
 import { EventEmitter } from "node:events";
 
 import type { SerializedMessage } from "@/db/conversations";
+import {
+  CONVERSATION_EMITTER_GLOBAL_KEY,
+  INDICATOR_EMITTER_GLOBAL_KEY,
+} from "./server-events-globals";
 type TypingPayload = {
   userId: string;
   isTyping: boolean;
@@ -26,11 +30,39 @@ type DockIndicatorEvent = {
   requestId?: string;
 };
 
-const conversationEmitter = new EventEmitter();
-const indicatorEmitter = new EventEmitter();
+declare global {
+  var __gogumaConversationEventEmitter__:
+    | EventEmitter
+    | undefined;
+  var __gogumaIndicatorEventEmitter__:
+    | EventEmitter
+    | undefined;
+}
 
-conversationEmitter.setMaxListeners(0);
-indicatorEmitter.setMaxListeners(0);
+const conversationGlobalScope =
+  globalThis as typeof globalThis &
+    Record<typeof CONVERSATION_EMITTER_GLOBAL_KEY, EventEmitter | undefined>;
+const indicatorGlobalScope =
+  globalThis as typeof globalThis &
+    Record<typeof INDICATOR_EMITTER_GLOBAL_KEY, EventEmitter | undefined>;
+
+const conversationEmitter =
+  conversationGlobalScope[CONVERSATION_EMITTER_GLOBAL_KEY] ??
+  (() => {
+    const emitter = new EventEmitter();
+    emitter.setMaxListeners(0);
+    conversationGlobalScope[CONVERSATION_EMITTER_GLOBAL_KEY] = emitter;
+    return emitter;
+  })();
+
+const indicatorEmitter =
+  indicatorGlobalScope[INDICATOR_EMITTER_GLOBAL_KEY] ??
+  (() => {
+    const emitter = new EventEmitter();
+    emitter.setMaxListeners(0);
+    indicatorGlobalScope[INDICATOR_EMITTER_GLOBAL_KEY] = emitter;
+    return emitter;
+  })();
 
 export function emitConversationEvent(event: ConversationEvent) {
   conversationEmitter.emit(event.conversationId, event);
