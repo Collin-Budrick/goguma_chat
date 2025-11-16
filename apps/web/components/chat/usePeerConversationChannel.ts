@@ -35,6 +35,7 @@ const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 15_000;
+const DEFAULT_CRYPTO_READY_TIMEOUT_MS = Math.min(HEARTBEAT_TIMEOUT_MS, 3_000);
 
 type ChannelHistoryMode = "replace" | "prepend";
 
@@ -1014,11 +1015,82 @@ export function usePeerConversationChannel(options: {
       void sendHeartbeat();
     };
 
+    const awaitCryptoReady = async (signal: AbortSignal) => {
+      const sessionId = peerSignalingController.getSnapshot().sessionId;
+      if (!sessionId) {
+        return;
+      }
+
+      const getCryptoReadyTimeout = () => {
+        if (typeof globalThis === "object" && globalThis) {
+          const override = (globalThis as {
+            __PEER_CRYPTO_READY_TIMEOUT__?: unknown;
+          }).__PEER_CRYPTO_READY_TIMEOUT__;
+          if (typeof override === "number" && override >= 0) {
+            return override;
+          }
+        }
+        return DEFAULT_CRYPTO_READY_TIMEOUT_MS;
+      };
+
+      const timeoutMs = getCryptoReadyTimeout();
+
+      try {
+        const trust = await getPeerTrustState(sessionId);
+        if (trust.remoteFingerprint) {
+          return;
+        }
+      } catch (error) {
+        console.warn("Failed to inspect peer trust state before heartbeats", error);
+      }
+
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const cleanup = () => {
+          if (settled) return;
+          settled = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          if (unsubscribe) {
+            unsubscribe();
+          }
+          signal.removeEventListener("abort", cleanup);
+          resolve();
+        };
+
+        const unsubscribe = subscribePeerTrust((state) => {
+          if (state.sessionId !== sessionId || !state.remoteFingerprint) {
+            return;
+          }
+          cleanup();
+        });
+
+        const timeoutId = timeoutMs > 0 ? setTimeout(cleanup, timeoutMs) : null;
+        signal.addEventListener("abort", cleanup, { once: true });
+
+        if (timeoutMs === 0) {
+          cleanup();
+        }
+      });
+    };
+
+    const abortController = new AbortController();
+
     void transport.ready
-      .then(() => {
+      .then(async () => {
         if (cancelled) {
           return;
         }
+
+        if (!abortController.signal.aborted) {
+          await awaitCryptoReady(abortController.signal);
+        }
+
+        if (cancelled || abortController.signal.aborted) {
+          return;
+        }
+
         heartbeatReadyRef.current = true;
         startHeartbeat();
       })
@@ -1044,6 +1116,7 @@ export function usePeerConversationChannel(options: {
         heartbeatIntervalRef.current = null;
       }
       clearHeartbeatTimeout();
+      abortController.abort();
       unsubscribeState();
     };
   }, [onHeartbeatTimeout, transportOption]);

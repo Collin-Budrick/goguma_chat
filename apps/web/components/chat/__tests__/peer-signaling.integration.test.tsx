@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 import {
   initializeMessagingTransport,
+  peerSignalingController,
   type TransportDependencies,
   type TransportHandle,
   type TransportMessage,
@@ -332,11 +333,14 @@ class DeferredReadyTransport implements TransportHandle {
 
 describe("peer signaling integration", () => {
   beforeEach(() => {
+    (globalThis as { __PEER_CRYPTO_READY_TIMEOUT__?: number }).__PEER_CRYPTO_READY_TIMEOUT__ = 0;
     installDomShim();
   });
 
   afterEach(() => {
     uninstallDomShim();
+    delete (globalThis as { __PEER_CRYPTO_READY_TIMEOUT__?: number }).__PEER_CRYPTO_READY_TIMEOUT__;
+    peerSignalingController.clear();
   });
 
   it("connects transport and delivers messages once the signaling backend echoes tokens", async () => {
@@ -397,6 +401,46 @@ describe("peer signaling integration", () => {
 
     await act(async () => {
       transport.markReady();
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(
+      transport.sentPayloads.some((payload) => {
+        try {
+          const parsed = JSON.parse(payload as string) as { type?: string; kind?: string };
+          return parsed?.type === "heartbeat" && parsed?.kind === "ping";
+        } catch {
+          return false;
+        }
+      }),
+    ).toBe(true);
+
+    await act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it("waits for the crypto-ready timeout before sending heartbeats when trust is unknown", async () => {
+    (globalThis as { __PEER_CRYPTO_READY_TIMEOUT__?: number }).__PEER_CRYPTO_READY_TIMEOUT__ = 25;
+
+    const transport = new DeferredReadyTransport();
+    let renderer: TestRenderer.ReactTestRenderer | null = null;
+
+    await act(async () => {
+      renderer = TestRenderer.create(<HeartbeatHarness transport={transport} />);
+    });
+
+    await act(async () => {
+      transport.markReady();
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(transport.sentPayloads).toHaveLength(0);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 40));
       await flushPromises();
       await flushPromises();
     });
