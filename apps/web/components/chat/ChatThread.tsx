@@ -66,25 +66,6 @@ type ChatThreadProps = {
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
 
-type ConnectionTone = "success" | "warning" | "error";
-
-type ConnectionIndicatorMeta = {
-  tone: ConnectionTone;
-  label: string;
-};
-
-const CONNECTION_PILL_CLASSES: Record<ConnectionTone, string> = {
-  success: "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
-  warning: "border-amber-400/40 bg-amber-500/10 text-amber-100",
-  error: "border-red-400/40 bg-red-500/10 text-red-100",
-};
-
-const CONNECTION_DOT_CLASSES: Record<ConnectionTone, string> = {
-  success: "bg-emerald-300",
-  warning: "bg-amber-300",
-  error: "bg-red-300",
-};
-
 function generateClientMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return `client-${crypto.randomUUID()}`;
@@ -266,20 +247,6 @@ export default function ChatThread({
     transport: transportHandle,
     onHeartbeatTimeout: restartTransport,
   });
-
-  const handleManualConnect = useCallback(() => {
-    if (typeof console !== "undefined" && typeof console.info === "function") {
-      console.info("[chat:thread] manual connect clicked", {
-        transportState,
-      });
-    }
-    void restartTransport().catch((error) => {
-      console.error("Manual peer connection failed", error);
-    });
-  }, [restartTransport, transportState]);
-
-  const isManualConnectDisabled =
-    transportState === "connecting" || transportState === "recovering";
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
@@ -934,27 +901,6 @@ export default function ChatThread({
     transportState,
   ]);
 
-  const connectionIndicator = useMemo<ConnectionIndicatorMeta | null>(() => {
-    switch (transportState) {
-      case "connected":
-        return { tone: "success", label: t("thread.connection.status.connected") };
-      case "connecting":
-      case "idle":
-        return { tone: "warning", label: t("thread.connection.status.connecting") };
-      case "degraded":
-      case "recovering":
-      case "closed":
-        return { tone: "warning", label: t("thread.connection.status.reconnecting") };
-      case "error":
-        return {
-          tone: "error",
-          label: transportError?.message ?? t("thread.connection.status.error"),
-        };
-      default:
-        return null;
-    }
-  }, [t, transportError?.message, transportState]);
-
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
     [conversation, viewerId, viewerProfile],
@@ -1298,35 +1244,6 @@ export default function ChatThread({
                   </p>
                   <p>{t(`thread.transport.mode.${messagingMode}`)}</p>
                 </div>
-                {connectionIndicator ? (
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 rounded-full border px-3 py-1 text-[11px]",
-                      CONNECTION_PILL_CLASSES[connectionIndicator.tone],
-                    )}
-                    aria-live="polite"
-                  >
-                    <span
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        CONNECTION_DOT_CLASSES[connectionIndicator.tone],
-                      )}
-                    />
-                    <span className="text-xs font-medium">
-                      {connectionIndicator.label}
-                    </span>
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={handleManualConnect}
-                  disabled={isManualConnectDisabled}
-                  className="rounded-full border border-white/30 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/60 hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:opacity-60"
-                >
-                  {isManualConnectDisabled
-                    ? t("thread.connection.status.connecting")
-                    : t("thread.transport.connect")}
-                </button>
                 <div className="relative">
                   <button
                     type="button"
