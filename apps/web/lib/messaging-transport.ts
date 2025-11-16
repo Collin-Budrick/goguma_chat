@@ -524,12 +524,34 @@ type WebTransportLike = {
   close: (options?: { closeCode?: number; reason?: string }) => Promise<void>;
 };
 
+type WebSocketLike = {
+  binaryType?: string;
+  readonly readyState: number;
+  close: (code?: number, reason?: string) => void;
+  send: (data: string | ArrayBuffer | ArrayBufferView | Blob) => void;
+  addEventListener?: (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+  ) => void;
+  removeEventListener?: (
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+  ) => void;
+  onopen?: ((event: Event) => void) | null;
+  onmessage?: ((event: { data: TransportMessage }) => void) | null;
+  onerror?: ((event: Event | Error) => void) | null;
+  onclose?: ((event: Event) => void) | null;
+};
+
 export type TransportDependencies = {
   udpConnector?: UDPConnector;
   createWebRTC?: (
     options: DriverStartOptions & { dependencies: TransportDependencies }
   ) => Promise<DriverConnection>;
   createWebTransport?: (
+    options: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string }
+  ) => Promise<DriverConnection>;
+  createWebSocket?: (
     options: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string }
   ) => Promise<DriverConnection>;
   signaling?: {
@@ -545,7 +567,9 @@ export type TransportDependencies = {
     | null
     | undefined;
   webTransportEndpoint?: string | ((options?: TransportConnectOptions) => string);
+  webSocketEndpoint?: string | ((options?: TransportConnectOptions) => string);
   WebTransportConstructor?: new (url: string) => WebTransportLike;
+  WebSocketConstructor?: new (url: string) => WebSocketLike;
   textEncoder?: () => TextEncoder;
 };
 
@@ -2541,6 +2565,194 @@ const defaultCreateWebTransport = async (
   };
 };
 
+const defaultCreateWebSocket = async (
+  startOptions: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string },
+): Promise<DriverConnection> => {
+  const { dependencies, options, signal } = startOptions;
+  const endpointCandidate =
+    startOptions.endpoint ??
+    (typeof dependencies.webSocketEndpoint === "function"
+      ? dependencies.webSocketEndpoint(options)
+      : dependencies.webSocketEndpoint) ??
+    (typeof options?.url === "string" ? options.url : undefined);
+
+  if (!endpointCandidate) {
+    throw new TransportUnavailableError("WebSocket endpoint is not configured");
+  }
+
+  const WebSocketCtor =
+    dependencies.WebSocketConstructor ??
+    ((typeof WebSocket !== "undefined" ? WebSocket : undefined) as
+      | (new (url: string) => WebSocketLike)
+      | undefined);
+
+  if (!WebSocketCtor) {
+    throw new TransportUnavailableError("WebSocket is not supported in this environment");
+  }
+
+  const socket = new WebSocketCtor(endpointCandidate);
+  if ("binaryType" in socket) {
+    (socket as { binaryType?: string }).binaryType = "arraybuffer";
+  }
+
+  const waitForOpen = async () =>
+    new Promise<void>((resolve, reject) => {
+      if (socket.readyState === 1) {
+        startOptions.emitState("connected");
+        resolve();
+        return;
+      }
+
+      const cleanup = () => {
+        if (typeof socket.removeEventListener === "function") {
+          socket.removeEventListener("open", handleOpen);
+          socket.removeEventListener("error", handleError);
+          socket.removeEventListener("close", handleClose);
+        } else {
+          socket.onopen = previousOpen;
+          socket.onerror = previousError;
+          socket.onclose = previousClose;
+        }
+        signal.removeEventListener("abort", handleAbort);
+      };
+
+      const handleAbort = () => {
+        cleanup();
+        reject(createAbortError());
+        socket.close(1000, "aborted");
+      };
+
+      const handleOpen = () => {
+        cleanup();
+        startOptions.emitState("connected");
+        resolve();
+      };
+
+      const handleError = (event: Event | Error) => {
+        cleanup();
+        reject(normalizeError(event instanceof ErrorEvent ? event.error ?? event : event));
+      };
+
+      const handleClose = () => {
+        cleanup();
+        reject(new Error("WebSocket connection closed during handshake"));
+      };
+
+      const previousOpen = socket.onopen;
+      const previousError = socket.onerror;
+      const previousClose = socket.onclose;
+
+      if (typeof socket.addEventListener === "function") {
+        socket.addEventListener("open", handleOpen);
+        socket.addEventListener("error", handleError);
+        socket.addEventListener("close", handleClose);
+      } else {
+        socket.onopen = (event) => {
+          previousOpen?.(event as Event);
+          handleOpen();
+        };
+        socket.onerror = (event) => {
+          previousError?.(event as Event);
+          handleError(event as Event);
+        };
+        socket.onclose = (event) => {
+          previousClose?.(event as Event);
+          handleClose();
+        };
+      }
+
+      signal.addEventListener("abort", handleAbort, { once: true });
+    });
+
+  await waitForOpen();
+
+  const handleMessage = (event: MessageEvent<TransportMessage> | { data: TransportMessage }) => {
+    startOptions.emitMessage(event.data);
+  };
+
+  const handleError = (event: Event | Error) => {
+    startOptions.emitError(normalizeError(event instanceof ErrorEvent ? event.error ?? event : event));
+  };
+
+  const handleClose = () => {
+    startOptions.emitState("closed");
+  };
+
+  const cleanupListeners: Array<() => void> = [];
+
+  if (typeof socket.addEventListener === "function") {
+    socket.addEventListener("message", handleMessage as EventListener);
+    socket.addEventListener("error", handleError as EventListener);
+    socket.addEventListener("close", handleClose);
+    cleanupListeners.push(() => {
+      socket.removeEventListener?.("message", handleMessage as EventListener);
+      socket.removeEventListener?.("error", handleError as EventListener);
+      socket.removeEventListener?.("close", handleClose);
+    });
+  } else {
+    const previousMessage = socket.onmessage;
+    const previousError = socket.onerror;
+    const previousClose = socket.onclose;
+
+    socket.onmessage = (event) => {
+      previousMessage?.(event as { data: TransportMessage });
+      handleMessage(event as { data: TransportMessage });
+    };
+    socket.onerror = (event) => {
+      previousError?.(event as Event);
+      handleError(event as Event);
+    };
+    socket.onclose = (event) => {
+      previousClose?.(event as Event);
+      handleClose();
+    };
+
+    cleanupListeners.push(() => {
+      socket.onmessage = previousMessage ?? null;
+      socket.onerror = previousError ?? null;
+      socket.onclose = previousClose ?? null;
+    });
+  }
+
+  const close = async () => {
+    cleanupListeners.forEach((cleanup) => cleanup());
+    socket.close();
+  };
+
+  signal.addEventListener(
+    "abort",
+    () => {
+      close().catch(() => undefined);
+    },
+    { once: true },
+  );
+
+  return {
+    async send(payload) {
+      if (socket.readyState !== 1) {
+        throw new Error("WebSocket is not open");
+      }
+
+      socket.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+    },
+    close,
+  };
+};
+
+const createWebSocketDriver = (dependencies: TransportDependencies): TransportDriver => ({
+  async start(startOptions) {
+    const endpoint =
+      typeof dependencies.webSocketEndpoint === "function"
+        ? dependencies.webSocketEndpoint(startOptions.options)
+        : dependencies.webSocketEndpoint;
+
+    const factory =
+      dependencies.createWebSocket ?? ((options) => defaultCreateWebSocket(options));
+
+    return factory({ ...startOptions, endpoint, dependencies });
+  },
+});
+
 const createProgressiveDriver = (
   dependencies: TransportDependencies,
 ): TransportDriver => ({
@@ -2562,6 +2774,8 @@ const createProgressiveDriver = (
       const normalized = normalizeError(error);
       startOptions.emitError(normalized);
 
+      let lastError: Error = normalized;
+
       const endpoint =
         typeof dependencies.webTransportEndpoint === "function"
           ? dependencies.webTransportEndpoint(startOptions.options)
@@ -2577,13 +2791,41 @@ const createProgressiveDriver = (
         const webTransportFactory =
           dependencies.createWebTransport ?? ((options) => defaultCreateWebTransport(options));
 
-        return webTransportFactory({
+        try {
+          return await webTransportFactory({
+            ...withDependencies,
+            endpoint,
+          });
+        } catch (webTransportError) {
+          const normalizedWebTransport = normalizeError(webTransportError);
+          startOptions.emitError(normalizedWebTransport);
+          lastError = normalizedWebTransport;
+        }
+      }
+
+      const webSocketEndpoint =
+        typeof dependencies.webSocketEndpoint === "function"
+          ? dependencies.webSocketEndpoint(startOptions.options)
+          : dependencies.webSocketEndpoint;
+
+      if (dependencies.createWebSocket || webSocketEndpoint) {
+        if (typeof console !== "undefined" && typeof console.debug === "function") {
+          console.debug("[transport:progressive] falling back to WebSocket", {
+            error: lastError.message,
+            endpoint: webSocketEndpoint,
+          });
+        }
+
+        const webSocketFactory =
+          dependencies.createWebSocket ?? ((options) => defaultCreateWebSocket(options));
+
+        return webSocketFactory({
           ...withDependencies,
-          endpoint,
+          endpoint: webSocketEndpoint,
         });
       }
 
-      throw normalized;
+      throw lastError;
     }
   },
 });
@@ -2592,6 +2834,9 @@ type TransportFactory = () => TransportHandle;
 
 const udpTransport = (dependencies: TransportDependencies): TransportFactory => () =>
   createTransportHandle("udp", createUDPDriver(dependencies));
+
+const websocketTransport = (dependencies: TransportDependencies): TransportFactory => () =>
+  createTransportHandle("websocket", createWebSocketDriver(dependencies));
 
 const progressiveTransport = (
   dependencies: TransportDependencies,
@@ -2609,7 +2854,9 @@ const getFactoryForMode = (
 
   return mode === "udp"
     ? udpTransport(dependencies)
-    : progressiveTransport(dependencies);
+    : mode === "websocket"
+      ? websocketTransport(dependencies)
+      : progressiveTransport(dependencies);
 };
 
 export function initializeMessagingTransport(options: {
