@@ -199,7 +199,7 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
   useEffect(() => {
     remoteTokensRef.current.clear();
-  }, [conversationId, snapshot.role, snapshot.sessionId, viewerId]);
+  }, [conversationId, snapshot.connected, snapshot.role, snapshot.sessionId, viewerId]);
 
   useEffect(() => {
     if (snapshot.remoteAnswer) {
