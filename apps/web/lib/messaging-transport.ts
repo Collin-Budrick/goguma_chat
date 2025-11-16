@@ -1652,6 +1652,14 @@ export const createPeerSignalingController = (
       },
       webTransportEndpoint: undefined,
       WebTransportConstructor: undefined,
+      pushEndpoint: (options) =>
+        typeof options?.roomId === "string"
+          ? `/api/conversations/${options.roomId}/events`
+          : undefined,
+      EventSourceConstructor:
+        typeof EventSource !== "undefined"
+          ? (EventSource as unknown as new (url: string) => EventSourceLike)
+          : undefined,
     } satisfies TransportDependencies;
   };
 
@@ -2738,13 +2746,31 @@ const defaultCreatePush = async (
     (typeof dependencies.pushEndpoint === "function"
       ? dependencies.pushEndpoint(options)
       : dependencies.pushEndpoint) ??
-    (typeof options?.url === "string" ? options.url : undefined);
+    (typeof options?.url === "string"
+      ? options.url
+      : typeof options?.roomId === "string"
+        ? `/api/conversations/${options.roomId}/events`
+        : undefined);
 
   const EventSourceCtor =
     dependencies.EventSourceConstructor ??
     ((typeof EventSource !== "undefined" ? EventSource : undefined) as
       | (new (url: string) => EventSourceLike)
       | undefined);
+
+  if (!endpointCandidate) {
+    const error = new TransportUnavailableError("Push endpoint is not configured");
+    startOptions.emitError(error);
+    startOptions.emitState("error");
+    throw error;
+  }
+
+  if (!EventSourceCtor) {
+    const error = new TransportUnavailableError("EventSource is not available");
+    startOptions.emitError(error);
+    startOptions.emitState("error");
+    throw error;
+  }
 
   const roomId = options?.roomId ?? null;
   const cleanupListeners: Array<() => void> = [];
@@ -2761,17 +2787,9 @@ const defaultCreatePush = async (
     }
   };
 
-  const source: EventSourceLike | null = EventSourceCtor && endpointCandidate
-    ? new EventSourceCtor(endpointCandidate)
-    : null;
+  const source: EventSourceLike = new EventSourceCtor(endpointCandidate);
 
   const readyPromise = new Promise<void>((resolve, reject) => {
-    if (!source) {
-      resolve();
-      startOptions.emitState("connected");
-      return;
-    }
-
     const handleAbort = () => {
       cleanupListeners.forEach((cleanup) => cleanup());
       reject(createAbortError());

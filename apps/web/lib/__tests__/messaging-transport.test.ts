@@ -67,6 +67,41 @@ class MockBroadcastChannel {
   }
 }
 
+class MockEventSource {
+  static instances: MockEventSource[] = [];
+
+  readonly url: string;
+  private listeners = new Map<string, Set<(event: MessageEvent<unknown>) => void>>();
+
+  constructor(url: string) {
+    this.url = url;
+    MockEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, listener: (event: MessageEvent<unknown>) => void) {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
+    }
+    this.listeners.get(type)!.add(listener);
+  }
+
+  removeEventListener(type: string, listener: (event: MessageEvent<unknown>) => void) {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  emit(type: string, data?: unknown) {
+    this.listeners.get(type)?.forEach((listener) => {
+      listener({ type, data } as MessageEvent<unknown>);
+    });
+  }
+
+  close() {}
+
+  static reset() {
+    MockEventSource.instances = [];
+  }
+}
+
 const installWindow = () => {
   const listeners: ListenerMap = new Map();
   globalThis.__testWindowListeners = listeners;
@@ -119,6 +154,7 @@ const uninstallWindow = () => {
 describe("initializeMessagingTransport", () => {
   beforeEach(() => {
     MockBroadcastChannel.reset();
+    MockEventSource.reset();
     installWindow();
   });
 
@@ -624,6 +660,64 @@ describe("initializeMessagingTransport", () => {
     unsubscribeState();
 
     expect(states).toContain("closed");
+    await controller.teardown();
+  });
+
+  it("creates an EventSource for push mode using conversation events", async () => {
+    const dependencies: TransportDependencies = {
+      pushEndpoint: (options) =>
+        typeof options?.roomId === "string"
+          ? `/api/conversations/${options.roomId}/events`
+          : undefined,
+      EventSourceConstructor:
+        MockEventSource as unknown as new (url: string) => EventSource,
+    };
+
+    (window as { localStorage: Storage }).localStorage.setItem(
+      "site-messaging-mode",
+      "push",
+    );
+
+    const controller = initializeMessagingTransport({
+      dependencies,
+      connectOptions: { roomId: "room-123" },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(MockEventSource.instances[0]?.url).toBe(
+      "/api/conversations/room-123/events",
+    );
+
+    MockEventSource.instances[0]?.emit("open");
+
+    await controller.whenReady();
+
+    const handle = controller.transport as TransportHandle;
+    expect(handle?.state).toBe("connected");
+
+    await controller.teardown();
+  });
+
+  it("surfaces an error when push endpoint is unavailable", async () => {
+    (window as { localStorage: Storage }).localStorage.setItem(
+      "site-messaging-mode",
+      "push",
+    );
+
+    const controller = initializeMessagingTransport({
+      dependencies: {
+        EventSourceConstructor:
+          MockEventSource as unknown as new (url: string) => EventSource,
+      },
+      connectOptions: { roomId: "room-404" },
+    });
+
+    await expect(controller.whenReady()).rejects.toThrow(
+      "Push endpoint is not configured",
+    );
+    expect(MockEventSource.instances).toHaveLength(0);
+
     await controller.teardown();
   });
 
