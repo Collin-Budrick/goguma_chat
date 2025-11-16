@@ -179,6 +179,75 @@ describe("initializeMessagingTransport", () => {
       };
     };
 
+  const createMockWebSocketDriver = (
+    label: string,
+    context: {
+      received?: TransportMessage[];
+      endpoints?: Array<string | undefined>;
+      onReady?: (session: Awaited<ReturnType<typeof createPeerCryptoSession>>) => void;
+    } = {},
+  ): TransportDependencies["createWebSocket"] =>
+    async ({ emitMessage, signal, options, endpoint }) => {
+      context.endpoints?.push(endpoint);
+
+      const sessionId =
+        typeof options?.metadata?.peerSessionId === "string"
+          ? options.metadata.peerSessionId
+          : "default-peer-session";
+
+      const remoteSession = await createPeerCryptoSession({
+        sessionId,
+        onPlaintext: (payload) => {
+          context.received?.push(payload);
+          emitMessage(payload);
+        },
+      });
+
+      remoteSession.attachTransmitter(async (payload) => {
+        emitMessage(payload);
+      });
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const abortHandler = () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        void remoteSession.teardown();
+      };
+
+      signal.addEventListener("abort", abortHandler, { once: true });
+
+      void remoteSession
+        .whenReady()
+        .then(() => {
+          if (context.onReady) {
+            context.onReady(remoteSession);
+            return;
+          }
+
+          timer = setTimeout(() => {
+            void remoteSession.send(`${label}-hello`).catch(() => undefined);
+          }, 10);
+        })
+        .catch(() => undefined);
+
+      return {
+        async send(payload) {
+          await remoteSession.receive(payload);
+        },
+        async close() {
+          signal.removeEventListener("abort", abortHandler);
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          await remoteSession.teardown();
+        },
+      };
+    };
+
   it("connects using the progressive pipeline and notifies listeners once ready", async () => {
     const dependencies: TransportDependencies = {
       createWebRTC: createMockDriver("progressive"),
@@ -289,6 +358,127 @@ describe("initializeMessagingTransport", () => {
     expect(received).toContain("fallback");
     expect(handle.state).toBe("connected");
   });
+
+  it("connects using the websocket mode and relays messages", async () => {
+    const remoteReceived: TransportMessage[] = [];
+    const endpoints: Array<string | undefined> = [];
+    let remoteSession: Awaited<ReturnType<typeof createPeerCryptoSession>> | null = null;
+    let resolveRemoteReady: (() => void) | null = null;
+    const remoteReady = new Promise<void>((resolve) => {
+      resolveRemoteReady = resolve;
+    });
+
+    const dependencies: TransportDependencies = {
+      webSocketEndpoint: "ws://example.com/ws",
+      createWebSocket: createMockWebSocketDriver("websocket", {
+        received: remoteReceived,
+        endpoints,
+        onReady: (session) => {
+          remoteSession = session;
+          resolveRemoteReady?.();
+        },
+      }),
+    };
+
+    (window as { localStorage: Storage }).localStorage.setItem(
+      "site-messaging-mode",
+      "websocket",
+    );
+
+    const controller = initializeMessagingTransport({ dependencies });
+
+    await controller.whenReady();
+    const handle = controller.transport as TransportHandle;
+
+    expect(handle.mode).toBe("websocket");
+    expect(handle.state).toBe("connected");
+    expect(endpoints).toContain("ws://example.com/ws");
+
+    const inbound: TransportMessage[] = [];
+
+    const inboundPromise = new Promise<void>((resolve) => {
+      const unsubscribe = handle.onMessage((message) => {
+        inbound.push(message);
+        if (message === "websocket-hello") {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    await remoteReady;
+    await remoteSession?.send("websocket-hello");
+    await inboundPromise;
+
+    await handle.send("client-ping");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(inbound).toContain("websocket-hello");
+    expect(remoteReceived).toContain("client-ping");
+
+    const states: TransportState[] = [];
+      const unsubscribeState = handle.onStateChange((state) => states.push(state));
+      await handle.disconnect();
+      unsubscribeState();
+
+      expect(states).toContain("closed");
+      await controller.teardown();
+    });
+
+  it("falls back to WebSocket when progressive drivers are unavailable", async () => {
+    const endpoints: Array<string | undefined> = [];
+    let remoteSession: Awaited<ReturnType<typeof createPeerCryptoSession>> | null = null;
+    let resolveRemoteReady: (() => void) | null = null;
+    const remoteReady = new Promise<void>((resolve) => {
+      resolveRemoteReady = resolve;
+    });
+
+    const dependencies: TransportDependencies = {
+      createWebRTC: async () => {
+        throw new TransportUnavailableError("webrtc unavailable");
+      },
+      createWebTransport: async () => {
+        throw new TransportUnavailableError("webtransport unavailable");
+      },
+      webTransportEndpoint: "https://irrelevant.example", // ensures progressive attempts fallback path
+      webSocketEndpoint: "ws://fallback.test/ws",
+      createWebSocket: createMockWebSocketDriver("ws-fallback", {
+        endpoints,
+        onReady: (session) => {
+          remoteSession = session;
+          resolveRemoteReady?.();
+        },
+      }),
+    };
+
+    const controller = initializeMessagingTransport({ dependencies });
+    await controller.whenReady();
+    const handle = controller.transport as TransportHandle;
+
+    expect(handle.mode).toBe("progressive");
+    expect(handle.state).toBe("connected");
+
+    const inbound: TransportMessage[] = [];
+
+    const inboundPromise = new Promise<void>((resolve) => {
+      const unsubscribe = handle.onMessage((message) => {
+        inbound.push(message);
+        if (message === "ws-fallback") {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    await remoteReady;
+    await remoteSession?.send("ws-fallback");
+      await inboundPromise;
+
+      expect(inbound).toContain("ws-fallback");
+      await handle.disconnect();
+      expect(endpoints).toContain("ws://fallback.test/ws");
+      await controller.teardown();
+    });
 
   it("does not emit mode changes when a swap fails", async () => {
     const dependencies: TransportDependencies = {
