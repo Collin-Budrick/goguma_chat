@@ -35,6 +35,7 @@ const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 15_000;
+const DEFAULT_CRYPTO_READY_TIMEOUT_MS = Math.min(HEARTBEAT_TIMEOUT_MS, 3_000);
 
 type ChannelHistoryMode = "replace" | "prepend";
 
@@ -926,20 +927,55 @@ export function usePeerConversationChannel(options: {
     heartbeatReadyRef.current = false;
     heartbeatPrimedRef.current = false;
 
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-    if (heartbeatTimeoutRef.current) {
-      clearTimeout(heartbeatTimeoutRef.current);
-      heartbeatTimeoutRef.current = null;
-    }
+    const stopHeartbeat = () => {
+      awaitingHeartbeatAckRef.current = false;
+      heartbeatReadyRef.current = false;
+      heartbeatPrimedRef.current = false;
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null;
+      }
+    };
+
+    stopHeartbeat();
 
     if (!transport) {
       return () => undefined;
     }
 
     let cancelled = false;
+    let heartbeatAbort = new AbortController();
+
+    const getHeartbeatInterval = () => {
+      if (typeof globalThis === "object" && globalThis) {
+        const override = (globalThis as {
+          __PEER_HEARTBEAT_INTERVAL__?: unknown;
+        }).__PEER_HEARTBEAT_INTERVAL__;
+        if (typeof override === "number" && override > 0) {
+          return override;
+        }
+      }
+      return HEARTBEAT_INTERVAL_MS;
+    };
+
+    const getHeartbeatTimeout = () => {
+      if (typeof globalThis === "object" && globalThis) {
+        const override = (globalThis as {
+          __PEER_HEARTBEAT_TIMEOUT__?: unknown;
+        }).__PEER_HEARTBEAT_TIMEOUT__;
+        if (typeof override === "number" && override > 0) {
+          return override;
+        }
+      }
+      return HEARTBEAT_TIMEOUT_MS;
+    };
+
+    const heartbeatIntervalMs = getHeartbeatInterval();
+    const heartbeatTimeoutMs = getHeartbeatTimeout();
 
     const clearHeartbeatTimeout = () => {
       if (heartbeatTimeoutRef.current) {
@@ -963,7 +999,7 @@ export function usePeerConversationChannel(options: {
         } finally {
           heartbeatRecoveryRef.current = false;
         }
-      }, HEARTBEAT_TIMEOUT_MS);
+      }, heartbeatTimeoutMs);
     };
 
     const sendHeartbeat = async () => {
@@ -972,8 +1008,7 @@ export function usePeerConversationChannel(options: {
         return;
       }
 
-      const state = handle.state;
-      if (state !== "connected") {
+      if (handle.state !== "connected") {
         awaitingHeartbeatAckRef.current = false;
         return;
       }
@@ -1009,41 +1044,111 @@ export function usePeerConversationChannel(options: {
           return;
         }
         void sendHeartbeat();
-      }, HEARTBEAT_INTERVAL_MS);
+      }, heartbeatIntervalMs);
 
       void sendHeartbeat();
     };
 
-    void transport.ready
-      .then(() => {
-        if (cancelled) {
+    const awaitCryptoReady = async (signal: AbortSignal) => {
+      const sessionId = peerSignalingController.getSnapshot().sessionId;
+      if (!sessionId) {
+        return;
+      }
+
+      const getCryptoReadyTimeout = () => {
+        if (typeof globalThis === "object" && globalThis) {
+          const override = (globalThis as {
+            __PEER_CRYPTO_READY_TIMEOUT__?: unknown;
+          }).__PEER_CRYPTO_READY_TIMEOUT__;
+          if (typeof override === "number" && override >= 0) {
+            return override;
+          }
+        }
+        return DEFAULT_CRYPTO_READY_TIMEOUT_MS;
+      };
+
+      const timeoutMs = getCryptoReadyTimeout();
+
+      try {
+        const trust = await getPeerTrustState(sessionId);
+        if (trust.remoteFingerprint) {
           return;
         }
+      } catch (error) {
+        console.warn("Failed to inspect peer trust state before heartbeats", error);
+      }
+
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const cleanup = () => {
+          if (settled) return;
+          settled = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          if (unsubscribe) {
+            unsubscribe();
+          }
+          signal.removeEventListener("abort", cleanup);
+          resolve();
+        };
+
+        const unsubscribe = subscribePeerTrust((state) => {
+          if (state.sessionId !== sessionId || !state.remoteFingerprint) {
+            return;
+          }
+          cleanup();
+        });
+
+        const timeoutId = timeoutMs > 0 ? setTimeout(cleanup, timeoutMs) : null;
+        signal.addEventListener("abort", cleanup, { once: true });
+
+        if (timeoutMs === 0) {
+          cleanup();
+        }
+      });
+    };
+
+    const beginHeartbeatFlow = async (signal: AbortSignal) => {
+      try {
+        await transport.ready;
+        if (signal.aborted || cancelled) {
+          return;
+        }
+
+        await awaitCryptoReady(signal);
+        if (signal.aborted || cancelled) {
+          return;
+        }
+
         heartbeatReadyRef.current = true;
         startHeartbeat();
-      })
-      .catch(() => undefined);
-
-    const unsubscribeState = transport.onStateChange((state) => {
-      if (
-        state === "degraded" ||
-        state === "recovering" ||
-        state === "closed" ||
-        state === "error"
-      ) {
-        awaitingHeartbeatAckRef.current = false;
-        heartbeatPrimedRef.current = false;
-        clearHeartbeatTimeout();
+      } catch {
+        // ignore
       }
-    });
+    };
+
+    const handleState = (state: TransportState) => {
+      if (state === "connected") {
+        heartbeatAbort.abort();
+        heartbeatAbort = new AbortController();
+        stopHeartbeat();
+        void beginHeartbeatFlow(heartbeatAbort.signal);
+        return;
+      }
+
+      stopHeartbeat();
+      heartbeatAbort.abort();
+    };
+
+    const unsubscribeState = transport.onStateChange(handleState);
+
+    handleState(transport.state);
 
     return () => {
       cancelled = true;
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
-      }
-      clearHeartbeatTimeout();
+      stopHeartbeat();
+      heartbeatAbort.abort();
       unsubscribeState();
     };
   }, [onHeartbeatTimeout, transportOption]);
