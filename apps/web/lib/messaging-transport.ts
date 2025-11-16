@@ -180,6 +180,45 @@ const waitForIceGatheringComplete = async (
 const normalizeError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
+const isIgnorableChannelError = (value: unknown): boolean => {
+  if (value == null) {
+    return false;
+  }
+
+  let name: string | undefined;
+  let message: string | undefined;
+
+  if (typeof value === "string") {
+    message = value;
+  } else if (value instanceof Error) {
+    name = value.name;
+    message = value.message;
+  } else if (typeof value === "object") {
+    const named = value as { name?: unknown; message?: unknown };
+    if (typeof named.name === "string") {
+      name = named.name;
+    }
+    if (typeof named.message === "string") {
+      message = named.message;
+    }
+  }
+
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized.includes("user-initiated abort") ||
+    normalized.includes("reason=close called") ||
+    (name === "OperationError" && normalized.includes("close called"))
+  );
+};
+
 const createTransportHandle = (
   mode: MessagingMode,
   driver: TransportDriver,
@@ -888,6 +927,10 @@ export const createPeerSignalingController = (
 
     try {
       await transport.ready.catch(() => undefined);
+      if (transport.state !== "connected") {
+        scheduleRetry(getHandshakeRetryInterval());
+        return;
+      }
       const frame: PeerHandshakeFrame = {
         type: "handshake",
         handshake: entry.handshake,
@@ -1283,7 +1326,12 @@ export const createPeerSignalingController = (
         channel.addEventListener("message", (event) => emitMessage(event.data));
         channel.addEventListener("error", (event) => {
           const errorEvent = event as ErrorEvent;
-          emitError(normalize(errorEvent.error ?? new Error("WebRTC data channel error")));
+          const detail = errorEvent.error ?? errorEvent;
+          if (isIgnorableChannelError(detail)) {
+            emitState("closed");
+            return;
+          }
+          emitError(normalize(detail ?? new Error("WebRTC data channel error")));
           emitState("error");
         });
         channel.addEventListener("close", () => {
@@ -2020,7 +2068,12 @@ const defaultCreateWebRTC = async (
 
   channel.onerror = (event) => {
     const errorEvent = event as ErrorEvent;
-    emitError(errorEvent.error ?? new Error("WebRTC data channel error"));
+    const detail = errorEvent.error ?? errorEvent;
+    if (isIgnorableChannelError(detail)) {
+      emitState("closed");
+      return;
+    }
+    emitError(normalizeError(detail ?? new Error("WebRTC data channel error")));
   };
 
   const { negotiate } = dependencies.signaling ?? {};

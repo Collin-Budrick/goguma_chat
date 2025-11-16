@@ -75,6 +75,7 @@ export function useMessagingTransportHandle(
   const errorUnsubscribeRef = useRef<(() => void) | null>(null);
   const lastDegradedRef = useRef<number | null>(null);
   const handshakeUpgradeKeyRef = useRef<string | null>(null);
+  const handshakeUpgradeSessionRef = useRef<string | null>(null);
 
   const scheduleMicrotask = useCallback((callback: () => void) => {
     if (typeof queueMicrotask === "function") {
@@ -259,9 +260,20 @@ export function useMessagingTransportHandle(
   }, [attachHandle, scheduleMicrotask]);
 
   useEffect(() => {
+    const sessionId = snapshot.sessionId ?? null;
     if (!snapshot.role) {
       handshakeUpgradeKeyRef.current = null;
+      handshakeUpgradeSessionRef.current = null;
       return;
+    }
+
+    if (
+      sessionId &&
+      handshakeUpgradeSessionRef.current &&
+      handshakeUpgradeSessionRef.current !== sessionId
+    ) {
+      handshakeUpgradeKeyRef.current = null;
+      handshakeUpgradeSessionRef.current = null;
     }
 
     const handshakeToken =
@@ -279,11 +291,15 @@ export function useMessagingTransportHandle(
       return;
     }
 
-    if (handshakeUpgradeKeyRef.current === key) {
+    if (
+      handshakeUpgradeKeyRef.current === key ||
+      handshakeUpgradeSessionRef.current === sessionId
+    ) {
       return;
     }
 
     handshakeUpgradeKeyRef.current = key;
+    handshakeUpgradeSessionRef.current = sessionId;
 
     if (transportRef.current) {
       scheduleMicrotask(() => {

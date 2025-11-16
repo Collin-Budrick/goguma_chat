@@ -990,11 +990,14 @@ export function usePeerConversationChannel(options: {
         scheduleTimeout();
       } catch (error) {
         awaitingHeartbeatAckRef.current = false;
-        if (
-          error instanceof Error &&
-          error.message === "Transport is not connected"
-        ) {
-          return;
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase();
+          if (
+            message === "transport is not connected" ||
+            message.includes("data channel is not open")
+          ) {
+            return;
+          }
         }
         console.error("Failed to send heartbeat", error);
       }

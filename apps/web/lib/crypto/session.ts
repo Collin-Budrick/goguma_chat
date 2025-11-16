@@ -35,6 +35,15 @@ const HANDSHAKE_TIMEOUT_MS = 15_000;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
+const isTransientTransportSendError = (error: Error) => {
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return (
+    message.includes("transport is not connected") ||
+    message.includes("data channel is not open") ||
+    message.includes("not ready to transmit")
+  );
+};
+
 const createEmitter = <T>() => {
   const listeners = new Set<(value: T) => void>();
   return {
@@ -405,6 +414,12 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
 
   private readonly queuedIncoming: TransportMessage[] = [];
 
+  private readonly queuedOutgoing: Array<{
+    payload: TransportMessage;
+    resolve: () => void;
+    reject: (error: Error) => void;
+  }> = [];
+
   private trustState: PeerTrustState;
 
   constructor(options: PeerCryptoInternalOptions) {
@@ -435,13 +450,24 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
   attachTransmitter(transmit: (payload: TransportMessage) => Promise<void>) {
     this.transmit = transmit;
     void this.sendHandshake();
+    this.flushQueuedOutgoing();
   }
 
   async send(payload: TransportMessage) {
     if (!this.transmit) {
-      throw new Error("Peer crypto session is not ready to transmit");
+      return await new Promise<void>((resolve, reject) => {
+        this.queuedOutgoing.push({
+          payload,
+          resolve,
+          reject,
+        });
+      });
     }
 
+    await this.performEncryptedSend(payload);
+  }
+
+  private async performEncryptedSend(payload: TransportMessage) {
     await this.whenReady();
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const key = this.sessionKey;
@@ -469,7 +495,9 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       await this.transmit(JSON.stringify(envelope));
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
-      this.handleError(normalized);
+      if (!isTransientTransportSendError(normalized)) {
+        this.handleError(normalized);
+      }
       throw normalized;
     }
   }
@@ -511,9 +539,11 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       this.handshakeTimer = null;
     }
     this.queuedIncoming.length = 0;
+    this.rejectQueuedOutgoing(new Error("Peer crypto session closed"));
   }
 
   private handleError(error: Error) {
+    this.rejectQueuedOutgoing(error);
     if (this.onError) {
       try {
         this.onError(error);
@@ -543,6 +573,26 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
     this.startHandshakeTimer();
 
     await this.transmit(JSON.stringify(envelope));
+  }
+
+  private flushQueuedOutgoing() {
+    if (!this.transmit || this.queuedOutgoing.length === 0) {
+      return;
+    }
+    const queued = this.queuedOutgoing.splice(0);
+    queued.forEach(({ payload, resolve, reject }) => {
+      this.performEncryptedSend(payload).then(resolve, reject);
+    });
+  }
+
+  private rejectQueuedOutgoing(error: Error) {
+    if (!this.queuedOutgoing.length) {
+      return;
+    }
+    const normalized = error instanceof Error ? error : new Error(String(error));
+    while (this.queuedOutgoing.length) {
+      this.queuedOutgoing.shift()?.reject(normalized);
+    }
   }
 
   private startHandshakeTimer() {
