@@ -343,11 +343,18 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
         return;
       }
 
-      const alreadyPublished = publishedTokensRef.current[kind] === value;
       const state = publishStateRef.current[kind];
+      const alreadyPublished = publishedTokensRef.current[kind] === value;
+      const tokenChanged = state.pending !== value;
 
       if (alreadyPublished) {
         return;
+      }
+
+      if (tokenChanged) {
+        state.pending = value;
+        state.blocked = false;
+        state.attempts = 0;
       }
 
       if (state.inFlight) {
@@ -366,9 +373,15 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
         return;
       }
 
-      state.pending = value;
-      state.blocked = false;
-      state.attempts = 0;
+      if (state.attempts >= MAX_PUBLISH_ATTEMPTS) {
+        logPeerSignaling("skipping publish because attempts are exhausted", {
+          kind,
+          attempts: state.attempts,
+          sessionId: snapshot.sessionId,
+        });
+        markBlocked(kind);
+        return;
+      }
 
       startPublish(kind);
     };
