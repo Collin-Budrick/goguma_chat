@@ -1,8 +1,6 @@
 import { EventEmitter } from "node:events";
 
 import type { SerializedMessage } from "@/db/conversations";
-import type { MessagingMode } from "@/lib/messaging-mode-shared";
-
 type TypingPayload = {
   userId: string;
   isTyping: boolean;
@@ -16,14 +14,7 @@ type ConversationEvent =
       message: SerializedMessage;
       clientMessageId?: string;
     }
-  | { type: "typing"; conversationId: string; typing: TypingPayload }
-  | {
-      type: "settings";
-      conversationId: string;
-      settings: { messagingMode: MessagingMode };
-      updatedAt: string;
-      updatedBy: string;
-    };
+  | { type: "typing"; conversationId: string; typing: TypingPayload };
 
 type DockIndicatorScope = "chat" | "contacts" | "all";
 

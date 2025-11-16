@@ -63,10 +63,6 @@ type ChatThreadProps = {
   initialCursor: string | null;
 };
 
-type ApiError = {
-  error?: string;
-};
-
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
 
@@ -213,10 +209,6 @@ export default function ChatThread({
       initialConversation,
   );
 
-  const initialMessagingMode = shouldUseInitialData
-    ? initialConversation?.messagingMode ?? DEFAULT_MESSAGING_MODE
-    : DEFAULT_MESSAGING_MODE;
-
   const [conversation, setConversation] = useState<ChatConversation | null>(
     shouldUseInitialData ? initialConversation : null,
   );
@@ -239,10 +231,7 @@ export default function ChatThread({
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
     () => DEFAULT_DISPLAY_SETTINGS,
   );
-  const [messagingMode, setMessagingMode] = useState<MessagingMode>(
-    () => initialMessagingMode,
-  );
-  const [isMessagingModeUpdating, setIsMessagingModeUpdating] = useState(false);
+  const messagingMode: MessagingMode = DEFAULT_MESSAGING_MODE;
   const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
   const [presenceToast, setPresenceToast] = useState<string | null>(null);
@@ -365,62 +354,6 @@ export default function ChatThread({
       });
     },
     [],
-  );
-
-  const handleMessagingModeSelect = useCallback(
-    async (mode: MessagingMode) => {
-      if (!conversation?.id) {
-        return;
-      }
-
-      if (isMessagingModeUpdating || messagingMode === mode) {
-        return;
-      }
-
-      const previousMode = messagingMode;
-      setThreadError(null);
-      setMessagingMode(mode);
-      setIsMessagingModeUpdating(true);
-
-      try {
-        const response = await fetch(
-          `/api/conversations/${conversation.id}/mode`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode }),
-          },
-        );
-
-        if (!response.ok) {
-          const payload = (await response
-            .json()
-            .catch(() => ({}))) as ApiError;
-          throw new Error(
-            payload.error ?? "Failed to update messaging mode",
-          );
-        }
-
-        const payload = (await response.json()) as {
-          conversation: ChatConversation;
-        };
-
-        setConversation(payload.conversation);
-      } catch (error) {
-        console.error("Failed to update messaging mode", error);
-        setMessagingMode(previousMode);
-        setThreadError(t("alerts.settings"));
-      } finally {
-        setIsMessagingModeUpdating(false);
-      }
-    },
-    [
-      conversation?.id,
-      isMessagingModeUpdating,
-      messagingMode,
-      setConversation,
-      t,
-    ],
   );
 
   useEffect(() => {
@@ -590,21 +523,6 @@ export default function ChatThread({
     initialMessages,
     initialCursor,
   ]);
-
-  useEffect(() => {
-    if (!conversation) {
-      setMessagingMode(DEFAULT_MESSAGING_MODE);
-      return;
-    }
-
-    if (isMessagingModeUpdating) {
-      return;
-    }
-
-    setMessagingMode((prev) =>
-      prev === conversation.messagingMode ? prev : conversation.messagingMode,
-    );
-  }, [conversation?.messagingMode, conversation, isMessagingModeUpdating]);
 
   useEffect(() => {
     if (!conversation?.id) {
@@ -812,13 +730,6 @@ export default function ChatThread({
       if (event.type === "conversation") {
         const nextConversation = event.conversation;
         setConversation(nextConversation);
-        if (nextConversation) {
-          setMessagingMode((prev) =>
-            prev === nextConversation.messagingMode
-              ? prev
-              : nextConversation.messagingMode,
-          );
-        }
         return;
       }
 
@@ -1336,7 +1247,7 @@ export default function ChatThread({
       : "text-xs text-white/70";
   const messagingOptions = useMemo(
     () =>
-      (["push", "progressive", "udp"] as MessagingMode[]).map((mode) => ({
+      (["push"] as MessagingMode[]).map((mode) => ({
         id: mode,
         label: t(`thread.settings.unified.transport.options.${mode}.label`),
         description: t(`thread.settings.unified.transport.options.${mode}.description`),
@@ -1462,8 +1373,7 @@ export default function ChatThread({
                             className="mt-3"
                             value={messagingMode}
                             options={messagingOptions}
-                            onChange={handleMessagingModeSelect}
-                            disabled={!conversation?.id || isMessagingModeUpdating}
+                            disabled={!conversation?.id}
                           />
                         </section>
                         <section>

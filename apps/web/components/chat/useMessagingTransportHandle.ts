@@ -36,9 +36,10 @@ export function useMessagingTransportHandle(
   const [lastError, setLastError] = useState<Error | null>(null);
 
   const conversationId = options?.conversationId ?? null;
+  const viewerId = options?.viewerId ?? null;
   const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling({
     conversationId,
-    viewerId: options?.viewerId ?? null,
+    viewerId,
   });
 
   const peerSessionId = useMemo(() => {

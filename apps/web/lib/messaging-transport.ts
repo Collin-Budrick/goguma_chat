@@ -6,10 +6,6 @@ import {
   loadMessagingMode,
 } from "./messaging-mode";
 import type { PeerHandshakeFrame, PeerPresenceUpdate } from "./messaging-schema";
-import {
-  createPeerCryptoSession,
-  type PeerCryptoSession,
-} from "./crypto/session";
 
 export type TransportMessage =
   | string
@@ -58,20 +54,6 @@ const createEmitter = <T>() => {
       return () => listeners.delete(listener);
     },
   };
-};
-
-const PEER_SESSION_DEFAULT_ID = "default-peer-session";
-
-const resolvePeerSessionId = (options?: TransportConnectOptions): string => {
-  const metadata = options?.metadata as { peerSessionId?: unknown } | undefined;
-  const candidate = metadata?.peerSessionId;
-  if (typeof candidate === "string" && candidate.trim()) {
-    return candidate.trim();
-  }
-  if (typeof options?.roomId === "string" && options.roomId.trim()) {
-    return `room:${options.roomId.trim()}`;
-  }
-  return PEER_SESSION_DEFAULT_ID;
 };
 
 export type PeerPresenceListener = (update: PeerPresenceUpdate) => void;
@@ -241,8 +223,6 @@ export const createTransportHandle = (
 
   let state: TransportState = "idle";
   let connection: DriverConnection | null = null;
-  let rawConnection: DriverConnection | null = null;
-  let cryptoSession: PeerCryptoSession | null = null;
   let controller = new AbortController();
   let lastConnectOptions: TransportConnectOptions | undefined;
   let readyResolve: (() => void) | undefined;
@@ -320,13 +300,8 @@ export const createTransportHandle = (
     updateState(next);
 
     if (next === "closed" || next === "error") {
-      const activeCrypto = cryptoSession;
-      cryptoSession = null;
       connection = null;
-      rawConnection = null;
-
       rejectPendingSends(createNotConnectedError());
-      activeCrypto?.teardown().catch(() => undefined);
     }
   };
 
@@ -375,56 +350,16 @@ export const createTransportHandle = (
     updateState(nextState);
 
     try {
-      const cryptoId = resolvePeerSessionId(resolvedOptions);
-      cryptoSession = await createPeerCryptoSession({
-        sessionId: cryptoId,
-        onPlaintext: (payload) => messageEmitter.emit(payload),
-        onError: (error) => errorEmitter.emit(error),
-      });
-
       logDebug("starting driver", resolvedOptions);
       connection = await driver.start({
         signal: controller.signal,
         options: resolvedOptions,
         emitMessage: (payload) => {
-          if (cryptoSession) {
-            void cryptoSession.receive(payload);
-          }
+          messageEmitter.emit(payload);
         },
         emitState: handleDriverStateChange,
         emitError: (error) => errorEmitter.emit(error),
       });
-
-      const baseConnection = connection;
-      rawConnection = baseConnection;
-
-      if (!cryptoSession) {
-        throw new Error("Failed to initialize peer crypto session");
-      }
-
-      cryptoSession.attachTransmitter(async (payload) => {
-        if (!baseConnection) return;
-        await baseConnection.send(payload);
-      });
-
-      await cryptoSession.whenReady();
-
-      connection = {
-        async send(payload) {
-          if (!cryptoSession) {
-            throw new Error("Peer crypto session is not available");
-          }
-          await cryptoSession.send(payload);
-        },
-        async close() {
-          if (baseConnection?.close) {
-            await baseConnection.close();
-          }
-          if (cryptoSession) {
-            await cryptoSession.teardown();
-          }
-        },
-      } satisfies DriverConnection;
 
       if (controller.signal.aborted) {
         throw createAbortError();
@@ -437,33 +372,23 @@ export const createTransportHandle = (
       logDebug("connected");
     } catch (error) {
       const normalized = normalizeError(error);
+      rejectPendingSends(normalized);
+
+      if (connection?.close) {
+        await connection.close().catch(() => undefined);
+      }
+      connection = null;
+
       if (isAbortError(normalized)) {
         logDebug("connect aborted");
-        rejectPendingSends(normalized);
-        if (cryptoSession) {
-          await cryptoSession.teardown().catch(() => undefined);
-        }
-        if (rawConnection?.close) {
-          await rawConnection.close().catch(() => undefined);
-        }
-        cryptoSession = null;
-        rawConnection = null;
         updateState("closed");
         throw normalized;
       }
+
       logDebug("connect failed", normalized);
       updateState("error");
       errorEmitter.emit(normalized);
       rejectReady(normalized);
-      rejectPendingSends(normalized);
-      if (cryptoSession) {
-        await cryptoSession.teardown().catch(() => undefined);
-      }
-      if (rawConnection?.close) {
-        await rawConnection.close().catch(() => undefined);
-      }
-      cryptoSession = null;
-      rawConnection = null;
       throw normalized;
     }
   };
@@ -474,16 +399,10 @@ export const createTransportHandle = (
     controller.abort();
     const activeConnection = connection;
     connection = null;
-    rawConnection = null;
-    const activeCrypto = cryptoSession;
-    cryptoSession = null;
 
     try {
       if (activeConnection?.close) {
         await activeConnection.close();
-      }
-      if (activeCrypto) {
-        await activeCrypto.teardown();
       }
     } finally {
       rejectPendingSends(createNotConnectedError());
@@ -2910,19 +2829,12 @@ const defaultCreatePush = async (
           return;
         }
 
-        if (event.type === "settings") {
-          forwardFrame({
-            type: "conversation",
-            conversation: parsed,
-          });
-          return;
-        }
       } catch (error) {
         startOptions.emitError(normalizeError(error));
       }
     };
 
-    ["message", "typing", "settings"].forEach((eventName) => {
+    ["message", "typing"].forEach((eventName) => {
       source.addEventListener(eventName, handleMessageEvent as never);
       cleanupListeners.push(() =>
         source.removeEventListener(eventName, handleMessageEvent as never),

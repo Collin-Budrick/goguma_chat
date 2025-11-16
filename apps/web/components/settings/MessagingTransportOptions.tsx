@@ -12,7 +12,7 @@ export type MessagingTransportOption = {
 type MessagingTransportOptionsProps = {
   value: MessagingMode;
   options: MessagingTransportOption[];
-  onChange: (mode: MessagingMode) => void | Promise<void>;
+  onChange?: (mode: MessagingMode) => void | Promise<void>;
   disabled?: boolean;
   className?: string;
 };
@@ -32,7 +32,7 @@ export function MessagingTransportOptions({
           <button
             key={option.id}
             type="button"
-            onClick={() => void onChange(option.id)}
+            onClick={() => void onChange?.(option.id)}
             disabled={disabled || isActive}
             className={cn(
               "rounded-xl border px-3 py-3 text-left transition",

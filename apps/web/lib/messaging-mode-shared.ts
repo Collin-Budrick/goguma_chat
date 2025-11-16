@@ -1,6 +1,6 @@
 export type MessagingMode = "udp" | "progressive" | "websocket" | "push";
 
-export const DEFAULT_MESSAGING_MODE: MessagingMode = "progressive";
+export const DEFAULT_MESSAGING_MODE: MessagingMode = "push";
 
 export function isMessagingMode(value: unknown): value is MessagingMode {
   return (

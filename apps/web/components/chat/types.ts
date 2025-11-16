@@ -1,5 +1,3 @@
-import type { MessagingMode } from "@/lib/messaging-mode-shared";
-
 export type ChatUserProfile = {
   id: string;
   email: string | null;
@@ -21,7 +19,6 @@ export type ChatConversation = {
   directKey: string | null;
   createdAt: string;
   updatedAt: string;
-  messagingMode: MessagingMode;
   participants: ChatParticipant[];
 };
 
