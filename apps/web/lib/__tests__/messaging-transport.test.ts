@@ -547,6 +547,86 @@ describe("initializeMessagingTransport", () => {
       await controller.teardown();
     });
 
+  it("clears stale connections when the driver closes and allows reconnect", async () => {
+    const stateTransitions: TransportState[] = [];
+    const sendInvocations: number[] = [];
+
+    const driverContext: { emitState: ((state: TransportState) => void) | null } = {
+      emitState: null,
+    };
+
+    const createClosingDriver = (): TransportDependencies["createWebRTC"] => {
+      let connectionId = 0;
+
+      return async ({ emitMessage, signal, options, emitState }) => {
+        const sessionId =
+          typeof options?.metadata?.peerSessionId === "string"
+            ? options.metadata.peerSessionId
+            : "default-peer-session";
+
+        const remoteSession = await createPeerCryptoSession({
+          sessionId,
+          onPlaintext: (payload) => emitMessage(payload),
+        });
+
+        remoteSession.attachTransmitter(async (payload) => {
+          emitMessage(payload);
+        });
+
+        const currentId = ++connectionId;
+        driverContext.emitState = emitState;
+
+        const abortHandler = () => {
+          void remoteSession.teardown();
+        };
+
+        signal.addEventListener("abort", abortHandler, { once: true });
+
+        return {
+          async send(payload) {
+            sendInvocations.push(currentId);
+            await remoteSession.receive(payload);
+          },
+          async close() {
+            signal.removeEventListener("abort", abortHandler);
+            await remoteSession.teardown();
+          },
+        } satisfies {
+          send: (payload: TransportMessage) => Promise<void>;
+          close: () => Promise<void>;
+        };
+      };
+    };
+
+    const dependencies: TransportDependencies = {
+      createWebRTC: createClosingDriver(),
+    };
+
+    const controller = initializeMessagingTransport({ dependencies });
+    await controller.whenReady();
+
+    const handle = controller.transport as TransportHandle;
+    const unsubscribe = handle.onStateChange((state) => stateTransitions.push(state));
+
+    await handle.send("first-message");
+
+    driverContext.emitState?.("closed");
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await expect(handle.send("after-close")).rejects.toThrow("Transport is not connected");
+    const initialConnectionId = Math.max(...sendInvocations);
+
+    await handle.connect();
+    await handle.send("after-reconnect");
+
+    expect(Math.max(...sendInvocations)).toBeGreaterThan(initialConnectionId);
+    expect(stateTransitions).toContain("closed");
+
+    unsubscribe();
+    await controller.teardown();
+  });
+
   it("does not emit mode changes when a swap fails", async () => {
     const dependencies: TransportDependencies = {
       createWebRTC: createMockDriver("progressive"),
