@@ -2912,16 +2912,17 @@ const defaultCreatePush = async (
         };
 
         if (parsed.type === "message:send" && parsed.conversationId && parsed.body) {
-          const response = await fetch("/api/chat/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              friendId: parsed.conversationId,
-              content: parsed.body,
-              mode: "push",
-              clientMessageId: parsed.clientMessageId,
-            }),
-          });
+          const response = await fetch(
+            `/api/conversations/${encodeURIComponent(parsed.conversationId)}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                body: parsed.body,
+                clientMessageId: parsed.clientMessageId,
+              }),
+            },
+          );
 
           if (!response.ok) {
             const error = new Error("Failed to deliver push message");
@@ -2936,38 +2937,30 @@ const defaultCreatePush = async (
           }
 
           const json = (await response.json()) as {
-            conversationId?: string;
             message?:
               | null
               | {
                   id: string;
-                  authorId: string;
+                  conversationId: string;
+                  senderId: string;
                   body: string;
-                  sentAt: string;
+                  createdAt: string;
+                  updatedAt: string;
+                  sender: {
+                    id: string;
+                    email: string | null;
+                    firstName: string | null;
+                    lastName: string | null;
+                    image: string | null;
+                  };
                 };
           };
 
-          const normalizedMessage = json.message
-            ? {
-                id: json.message.id,
-                conversationId: json.conversationId ?? parsed.conversationId,
-                senderId: json.message.authorId,
-                body: json.message.body,
-                createdAt: json.message.sentAt,
-                updatedAt: json.message.sentAt,
-                sender: {
-                  id: json.message.authorId,
-                  email: null,
-                  firstName: null,
-                  lastName: null,
-                  image: null,
-                },
-              }
-            : undefined;
+          const normalizedMessage = json.message ?? undefined;
 
           forwardFrame({
             type: "message:ack",
-            conversationId: json.conversationId ?? parsed.conversationId,
+            conversationId: normalizedMessage?.conversationId ?? parsed.conversationId,
             clientMessageId: parsed.clientMessageId ?? null,
             message: normalizedMessage ?? undefined,
           });
