@@ -529,6 +529,7 @@
         "label": "전송 방식",
         "connect": "연결하기",
         "mode": {
+          "push": "푸시",
           "progressive": "Progressive",
           "udp": "UDP"
         }
@@ -542,6 +543,10 @@
           "description": "이 대화의 모든 참가자에게 적용돼요.",
           "transport": {
             "options": {
+              "push": {
+                "label": "푸시 전송",
+                "description": "웹소켓 없이 채팅을 최신 상태로 유지하는 서버 푸시 스트림입니다."
+              },
               "progressive": {
                 "label": "Progressive 전송",
                 "description": "혼잡 제어가 포함된 WebRTC/WebTransport 경로예요."

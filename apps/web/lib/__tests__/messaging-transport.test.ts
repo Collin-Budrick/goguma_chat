@@ -249,6 +249,75 @@ describe("initializeMessagingTransport", () => {
       };
     };
 
+  const createMockPushDriver = (
+    label: string,
+    context: {
+      received?: TransportMessage[];
+      endpoints?: Array<string | undefined>;
+      onReady?: (session: Awaited<ReturnType<typeof createPeerCryptoSession>>) => void;
+    } = {},
+  ): TransportDependencies["createPush"] =>
+    async ({ emitMessage, signal, options, endpoint }) => {
+      context.endpoints?.push(endpoint);
+
+      const sessionId =
+        typeof options?.metadata?.peerSessionId === "string"
+          ? options.metadata.peerSessionId
+          : "default-peer-session";
+
+      const remoteSession = await createPeerCryptoSession({
+        sessionId,
+        onPlaintext: (payload) => {
+          context.received?.push(payload);
+          emitMessage(payload);
+        },
+      });
+
+      remoteSession.attachTransmitter(async (payload) => {
+        emitMessage(payload);
+      });
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
+      const abortHandler = () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        void remoteSession.teardown();
+      };
+
+      signal.addEventListener("abort", abortHandler, { once: true });
+
+      void remoteSession
+        .whenReady()
+        .then(() => {
+          if (context.onReady) {
+            context.onReady(remoteSession);
+            return;
+          }
+
+          timer = setTimeout(() => {
+            void remoteSession.send(`${label}-hello`).catch(() => undefined);
+          }, 10);
+        })
+        .catch(() => undefined);
+
+      return {
+        async send(payload) {
+          await remoteSession.receive(payload);
+        },
+        async close() {
+          signal.removeEventListener("abort", abortHandler);
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          await remoteSession.teardown();
+        },
+      };
+    };
+
   it("resets ready promise and pending sends when reconnecting after failure", async () => {
     const received: TransportMessage[] = [];
     let attempts = 0;
@@ -491,6 +560,72 @@ describe("initializeMessagingTransport", () => {
       expect(states).toContain("closed");
       await controller.teardown();
     });
+
+  it("connects using the push mode and relays messages", async () => {
+    const remoteReceived: TransportMessage[] = [];
+    const endpoints: Array<string | undefined> = [];
+    let remoteSession: Awaited<ReturnType<typeof createPeerCryptoSession>> | null = null;
+    let resolveRemoteReady: (() => void) | null = null;
+    const remoteReady = new Promise<void>((resolve) => {
+      resolveRemoteReady = resolve;
+    });
+
+    const dependencies: TransportDependencies = {
+      pushEndpoint: "https://example.com/push",
+      createPush: createMockPushDriver("push", {
+        received: remoteReceived,
+        endpoints,
+        onReady: (session) => {
+          remoteSession = session;
+          resolveRemoteReady?.();
+        },
+      }),
+    };
+
+    (window as { localStorage: Storage }).localStorage.setItem(
+      "site-messaging-mode",
+      "push",
+    );
+
+    const controller = initializeMessagingTransport({ dependencies });
+
+    await controller.whenReady();
+    const handle = controller.transport as TransportHandle;
+
+    expect(handle.mode).toBe("push");
+    expect(handle.state).toBe("connected");
+    expect(endpoints).toContain("https://example.com/push");
+
+    const inbound: TransportMessage[] = [];
+
+    const inboundPromise = new Promise<void>((resolve) => {
+      const unsubscribe = handle.onMessage((message) => {
+        inbound.push(message);
+        if (message === "push-hello") {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    await remoteReady;
+    await remoteSession?.send("push-hello");
+    await inboundPromise;
+
+    await handle.send("client-push");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(inbound).toContain("push-hello");
+    expect(remoteReceived).toContain("client-push");
+
+    const states: TransportState[] = [];
+    const unsubscribeState = handle.onStateChange((state) => states.push(state));
+    await handle.disconnect();
+    unsubscribeState();
+
+    expect(states).toContain("closed");
+    await controller.teardown();
+  });
 
   it("falls back to WebSocket when progressive drivers are unavailable", async () => {
     const endpoints: Array<string | undefined> = [];
