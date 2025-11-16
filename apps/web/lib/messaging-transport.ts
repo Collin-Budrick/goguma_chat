@@ -2808,6 +2808,19 @@ const defaultCreatePush = async (
   };
 
   let readySettled = false;
+  let closed = false;
+  let reconnectAttempts = 0;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let source: EventSourceLike | null = null;
+  const sourceCleanup: Array<() => void> = [];
+  const persistentCleanup: Array<() => void> = [];
+
+  const clearReconnectTimer = () => {
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
 
   const clearSource = () => {
     while (sourceCleanup.length) {
@@ -2834,7 +2847,7 @@ const defaultCreatePush = async (
     const handleAbort = () => {
       readyCleanupListeners.forEach((cleanup) => cleanup());
       cleanupListeners.forEach((cleanup) => cleanup());
-      source.close();
+      source?.close();
       reject(createAbortError());
     };
 
@@ -2860,7 +2873,7 @@ const defaultCreatePush = async (
         readyCleanupListeners.forEach((cleanup) => cleanup());
         cleanupListeners.forEach((cleanup) => cleanup());
         reject(normalizedError);
-        source.close();
+        source?.close();
       }
     };
 
@@ -2869,17 +2882,18 @@ const defaultCreatePush = async (
         return;
       }
 
-    readyCleanupListeners.push(() => {
-      source.removeEventListener("open", handleReady);
-      source.removeEventListener("ready", handleReady as never);
-      source.removeEventListener("error", handleError as never);
-    });
+      readyCleanupListeners.push(() => {
+        source?.removeEventListener("open", handleReady);
+        source?.removeEventListener("ready", handleReady as never);
+        source?.removeEventListener("error", handleError as never);
+      });
 
       const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
       source = localSource;
 
       const handleReady = () => {
         reconnectAttempts = 0;
+        clearReconnectTimer();
         startOptions.emitState("connected");
         if (readySettled) return;
         readySettled = true;
@@ -2897,6 +2911,7 @@ const defaultCreatePush = async (
         }
 
         startOptions.emitState("recovering");
+        clearSource();
         scheduleReconnect();
       };
 
@@ -2949,6 +2964,23 @@ const defaultCreatePush = async (
         );
       });
     };
+    const scheduleReconnect = () => {
+      if (closed || signal.aborted) {
+        return;
+      }
+
+      clearReconnectTimer();
+      reconnectAttempts += 1;
+
+      const delay = Math.min(1000 * reconnectAttempts, 16000);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (closed || signal.aborted) {
+          return;
+        }
+        connectSource();
+      }, delay);
+    };
 
     connectSource();
   });
@@ -2958,6 +2990,10 @@ const defaultCreatePush = async (
   } catch (error) {
     teardown();
     throw error;
+  }
+
+  if (!source) {
+    throw new Error("Push transport source could not be initialized");
   }
 
   const handleRuntimeError = (event: Event | Error) => {
