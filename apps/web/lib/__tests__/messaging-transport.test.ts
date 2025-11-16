@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test";
 
 import {
   initializeMessagingTransport,
+  createTransportHandle,
   TransportDependencies,
   TransportHandle,
   TransportMessage,
@@ -247,6 +248,72 @@ describe("initializeMessagingTransport", () => {
         },
       };
     };
+
+  it("resets ready promise and pending sends when reconnecting after failure", async () => {
+    const received: TransportMessage[] = [];
+    let attempts = 0;
+
+    const driver: Parameters<typeof createTransportHandle>[1] = {
+      async start({ emitMessage, signal }) {
+        attempts += 1;
+        if (attempts === 1) {
+          throw new Error("connect failed");
+        }
+
+        const remoteSession = await createPeerCryptoSession({
+          sessionId: "retry-session",
+          onPlaintext: (payload) => {
+            received.push(payload);
+            emitMessage(payload);
+          },
+        });
+
+        const abortHandler = () => {
+          void remoteSession.teardown();
+        };
+
+        signal.addEventListener("abort", abortHandler, { once: true });
+
+        remoteSession.attachTransmitter(async (payload) => {
+          emitMessage(payload);
+        });
+
+        await remoteSession.whenReady();
+
+        return {
+          async send(payload) {
+            await remoteSession.receive(payload);
+          },
+          async close() {
+            signal.removeEventListener("abort", abortHandler);
+            await remoteSession.teardown();
+          },
+        };
+      },
+    };
+
+    const handle = createTransportHandle("progressive", driver);
+    const initialReady = handle.ready;
+
+    await expect(handle.connect()).rejects.toThrow("connect failed");
+    await expect(initialReady).rejects.toThrow("connect failed");
+
+    const reconnectPromise = handle.connect();
+    const retryReady = handle.ready;
+
+    expect(retryReady).not.toBe(initialReady);
+
+    const queuedSend = handle.send("after-retry");
+
+    await reconnectPromise;
+    await retryReady;
+    await queuedSend;
+
+    expect(handle.state).toBe("connected");
+    expect(received).toContain("after-retry");
+
+    await handle.disconnect();
+  });
 
   it("connects using the progressive pipeline and notifies listeners once ready", async () => {
     const dependencies: TransportDependencies = {

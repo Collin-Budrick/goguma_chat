@@ -219,7 +219,7 @@ const isIgnorableChannelError = (value: unknown): boolean => {
   );
 };
 
-const createTransportHandle = (
+export const createTransportHandle = (
   mode: MessagingMode,
   driver: TransportDriver,
 ): TransportHandle => {
@@ -245,10 +245,17 @@ const createTransportHandle = (
   let readyResolve: (() => void) | undefined;
   let readyReject: ((reason: unknown) => void) | undefined;
   let readySettled = false;
-  const readyPromise: Promise<void> = new Promise((resolve, reject) => {
-    readyResolve = resolve;
-    readyReject = reject;
-  });
+  let readyPromise: Promise<void>;
+
+  const resetReadyState = () => {
+    readySettled = false;
+    readyPromise = new Promise((resolve, reject) => {
+      readyResolve = resolve;
+      readyReject = reject;
+    });
+  };
+
+  resetReadyState();
 
   type PendingSendEntry = {
     payload: TransportMessage;
@@ -333,6 +340,10 @@ const createTransportHandle = (
     const resolvedOptions = options ?? lastConnectOptions;
     if (options || (!lastConnectOptions && resolvedOptions)) {
       lastConnectOptions = resolvedOptions;
+    }
+
+    if (readySettled) {
+      resetReadyState();
     }
 
     const nextState =
@@ -446,6 +457,7 @@ const createTransportHandle = (
     } finally {
       rejectPendingSends(createNotConnectedError());
       updateState("closed");
+      resetReadyState();
     }
 
     // Prepare the handle for a potential reconnect by resetting the controller.
