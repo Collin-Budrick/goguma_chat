@@ -542,7 +542,6 @@ export function usePeerConversationChannel(options: {
       navigator.serviceWorker.removeEventListener("message", handleMessage);
     };
   }, [notify, updateMessages]);
-
   const resolvePending = useCallback(<T,>(
     map: PendingMap<T>,
     key: string | null | undefined,
@@ -883,10 +882,6 @@ export function usePeerConversationChannel(options: {
   }, [handleFrame, options.transport, rejectAllPending]);
 
   useEffect(() => {
-    void flushOutboundQueue();
-  }, [flushOutboundQueue, options.transport]);
-
-  useEffect(() => {
     const transport = options.transport;
     if (!transport) {
       return () => undefined;
@@ -1153,6 +1148,10 @@ export function usePeerConversationChannel(options: {
       }
     }
   }, [sendViaHttp]);
+
+  useEffect(() => {
+    void flushOutboundQueue();
+  }, [flushOutboundQueue, options.transport]);
 
   const sendMessage = useCallback(
     async ({
