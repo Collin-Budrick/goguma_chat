@@ -182,6 +182,16 @@ export function usePeerConversationChannel(options: {
   const heartbeatPrimedRef = useRef(false);
   const heartbeatRecoveryRef = useRef(false);
 
+  const rejectAllPending = useCallback((error: Error) => {
+    const rejectMap = <T,>(map: PendingMap<T>) => {
+      if (!map.size) return;
+      map.forEach((entry) => entry.reject(error));
+    };
+    rejectMap(pendingAcksRef.current);
+    rejectMap(pendingHistoryRef.current);
+    rejectMap(pendingLoadRef.current);
+  }, []);
+
   const ensurePeerTrusted = useCallback(async () => {
     const sessionId = peerSignalingController.getSnapshot().sessionId;
     if (!sessionId) {
@@ -640,9 +650,19 @@ export function usePeerConversationChannel(options: {
     };
 
     map.set(key, entry);
+    if (typeof console !== "undefined" && typeof console.info === "function") {
+      console.info("[chat:peer] registerPending", {
+        key,
+        timeoutMs,
+        pendingCount: map.size,
+      });
+    }
 
     if (typeof window !== "undefined" && timeoutMs > 0) {
       timer = window.setTimeout(() => {
+        if (typeof console !== "undefined" && typeof console.info === "function") {
+          console.info("[chat:peer] pending entry timed out", { key });
+        }
         entry.reject(new Error("Timed out waiting for peer response"));
       }, timeoutMs);
     }
@@ -896,6 +916,10 @@ export function usePeerConversationChannel(options: {
   useEffect(() => {
     transportRef.current = options.transport;
     if (!options.transport) {
+      rejectAllPending(new Error("Peer transport is unavailable"));
+      if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info("[chat:peer] transport detached");
+      }
       awaitingHeartbeatAckRef.current = false;
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
@@ -909,17 +933,48 @@ export function usePeerConversationChannel(options: {
     }
 
     const unsubscribe = options.transport.onMessage((payload) => {
+      if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info("[chat:peer] transport message received");
+      }
       handleFrame(parseTransportMessage(payload));
     });
     const unsubscribeError = options.transport.onError((error) => {
       console.error("Peer transport error", error);
+      if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info("[chat:peer] transport error event", { error });
+      }
     });
 
     return () => {
       unsubscribe();
       unsubscribeError();
     };
-  }, [handleFrame, options.transport]);
+  }, [handleFrame, options.transport, rejectAllPending]);
+
+  useEffect(() => {
+    const transport = options.transport;
+    if (!transport) {
+      return () => undefined;
+    }
+    const unsubscribe = transport.onStateChange((state) => {
+      if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info("[chat:peer] transport state change", { state });
+      }
+      if (
+        state === "error" ||
+        state === "closed" ||
+        state === "recovering" ||
+        state === "degraded"
+      ) {
+        rejectAllPending(
+          new Error("Peer transport disconnected before peer responded"),
+        );
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [options.transport, rejectAllPending]);
 
   useEffect(() => {
     const transport = transportRef.current;
@@ -1190,10 +1245,16 @@ export function usePeerConversationChannel(options: {
         clientMessageId,
       };
 
-      return new Promise<SendMessageResult>((resolve, reject) => {
-        registerPending(
-          pendingAcksRef.current,
+    return new Promise<SendMessageResult>((resolve, reject) => {
+      if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info("[chat:peer] sendMessage", {
+          conversationId,
           clientMessageId,
+        });
+      }
+      registerPending(
+        pendingAcksRef.current,
+        clientMessageId,
           (message) => resolve({ message }),
           (error) => reject(error),
           ACK_TIMEOUT_MS,
@@ -1202,6 +1263,12 @@ export function usePeerConversationChannel(options: {
         transport
           .send(JSON.stringify(payload))
           .catch((error) => {
+            if (typeof console !== "undefined" && typeof console.info === "function") {
+              console.info("[chat:peer] sendMessage transport send failed", {
+                clientMessageId,
+                error,
+              });
+            }
             rejectPending(
               pendingAcksRef.current,
               clientMessageId,
@@ -1383,6 +1450,12 @@ export function usePeerConversationChannel(options: {
         transport
           .send(JSON.stringify(payload))
           .catch((error) => {
+            if (typeof console !== "undefined" && typeof console.info === "function") {
+              console.info("[chat:peer] loadMore send failed", {
+                requestId,
+                error,
+              });
+            }
             cleanup();
             reject(normalizeError(error));
           });
@@ -1475,6 +1548,12 @@ export function usePeerConversationChannel(options: {
         transport
           .send(JSON.stringify(payload))
           .catch((error) => {
+            if (typeof console !== "undefined" && typeof console.info === "function") {
+              console.info("[chat:peer] syncHistory send failed", {
+                requestId,
+                error,
+              });
+            }
             cleanup();
             reject(normalizeError(error));
           });

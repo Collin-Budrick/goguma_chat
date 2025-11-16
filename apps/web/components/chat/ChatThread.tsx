@@ -278,6 +278,20 @@ export default function ChatThread({
     onHeartbeatTimeout: restartTransport,
   });
 
+  const handleManualConnect = useCallback(() => {
+    if (typeof console !== "undefined" && typeof console.info === "function") {
+      console.info("[chat:thread] manual connect clicked", {
+        transportState,
+      });
+    }
+    void restartTransport().catch((error) => {
+      console.error("Manual peer connection failed", error);
+    });
+  }, [restartTransport, transportState]);
+
+  const isManualConnectDisabled =
+    transportState === "connecting" || transportState === "recovering";
+
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const typingActiveRef = useRef(false);
@@ -1392,6 +1406,16 @@ export default function ChatThread({
                     </span>
                   </div>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={handleManualConnect}
+                  disabled={isManualConnectDisabled}
+                  className="rounded-full border border-white/30 bg-white/5 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/60 hover:bg-white/10 disabled:cursor-not-allowed disabled:border-white/20 disabled:opacity-60"
+                >
+                  {isManualConnectDisabled
+                    ? t("thread.connection.status.connecting")
+                    : t("thread.transport.connect")}
+                </button>
                 <div className="relative">
                   <button
                     type="button"

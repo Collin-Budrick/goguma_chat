@@ -527,6 +527,7 @@
       },
       "transport": {
         "label": "전송 방식",
+        "connect": "연결하기",
         "mode": {
           "progressive": "Progressive",
           "udp": "UDP"

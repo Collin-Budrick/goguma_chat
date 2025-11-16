@@ -120,6 +120,9 @@ const createAbortError = () =>
     ? new DOMException("The operation was aborted.", "AbortError")
     : new Error("The operation was aborted.");
 
+const isAbortError = (error: Error) =>
+  error.name === "AbortError" || error.message === "The operation was aborted.";
+
 const resolvePeerIceServers = (): RTCIceServer[] => {
   const globalScope =
     typeof globalThis === "object" && globalThis
@@ -434,6 +437,20 @@ export const createTransportHandle = (
       logDebug("connected");
     } catch (error) {
       const normalized = normalizeError(error);
+      if (isAbortError(normalized)) {
+        logDebug("connect aborted");
+        rejectPendingSends(normalized);
+        if (cryptoSession) {
+          await cryptoSession.teardown().catch(() => undefined);
+        }
+        if (rawConnection?.close) {
+          await rawConnection.close().catch(() => undefined);
+        }
+        cryptoSession = null;
+        rawConnection = null;
+        updateState("closed");
+        throw normalized;
+      }
       logDebug("connect failed", normalized);
       updateState("error");
       errorEmitter.emit(normalized);
@@ -929,9 +946,6 @@ export const createPeerSignalingController = (
       lower.includes("data channel is not open")
     );
   };
-
-  const isAbortError = (error: Error) =>
-    error.name === "AbortError" || error.message === "The operation was aborted.";
 
   const getHandshakeExpiration = (entry: HandshakeEntry) => {
     const ttlDeadline = entry.createdAt + INVITE_TTL_MS;
@@ -2903,6 +2917,7 @@ export function initializeMessagingTransport(options: {
   let switchPromise: Promise<void> | null = null;
   let readyPromise: Promise<void> = Promise.resolve();
   let lastError: Error | null = null;
+  let lastErrorWasAbort = false;
 
   const executeSwitch = async (mode: MessagingMode): Promise<boolean> => {
     if (mode === currentMode && currentHandle) {
@@ -2923,10 +2938,12 @@ export function initializeMessagingTransport(options: {
         await previousHandle.disconnect();
       }
       lastError = null;
+      lastErrorWasAbort = false;
       return true;
     } catch (error) {
       const normalized = normalizeError(error);
       lastError = normalized;
+      lastErrorWasAbort = isAbortError(normalized);
       await nextHandle.disconnect().catch(() => undefined);
       currentHandle = previousHandle;
       return false;
@@ -2949,6 +2966,11 @@ export function initializeMessagingTransport(options: {
     switchPromise = tracking;
     readyPromise = pending.then((success) => {
       if (!success) {
+        if (lastError && lastErrorWasAbort) {
+          lastErrorWasAbort = false;
+          lastError = null;
+          return;
+        }
         throw lastError ?? new Error("Failed to switch messaging transport");
       }
     });

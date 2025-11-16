@@ -527,6 +527,7 @@
       },
       "transport": {
         "label": "Transport",
+        "connect": "Connect",
         "mode": {
           "progressive": "Progressive",
           "udp": "UDP"

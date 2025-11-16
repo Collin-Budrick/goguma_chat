@@ -31,6 +31,7 @@ const STORE_SESSIONS = "sessions";
 const IDENTITY_KEY = "identity";
 const KEY_ROTATION_INFO = new TextEncoder().encode("goguma-peer-session");
 const HANDSHAKE_TIMEOUT_MS = 15_000;
+const HANDSHAKE_RETRY_INTERVAL_MS = 500;
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -42,6 +43,16 @@ const isTransientTransportSendError = (error: Error) => {
     message.includes("data channel is not open") ||
     message.includes("not ready to transmit")
   );
+};
+
+const logPeerCrypto = (message: string, meta?: Record<string, unknown>) => {
+  if (typeof console !== "undefined" && typeof console.info === "function") {
+    if (meta) {
+      console.info(`[crypto:peer] ${message}`, meta);
+    } else {
+      console.info(`[crypto:peer] ${message}`);
+    }
+  }
 };
 
 const createEmitter = <T>() => {
@@ -412,6 +423,8 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
 
   private handshakeTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private handshakeRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
   private readonly queuedIncoming: TransportMessage[] = [];
 
   private readonly queuedOutgoing: Array<{
@@ -445,12 +458,14 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
     this.localRotation = Date.now();
 
     trustEmitter.emit({ ...this.trustState });
+    logPeerCrypto("session initialized", { sessionId: this.sessionId });
   }
 
   attachTransmitter(transmit: (payload: TransportMessage) => Promise<void>) {
     this.transmit = transmit;
     void this.sendHandshake();
     this.flushQueuedOutgoing();
+    logPeerCrypto("transmitter attached", { sessionId: this.sessionId });
   }
 
   async send(payload: TransportMessage) {
@@ -538,11 +553,17 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       clearTimeout(this.handshakeTimer);
       this.handshakeTimer = null;
     }
+    if (this.handshakeRetryTimer) {
+      clearTimeout(this.handshakeRetryTimer);
+      this.handshakeRetryTimer = null;
+    }
     this.queuedIncoming.length = 0;
     this.rejectQueuedOutgoing(new Error("Peer crypto session closed"));
   }
 
   private handleError(error: Error) {
+    logPeerCrypto("session error", { sessionId: this.sessionId, error });
+    this.clearHandshakeTimers();
     this.rejectQueuedOutgoing(error);
     if (this.onError) {
       try {
@@ -558,7 +579,7 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
   }
 
   private async sendHandshake() {
-    if (!this.transmit) return;
+    if (!this.transmit || this.handshakeCompleted) return;
 
     const publicKeyRaw = await crypto.subtle.exportKey("raw", this.identity.publicKey);
     const envelope: EnvelopeHandshake = {
@@ -572,7 +593,27 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
 
     this.startHandshakeTimer();
 
-    await this.transmit(JSON.stringify(envelope));
+    try {
+      logPeerCrypto("sending handshake", { sessionId: this.sessionId });
+      await this.transmit(JSON.stringify(envelope));
+      logPeerCrypto("handshake frame sent", { sessionId: this.sessionId });
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      if (isTransientTransportSendError(normalized)) {
+        logPeerCrypto("handshake send transient failure", {
+          sessionId: this.sessionId,
+          error: normalized,
+        });
+        this.scheduleHandshakeRetry();
+        return;
+      }
+      logPeerCrypto("handshake send fatal failure", {
+        sessionId: this.sessionId,
+        error: normalized,
+      });
+      this.handleError(normalized);
+      throw normalized;
+    }
   }
 
   private flushQueuedOutgoing() {
@@ -595,15 +636,29 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
     }
   }
 
+  private scheduleHandshakeRetry() {
+    if (this.handshakeRetryTimer) {
+      return;
+    }
+    logPeerCrypto("scheduling handshake retry", { sessionId: this.sessionId });
+    this.handshakeRetryTimer = setTimeout(() => {
+      this.handshakeRetryTimer = null;
+      void this.sendHandshake();
+    }, HANDSHAKE_RETRY_INTERVAL_MS);
+  }
+
   private startHandshakeTimer() {
     if (this.handshakeTimer) {
-      clearTimeout(this.handshakeTimer);
+      return;
     }
+    logPeerCrypto("handshake timer started", { sessionId: this.sessionId });
     this.handshakeTimer = setTimeout(() => {
       if (this.readyReject) {
         this.readyReject(new Error("Peer crypto handshake timed out"));
         this.readyReject = null;
       }
+      logPeerCrypto("handshake timer fired", { sessionId: this.sessionId });
+      this.handshakeTimer = null;
     }, HANDSHAKE_TIMEOUT_MS);
   }
 
@@ -633,6 +688,7 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
     await this.persistTrustState();
 
     await this.maybeFinalizeHandshake();
+    logPeerCrypto("received handshake frame", { sessionId: this.sessionId });
   }
 
   private async handleEncrypted(envelope: EnvelopeData) {
@@ -685,11 +741,8 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
 
     this.sessionKey = aesKey;
     this.handshakeCompleted = true;
-
-    if (this.handshakeTimer) {
-      clearTimeout(this.handshakeTimer);
-      this.handshakeTimer = null;
-    }
+    this.clearHandshakeTimers();
+    logPeerCrypto("handshake completed", { sessionId: this.sessionId });
 
     await this.persistTrustState();
 
@@ -709,6 +762,17 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       }
     }
 
+  }
+
+  private clearHandshakeTimers() {
+    if (this.handshakeTimer) {
+      clearTimeout(this.handshakeTimer);
+      this.handshakeTimer = null;
+    }
+    if (this.handshakeRetryTimer) {
+      clearTimeout(this.handshakeRetryTimer);
+      this.handshakeRetryTimer = null;
+    }
   }
 
   private async persistTrustState() {
