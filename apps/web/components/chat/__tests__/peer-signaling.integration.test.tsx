@@ -191,6 +191,11 @@ function ChannelHarness({ transport, events }: HarnessProps) {
   return null;
 }
 
+function HeartbeatHarness({ transport }: { transport: TransportHandle }) {
+  usePeerConversationChannel({ transport, onHeartbeatTimeout: async () => {} });
+  return null;
+}
+
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 class SimpleTransportHandle implements TransportHandle {
@@ -271,6 +276,60 @@ class SimpleTransportHandle implements TransportHandle {
   }
 }
 
+class DeferredReadyTransport implements TransportHandle {
+  mode: MessagingMode = "progressive";
+  state: TransportState = "connected";
+  sentPayloads: TransportMessage[] = [];
+  ready: Promise<void>;
+  private resolveReady: (() => void) | null = null;
+  private readonly messageListeners = new Set<(payload: TransportMessage) => void>();
+  private readonly stateListeners = new Set<(state: TransportState) => void>();
+  private readonly errorListeners = new Set<(error: Error) => void>();
+
+  constructor() {
+    this.ready = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+  }
+
+  markReady() {
+    this.resolveReady?.();
+    this.resolveReady = null;
+  }
+
+  async connect() {
+    if (this.state === "connected") return;
+    this.state = "connected";
+    this.stateListeners.forEach((listener) => listener(this.state));
+  }
+
+  async disconnect() {
+    if (this.state === "closed") return;
+    this.state = "closed";
+    this.stateListeners.forEach((listener) => listener(this.state));
+  }
+
+  async send(payload: TransportMessage) {
+    this.sentPayloads.push(payload);
+  }
+
+  onMessage(listener: (payload: TransportMessage) => void) {
+    this.messageListeners.add(listener);
+    return () => this.messageListeners.delete(listener);
+  }
+
+  onStateChange(listener: (state: TransportState) => void) {
+    this.stateListeners.add(listener);
+    listener(this.state);
+    return () => this.stateListeners.delete(listener);
+  }
+
+  onError(listener: (error: Error) => void) {
+    this.errorListeners.add(listener);
+    return () => this.errorListeners.delete(listener);
+  }
+}
+
 describe("peer signaling integration", () => {
   beforeEach(() => {
     installDomShim();
@@ -319,5 +378,42 @@ describe("peer signaling integration", () => {
       renderer?.unmount();
     });
     await controller.teardown();
+  });
+
+  it("defers heartbeat traffic until crypto session is ready", async () => {
+    const transport = new DeferredReadyTransport();
+    let renderer: TestRenderer.ReactTestRenderer | null = null;
+
+    await act(async () => {
+      renderer = TestRenderer.create(<HeartbeatHarness transport={transport} />);
+    });
+
+    await act(async () => {
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(transport.sentPayloads).toHaveLength(0);
+
+    await act(async () => {
+      transport.markReady();
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(
+      transport.sentPayloads.some((payload) => {
+        try {
+          const parsed = JSON.parse(payload as string) as { type?: string; kind?: string };
+          return parsed?.type === "heartbeat" && parsed?.kind === "ping";
+        } catch {
+          return false;
+        }
+      }),
+    ).toBe(true);
+
+    await act(async () => {
+      renderer?.unmount();
+    });
   });
 });

@@ -177,6 +177,8 @@ export function usePeerConversationChannel(options: {
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awaitingHeartbeatAckRef = useRef(false);
+  const heartbeatReadyRef = useRef(false);
+  const heartbeatPrimedRef = useRef(false);
   const heartbeatRecoveryRef = useRef(false);
 
   const ensurePeerTrusted = useCallback(async () => {
@@ -680,6 +682,7 @@ export function usePeerConversationChannel(options: {
             clearTimeout(heartbeatTimeoutRef.current);
             heartbeatTimeoutRef.current = null;
           }
+          heartbeatPrimedRef.current = true;
           break;
         }
         case "handshake": {
@@ -920,6 +923,8 @@ export function usePeerConversationChannel(options: {
   useEffect(() => {
     const transport = transportRef.current;
     awaitingHeartbeatAckRef.current = false;
+    heartbeatReadyRef.current = false;
+    heartbeatPrimedRef.current = false;
 
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
@@ -936,10 +941,19 @@ export function usePeerConversationChannel(options: {
 
     let cancelled = false;
 
-    const scheduleTimeout = () => {
+    const clearHeartbeatTimeout = () => {
       if (heartbeatTimeoutRef.current) {
         clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null;
       }
+    };
+
+    const scheduleTimeout = () => {
+      if (!heartbeatPrimedRef.current) {
+        return;
+      }
+
+      clearHeartbeatTimeout();
       heartbeatTimeoutRef.current = setTimeout(async () => {
         awaitingHeartbeatAckRef.current = false;
         if (heartbeatRecoveryRef.current) {
@@ -947,7 +961,7 @@ export function usePeerConversationChannel(options: {
         }
         heartbeatRecoveryRef.current = true;
         try {
-        await onHeartbeatTimeout?.();
+          await onHeartbeatTimeout?.();
         } catch (error) {
           console.error("Heartbeat recovery failed", error);
         } finally {
@@ -958,7 +972,7 @@ export function usePeerConversationChannel(options: {
 
     const sendHeartbeat = async () => {
       const handle = transportRef.current;
-      if (!handle || cancelled) {
+      if (!handle || cancelled || !heartbeatReadyRef.current) {
         return;
       }
 
@@ -975,7 +989,6 @@ export function usePeerConversationChannel(options: {
           kind: "ping",
           timestamp: Date.now(),
         };
-        await handle.ready.catch(() => undefined);
         await handle.send(JSON.stringify(payload));
         scheduleTimeout();
       } catch (error) {
@@ -990,14 +1003,43 @@ export function usePeerConversationChannel(options: {
       }
     };
 
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (awaitingHeartbeatAckRef.current) {
+    const startHeartbeat = () => {
+      if (cancelled) {
         return;
       }
-      void sendHeartbeat();
-    }, HEARTBEAT_INTERVAL_MS);
 
-    void sendHeartbeat();
+      heartbeatIntervalRef.current = setInterval(() => {
+        if (awaitingHeartbeatAckRef.current) {
+          return;
+        }
+        void sendHeartbeat();
+      }, HEARTBEAT_INTERVAL_MS);
+
+      void sendHeartbeat();
+    };
+
+    void transport.ready
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+        heartbeatReadyRef.current = true;
+        startHeartbeat();
+      })
+      .catch(() => undefined);
+
+    const unsubscribeState = transport.onStateChange((state) => {
+      if (
+        state === "degraded" ||
+        state === "recovering" ||
+        state === "closed" ||
+        state === "error"
+      ) {
+        awaitingHeartbeatAckRef.current = false;
+        heartbeatPrimedRef.current = false;
+        clearHeartbeatTimeout();
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -1005,10 +1047,8 @@ export function usePeerConversationChannel(options: {
         clearInterval(heartbeatIntervalRef.current);
         heartbeatIntervalRef.current = null;
       }
-      if (heartbeatTimeoutRef.current) {
-        clearTimeout(heartbeatTimeoutRef.current);
-        heartbeatTimeoutRef.current = null;
-      }
+      clearHeartbeatTimeout();
+      unsubscribeState();
     };
   }, [onHeartbeatTimeout, transportOption]);
 
