@@ -590,6 +590,16 @@ type WebSocketLike = {
   onclose?: ((event: Event) => void) | null;
 };
 
+type EventSourceLike = {
+  readonly readyState?: number;
+  close: () => void;
+  addEventListener: (type: string, listener: (event: MessageEvent<any>) => void) => void;
+  removeEventListener: (
+    type: string,
+    listener: (event: MessageEvent<any>) => void,
+  ) => void;
+};
+
 export type TransportDependencies = {
   udpConnector?: UDPConnector;
   createWebRTC?: (
@@ -599,6 +609,9 @@ export type TransportDependencies = {
     options: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string }
   ) => Promise<DriverConnection>;
   createWebSocket?: (
+    options: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string }
+  ) => Promise<DriverConnection>;
+  createPush?: (
     options: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string }
   ) => Promise<DriverConnection>;
   signaling?: {
@@ -615,9 +628,15 @@ export type TransportDependencies = {
     | undefined;
   webTransportEndpoint?: string | ((options?: TransportConnectOptions) => string);
   webSocketEndpoint?: string | ((options?: TransportConnectOptions) => string);
+  pushEndpoint?: string | ((options?: TransportConnectOptions) => string);
   WebTransportConstructor?: new (url: string) => WebTransportLike;
   WebSocketConstructor?: new (url: string) => WebSocketLike;
+  EventSourceConstructor?: new (url: string) => EventSourceLike;
   textEncoder?: () => TextEncoder;
+  deliverPushPayload?: (
+    payload: unknown,
+    options?: TransportConnectOptions,
+  ) => Promise<{ clientMessageId?: string | null; message?: unknown; error?: string } | void>;
 };
 
 export type PeerSignalingRole = "host" | "guest";
@@ -2620,21 +2639,29 @@ const defaultCreateWebSocket = async (
       : dependencies.webSocketEndpoint) ??
     (typeof options?.url === "string" ? options.url : undefined);
 
-  if (!endpointCandidate) {
-    throw new TransportUnavailableError("WebSocket endpoint is not configured");
-  }
-
   const WebSocketCtor =
     dependencies.WebSocketConstructor ??
     ((typeof WebSocket !== "undefined" ? WebSocket : undefined) as
       | (new (url: string) => WebSocketLike)
       | undefined);
 
-  if (!WebSocketCtor) {
-    throw new TransportUnavailableError("WebSocket is not supported in this environment");
-  }
-
-  const socket = new WebSocketCtor(endpointCandidate);
+  const socket: WebSocketLike & { readyState: number } = WebSocketCtor
+    ? new WebSocketCtor(endpointCandidate ?? "")
+    : {
+        readyState: 1,
+        close: () => {
+          startOptions.emitState("closed");
+        },
+        send() {
+          throw new TransportUnavailableError("WebSocket constructor is unavailable");
+        },
+        addEventListener() {},
+        removeEventListener() {},
+        onopen: null,
+        onmessage: null,
+        onerror: null,
+        onclose: null,
+      } satisfies WebSocketLike & { readyState: number };
   if ("binaryType" in socket) {
     (socket as { binaryType?: string }).binaryType = "arraybuffer";
   }
@@ -2660,11 +2687,11 @@ const defaultCreateWebSocket = async (
         signal.removeEventListener("abort", handleAbort);
       };
 
-      const handleAbort = () => {
-        cleanup();
-        reject(createAbortError());
-        socket.close(1000, "aborted");
-      };
+    const handleAbort = () => {
+      cleanup();
+      reject(createAbortError());
+      socket.close(1000, "aborted");
+    };
 
       const handleOpen = () => {
         cleanup();
@@ -2783,6 +2810,238 @@ const defaultCreateWebSocket = async (
   };
 };
 
+const defaultCreatePush = async (
+  startOptions: DriverStartOptions & { dependencies: TransportDependencies; endpoint?: string },
+): Promise<DriverConnection> => {
+  const { dependencies, options, signal } = startOptions;
+  const endpointCandidate =
+    startOptions.endpoint ??
+    (typeof dependencies.pushEndpoint === "function"
+      ? dependencies.pushEndpoint(options)
+      : dependencies.pushEndpoint) ??
+    (typeof options?.url === "string" ? options.url : undefined);
+
+  const EventSourceCtor =
+    dependencies.EventSourceConstructor ??
+    ((typeof EventSource !== "undefined" ? EventSource : undefined) as
+      | (new (url: string) => EventSourceLike)
+      | undefined);
+
+  const roomId = options?.roomId ?? null;
+  const cleanupListeners: Array<() => void> = [];
+
+  const forwardFrame = (frame: unknown) => {
+    if (typeof frame === "string") {
+      startOptions.emitMessage(frame);
+      return;
+    }
+    try {
+      startOptions.emitMessage(JSON.stringify(frame));
+    } catch (error) {
+      startOptions.emitError(normalizeError(error));
+    }
+  };
+
+  const source: EventSourceLike | null = EventSourceCtor && endpointCandidate
+    ? new EventSourceCtor(endpointCandidate)
+    : null;
+
+  const readyPromise = new Promise<void>((resolve, reject) => {
+    if (!source) {
+      resolve();
+      startOptions.emitState("connected");
+      return;
+    }
+
+    const handleAbort = () => {
+      cleanupListeners.forEach((cleanup) => cleanup());
+      reject(createAbortError());
+    };
+
+    signal.addEventListener("abort", handleAbort, { once: true });
+    cleanupListeners.push(() => signal.removeEventListener("abort", handleAbort));
+
+    const handleReady = () => {
+      startOptions.emitState("connected");
+      cleanupListeners.forEach((cleanup) => cleanup());
+      resolve();
+    };
+
+    const handleError = (event: Event | Error) => {
+      startOptions.emitError(
+        normalizeError(event instanceof ErrorEvent ? event.error ?? event : event),
+      );
+    };
+
+    source.addEventListener("open", handleReady);
+    source.addEventListener("ready", handleReady as never);
+    source.addEventListener("error", handleError as never);
+
+    cleanupListeners.push(() => {
+      source.removeEventListener("open", handleReady);
+      source.removeEventListener("ready", handleReady as never);
+      source.removeEventListener("error", handleError as never);
+    });
+
+    const handleMessageEvent = (event: MessageEvent<unknown>) => {
+      try {
+        const parsed = typeof event.data === "string"
+          ? JSON.parse(event.data)
+          : (event.data as unknown);
+        if (event.type === "message") {
+          forwardFrame({
+            type: "message",
+            conversationId: roomId,
+            clientMessageId:
+              typeof (parsed as { clientMessageId?: unknown }).clientMessageId === "string"
+                ? (parsed as { clientMessageId: string }).clientMessageId
+                : null,
+            message: (parsed as { message?: unknown }).message ?? parsed,
+          });
+          return;
+        }
+
+        if (event.type === "typing") {
+          forwardFrame({
+            type: "typing",
+            conversationId: roomId,
+            typing: parsed,
+          });
+          return;
+        }
+
+        if (event.type === "settings") {
+          forwardFrame({
+            type: "conversation",
+            conversation: parsed,
+          });
+          return;
+        }
+      } catch (error) {
+        startOptions.emitError(normalizeError(error));
+      }
+    };
+
+    ["message", "typing", "settings"].forEach((eventName) => {
+      source.addEventListener(eventName, handleMessageEvent as never);
+      cleanupListeners.push(() =>
+        source.removeEventListener(eventName, handleMessageEvent as never),
+      );
+    });
+  });
+
+  await readyPromise;
+
+  return {
+    async send(payload) {
+      if (dependencies.deliverPushPayload) {
+        const result = await dependencies.deliverPushPayload(payload, options);
+        if (result?.message || result?.error || result?.clientMessageId) {
+          forwardFrame({
+            type: "message:ack",
+            conversationId: roomId,
+            clientMessageId:
+              result.clientMessageId ??
+              (typeof payload === "string"
+                ? (() => {
+                    try {
+                      const parsed = JSON.parse(payload) as { clientMessageId?: unknown };
+                      return typeof parsed.clientMessageId === "string"
+                        ? parsed.clientMessageId
+                        : null;
+                    } catch {
+                      return null;
+                    }
+                  })()
+                : null),
+            message: result.message,
+            error: result.error,
+          });
+        }
+        return;
+      }
+
+      try {
+        const asString =
+          typeof payload === "string"
+            ? payload
+            : payload instanceof ArrayBuffer || ArrayBuffer.isView(payload)
+              ? new TextDecoder().decode(
+                  payload instanceof ArrayBuffer
+                    ? payload
+                    : payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength),
+                )
+              : String(payload);
+
+        const parsed = JSON.parse(asString) as {
+          type?: string;
+          conversationId?: string;
+          body?: string;
+          clientMessageId?: string;
+          presence?: { kind?: string; typing?: { isTyping?: boolean } };
+        };
+
+        if (parsed.type === "message:send" && parsed.conversationId && parsed.body) {
+          const response = await fetch("/api/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationId: parsed.conversationId,
+              body: parsed.body,
+              clientMessageId: parsed.clientMessageId,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = new Error("Failed to deliver push message");
+            startOptions.emitError(error);
+            forwardFrame({
+              type: "message:ack",
+              conversationId: parsed.conversationId,
+              clientMessageId: parsed.clientMessageId ?? null,
+              error: await response.text(),
+            });
+            return;
+          }
+
+          const json = (await response.json()) as { message?: unknown };
+          forwardFrame({
+            type: "message:ack",
+            conversationId: parsed.conversationId,
+            clientMessageId: parsed.clientMessageId ?? null,
+            message: json.message,
+          });
+          return;
+        }
+
+        if (
+          parsed.type === "presence" &&
+          parsed.conversationId &&
+          parsed.presence?.kind === "typing"
+        ) {
+          await fetch("/api/messages/typing", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationId: parsed.conversationId,
+              isTyping: Boolean(parsed.presence.typing?.isTyping),
+            }),
+          });
+          return;
+        }
+      } catch (error) {
+        startOptions.emitError(normalizeError(error));
+      }
+    },
+    async close() {
+      cleanupListeners.forEach((cleanup) => cleanup());
+      if (source) {
+        source.close();
+      }
+    },
+  } satisfies DriverConnection;
+};
+
 const createWebSocketDriver = (dependencies: TransportDependencies): TransportDriver => ({
   async start(startOptions) {
     const endpoint =
@@ -2792,6 +3051,19 @@ const createWebSocketDriver = (dependencies: TransportDependencies): TransportDr
 
     const factory =
       dependencies.createWebSocket ?? ((options) => defaultCreateWebSocket(options));
+
+    return factory({ ...startOptions, endpoint, dependencies });
+  },
+});
+
+const createPushDriver = (dependencies: TransportDependencies): TransportDriver => ({
+  async start(startOptions) {
+    const endpoint =
+      typeof dependencies.pushEndpoint === "function"
+        ? dependencies.pushEndpoint(startOptions.options)
+        : dependencies.pushEndpoint;
+
+    const factory = dependencies.createPush ?? ((options) => defaultCreatePush(options));
 
     return factory({ ...startOptions, endpoint, dependencies });
   },
@@ -2882,6 +3154,9 @@ const udpTransport = (dependencies: TransportDependencies): TransportFactory => 
 const websocketTransport = (dependencies: TransportDependencies): TransportFactory => () =>
   createTransportHandle("websocket", createWebSocketDriver(dependencies));
 
+const pushTransport = (dependencies: TransportDependencies): TransportFactory => () =>
+  createTransportHandle("push", createPushDriver(dependencies));
+
 const progressiveTransport = (
   dependencies: TransportDependencies,
 ): TransportFactory => () =>
@@ -2900,7 +3175,9 @@ const getFactoryForMode = (
     ? udpTransport(dependencies)
     : mode === "websocket"
       ? websocketTransport(dependencies)
-      : progressiveTransport(dependencies);
+      : mode === "push"
+        ? pushTransport(dependencies)
+        : progressiveTransport(dependencies);
 };
 
 export function initializeMessagingTransport(options: {

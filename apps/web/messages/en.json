@@ -529,6 +529,7 @@
         "label": "Transport",
         "connect": "Connect",
         "mode": {
+          "push": "Push",
           "progressive": "Progressive",
           "udp": "UDP"
         }
@@ -542,6 +543,10 @@
           "description": "Everyone in this conversation sees these choices.",
           "transport": {
             "options": {
+              "push": {
+                "label": "Push delivery",
+                "description": "Server push stream that keeps chats fresh without WebSocket connections."
+              },
               "progressive": {
                 "label": "Progressive delivery",
                 "description": "Adaptive WebRTC/WebTransport pipeline with congestion helpers."

@@ -1336,7 +1336,7 @@ export default function ChatThread({
       : "text-xs text-white/70";
   const messagingOptions = useMemo(
     () =>
-      (["progressive", "udp"] as MessagingMode[]).map((mode) => ({
+      (["push", "progressive", "udp"] as MessagingMode[]).map((mode) => ({
         id: mode,
         label: t(`thread.settings.unified.transport.options.${mode}.label`),
         description: t(`thread.settings.unified.transport.options.${mode}.description`),

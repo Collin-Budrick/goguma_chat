@@ -187,7 +187,7 @@ export function useMessagingTransportHandle(
     }
 
     try {
-      window.localStorage.setItem("site-messaging-mode", "progressive");
+      window.localStorage.setItem("site-messaging-mode", "push");
     } catch {
       // ignore storage failures
     }
