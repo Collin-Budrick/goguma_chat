@@ -345,7 +345,8 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
       const state = publishStateRef.current[kind];
       const alreadyPublished = publishedTokensRef.current[kind] === value;
-      const tokenChanged = state.pending !== value;
+      const currentToken = state.pending ?? publishedTokensRef.current[kind];
+      const tokenChanged = currentToken !== value;
 
       if (alreadyPublished) {
         return;
@@ -365,7 +366,7 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
         return;
       }
 
-      if (state.blocked) {
+      if (state.blocked && !tokenChanged) {
         logPeerSignaling("skipping publish because previous attempts failed", {
           kind,
           sessionId: snapshot.sessionId,
@@ -373,7 +374,7 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
         return;
       }
 
-      if (state.attempts >= MAX_PUBLISH_ATTEMPTS) {
+      if (!tokenChanged && state.attempts >= MAX_PUBLISH_ATTEMPTS) {
         logPeerSignaling("skipping publish because attempts are exhausted", {
           kind,
           attempts: state.attempts,
