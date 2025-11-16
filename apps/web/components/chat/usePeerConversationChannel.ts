@@ -949,10 +949,6 @@ export function usePeerConversationChannel(options: {
     };
 
     const scheduleTimeout = () => {
-      if (!heartbeatPrimedRef.current) {
-        return;
-      }
-
       clearHeartbeatTimeout();
       heartbeatTimeoutRef.current = setTimeout(async () => {
         awaitingHeartbeatAckRef.current = false;
