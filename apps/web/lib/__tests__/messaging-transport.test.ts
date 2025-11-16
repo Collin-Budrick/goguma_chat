@@ -721,6 +721,54 @@ describe("initializeMessagingTransport", () => {
     await controller.teardown();
   });
 
+  it("recovers push connections after transient errors", async () => {
+    (window as { localStorage: Storage }).localStorage.setItem(
+      "site-messaging-mode",
+      "push",
+    );
+
+    const controller = initializeMessagingTransport({
+      dependencies: {
+        pushEndpoint: (options) =>
+          typeof options?.roomId === "string"
+            ? `/api/conversations/${options.roomId}/events`
+            : undefined,
+        EventSourceConstructor:
+          MockEventSource as unknown as new (url: string) => EventSource,
+      },
+      connectOptions: { roomId: "reconnect-room" },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const firstSource = MockEventSource.instances[0];
+    expect(firstSource?.url).toBe("/api/conversations/reconnect-room/events");
+
+    firstSource?.emit("open");
+    await controller.whenReady();
+
+    const handle = controller.transport as TransportHandle;
+    const states: TransportState[] = [handle.state];
+    const unsubscribeState = handle.onStateChange((state) => states.push(state));
+
+    firstSource?.emit("error", new Error("network glitch") as never);
+
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    const nextSource = MockEventSource.instances.at(-1);
+    expect(MockEventSource.instances.length).toBeGreaterThanOrEqual(2);
+    expect(nextSource).toBeDefined();
+
+    nextSource?.emit("open");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(states).toContain("recovering");
+    expect(states.filter((state) => state === "connected").length).toBeGreaterThanOrEqual(2);
+
+    unsubscribeState();
+    await controller.teardown();
+  });
+
   it("falls back to WebSocket when progressive drivers are unavailable", async () => {
     const endpoints: Array<string | undefined> = [];
     let remoteSession: Awaited<ReturnType<typeof createPeerCryptoSession>> | null = null;

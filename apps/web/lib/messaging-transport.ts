@@ -2773,7 +2773,19 @@ const defaultCreatePush = async (
   }
 
   const roomId = options?.roomId ?? null;
-  const cleanupListeners: Array<() => void> = [];
+  const sourceCleanup: Array<() => void> = [];
+  const persistentCleanup: Array<() => void> = [];
+  let source: EventSourceLike | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconnectAttempts = 0;
+  let closed = false;
+
+  const clearReconnectTimer = () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  };
 
   const forwardFrame = (frame: unknown) => {
     if (typeof frame === "string") {
@@ -2787,80 +2799,145 @@ const defaultCreatePush = async (
     }
   };
 
-  const source: EventSourceLike = new EventSourceCtor(endpointCandidate);
+  let readySettled = false;
+
+  const clearSource = () => {
+    while (sourceCleanup.length) {
+      sourceCleanup.pop()?.();
+    }
+    if (source) {
+      source.close();
+      source = null;
+    }
+  };
+
+  const teardown = () => {
+    closed = true;
+    clearReconnectTimer();
+    clearSource();
+    while (persistentCleanup.length) {
+      persistentCleanup.pop()?.();
+    }
+  };
 
   const readyPromise = new Promise<void>((resolve, reject) => {
     const handleAbort = () => {
-      cleanupListeners.forEach((cleanup) => cleanup());
+      if (readySettled) return;
+      readySettled = true;
+      teardown();
       reject(createAbortError());
     };
 
     signal.addEventListener("abort", handleAbort, { once: true });
-    cleanupListeners.push(() => signal.removeEventListener("abort", handleAbort));
+    persistentCleanup.push(() => signal.removeEventListener("abort", handleAbort));
 
-    const handleReady = () => {
-      startOptions.emitState("connected");
-      cleanupListeners.forEach((cleanup) => cleanup());
-      resolve();
-    };
-
-    const handleError = (event: Event | Error) => {
-      startOptions.emitError(
-        normalizeError(event instanceof ErrorEvent ? event.error ?? event : event),
-      );
-    };
-
-    source.addEventListener("open", handleReady);
-    source.addEventListener("ready", handleReady as never);
-    source.addEventListener("error", handleError as never);
-
-    cleanupListeners.push(() => {
-      source.removeEventListener("open", handleReady);
-      source.removeEventListener("ready", handleReady as never);
-      source.removeEventListener("error", handleError as never);
-    });
-
-    const handleMessageEvent = (event: MessageEvent<unknown>) => {
-      try {
-        const parsed = typeof event.data === "string"
-          ? JSON.parse(event.data)
-          : (event.data as unknown);
-        if (event.type === "message") {
-          forwardFrame({
-            type: "message",
-            conversationId: roomId,
-            clientMessageId:
-              typeof (parsed as { clientMessageId?: unknown }).clientMessageId === "string"
-                ? (parsed as { clientMessageId: string }).clientMessageId
-                : null,
-            message: (parsed as { message?: unknown }).message ?? parsed,
-          });
-          return;
-        }
-
-        if (event.type === "typing") {
-          forwardFrame({
-            type: "typing",
-            conversationId: roomId,
-            typing: parsed,
-          });
-          return;
-        }
-
-      } catch (error) {
-        startOptions.emitError(normalizeError(error));
+    const scheduleReconnect = () => {
+      if (closed || signal.aborted) {
+        return;
       }
+
+      const delay = Math.min(250 * 2 ** reconnectAttempts, 10_000);
+      reconnectAttempts += 1;
+
+      clearReconnectTimer();
+
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectSource();
+      }, delay);
     };
 
-    ["message", "typing"].forEach((eventName) => {
-      source.addEventListener(eventName, handleMessageEvent as never);
-      cleanupListeners.push(() =>
-        source.removeEventListener(eventName, handleMessageEvent as never),
-      );
-    });
+    const connectSource = () => {
+      if (closed || signal.aborted) {
+        return;
+      }
+
+      clearSource();
+
+      const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
+      source = localSource;
+
+      const handleReady = () => {
+        reconnectAttempts = 0;
+        startOptions.emitState("connected");
+        if (readySettled) return;
+        readySettled = true;
+        resolve();
+      };
+
+      const handleError = (event: Event | Error) => {
+        const normalized = normalizeError(
+          event instanceof ErrorEvent ? event.error ?? event : event,
+        );
+        startOptions.emitError(normalized);
+
+        if (closed || signal.aborted) {
+          return;
+        }
+
+        startOptions.emitState("recovering");
+        scheduleReconnect();
+      };
+
+      localSource.addEventListener("open", handleReady);
+      localSource.addEventListener("ready", handleReady as never);
+      localSource.addEventListener("error", handleError as never);
+
+      sourceCleanup.push(() => {
+        localSource.removeEventListener("open", handleReady);
+        localSource.removeEventListener("ready", handleReady as never);
+        localSource.removeEventListener("error", handleError as never);
+      });
+
+      const handleMessageEvent = (event: MessageEvent<unknown>) => {
+        try {
+          const parsed = typeof event.data === "string"
+            ? JSON.parse(event.data)
+            : (event.data as unknown);
+          if (event.type === "message") {
+            forwardFrame({
+              type: "message",
+              conversationId: roomId,
+              clientMessageId:
+                typeof (parsed as { clientMessageId?: unknown }).clientMessageId === "string"
+                  ? (parsed as { clientMessageId: string }).clientMessageId
+                  : null,
+              message: (parsed as { message?: unknown }).message ?? parsed,
+            });
+            return;
+          }
+
+          if (event.type === "typing") {
+            forwardFrame({
+              type: "typing",
+              conversationId: roomId,
+              typing: parsed,
+            });
+            return;
+          }
+
+        } catch (error) {
+          startOptions.emitError(normalizeError(error));
+        }
+      };
+
+      ["message", "typing"].forEach((eventName) => {
+        localSource.addEventListener(eventName, handleMessageEvent as never);
+        sourceCleanup.push(() =>
+          localSource.removeEventListener(eventName, handleMessageEvent as never),
+        );
+      });
+    };
+
+    connectSource();
   });
 
-  await readyPromise;
+  try {
+    await readyPromise;
+  } catch (error) {
+    teardown();
+    throw error;
+  }
 
   return {
     async send(payload) {
@@ -2987,10 +3064,7 @@ const defaultCreatePush = async (
       }
     },
     async close() {
-      cleanupListeners.forEach((cleanup) => cleanup());
-      if (source) {
-        source.close();
-      }
+      teardown();
     },
   } satisfies DriverConnection;
 };
@@ -3176,6 +3250,13 @@ export function initializeMessagingTransport(options: {
       lastErrorWasAbort = isAbortError(normalized);
       await nextHandle.disconnect().catch(() => undefined);
       currentHandle = previousHandle;
+      if (
+        mode === "push" &&
+        normalized instanceof TransportUnavailableError &&
+        currentMode !== "progressive"
+      ) {
+        return executeSwitch("progressive");
+      }
       return false;
     }
   };
