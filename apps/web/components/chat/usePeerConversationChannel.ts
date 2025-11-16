@@ -168,6 +168,16 @@ export function usePeerConversationChannel(options: {
   const pendingAcksRef = useRef<PendingMap<ChatMessage>>(new Map());
   const pendingHistoryRef = useRef<PendingMap<SyncHistoryResult>>(new Map());
   const pendingLoadRef = useRef<PendingMap<LoadMoreResult>>(new Map());
+  const outboundQueueRef = useRef<
+    Array<{
+      payload: {
+        type: "message:send";
+        conversationId: string;
+        body: string;
+        clientMessageId: string;
+      };
+    }>
+  >([]);
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const awaitingHeartbeatAckRef = useRef(false);
@@ -873,6 +883,10 @@ export function usePeerConversationChannel(options: {
   }, [handleFrame, options.transport, rejectAllPending]);
 
   useEffect(() => {
+    void flushOutboundQueue();
+  }, [flushOutboundQueue, options.transport]);
+
+  useEffect(() => {
     const transport = options.transport;
     if (!transport) {
       return () => undefined;
@@ -1066,6 +1080,80 @@ export function usePeerConversationChannel(options: {
     [],
   );
 
+  const sendViaHttp = useCallback(
+    async ({
+      conversationId,
+      body,
+      clientMessageId,
+    }: {
+      conversationId: string;
+      body: string;
+      clientMessageId: string;
+    }) => {
+      try {
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body, clientMessageId }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP send failed with status ${response.status}`);
+        }
+
+        const json = (await response.json()) as { message?: ChatMessage | null };
+        handleFrame({
+          type: "message:ack",
+          conversationId,
+          clientMessageId,
+          message: json.message ?? undefined,
+        });
+        return true;
+      } catch (error) {
+        if (typeof console !== "undefined" && typeof console.info === "function") {
+          console.info("[chat:peer] HTTP send fallback failed", { error, clientMessageId });
+        }
+        return false;
+      }
+    },
+    [handleFrame],
+  );
+
+  const flushOutboundQueue = useCallback(async () => {
+    if (!outboundQueueRef.current.length) {
+      return;
+    }
+
+    const entries = outboundQueueRef.current.splice(0);
+    for (const entry of entries) {
+      let delivered = false;
+      const transport = transportRef.current;
+
+      if (transport) {
+        await transport.ready.catch(() => undefined);
+        try {
+          await transport.send(JSON.stringify(entry.payload));
+          delivered = true;
+        } catch (error) {
+          if (typeof console !== "undefined" && typeof console.info === "function") {
+            console.info("[chat:peer] flushOutboundQueue send failed", { error });
+          }
+        }
+      }
+
+      if (!delivered) {
+        delivered = await sendViaHttp(entry.payload);
+      }
+
+      if (!delivered) {
+        outboundQueueRef.current.push(entry);
+      }
+    }
+  }, [sendViaHttp]);
+
   const sendMessage = useCallback(
     async ({
       conversationId,
@@ -1085,10 +1173,7 @@ export function usePeerConversationChannel(options: {
           message: optimisticMessage,
           clientMessageId,
         });
-        return { message: optimisticMessage } satisfies SendMessageResult;
       }
-
-      await transport.ready.catch(() => undefined);
 
       const payload = {
         type: "message:send",
@@ -1097,39 +1182,58 @@ export function usePeerConversationChannel(options: {
         clientMessageId,
       };
 
-    return new Promise<SendMessageResult>((resolve, reject) => {
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:peer] sendMessage", {
-          conversationId,
+      return new Promise<SendMessageResult>((resolve, reject) => {
+        if (typeof console !== "undefined" && typeof console.info === "function") {
+          console.info("[chat:peer] sendMessage", {
+            conversationId,
+            clientMessageId,
+          });
+        }
+        registerPending(
+          pendingAcksRef.current,
           clientMessageId,
-        });
-      }
-      registerPending(
-        pendingAcksRef.current,
-        clientMessageId,
           (message) => resolve({ message }),
           (error) => reject(error),
           ACK_TIMEOUT_MS,
         );
 
-        transport
-          .send(JSON.stringify(payload))
-          .catch((error) => {
-            if (typeof console !== "undefined" && typeof console.info === "function") {
-              console.info("[chat:peer] sendMessage transport send failed", {
+        const attemptSend = async () => {
+          const handle = transportRef.current;
+          if (handle) {
+            await handle.ready.catch(() => undefined);
+            try {
+              await handle.send(JSON.stringify(payload));
+              return;
+            } catch (error) {
+              if (
+                typeof console !== "undefined" && typeof console.info === "function"
+              ) {
+                console.info("[chat:peer] sendMessage transport send failed", {
+                  clientMessageId,
+                  error,
+                });
+              }
+              rejectPending(
+                pendingAcksRef.current,
                 clientMessageId,
-                error,
-              });
+                normalizeError(error),
+              );
+              return;
             }
-            rejectPending(
-              pendingAcksRef.current,
-              clientMessageId,
-              normalizeError(error),
-            );
-          });
+          }
+
+          const delivered = await sendViaHttp(payload);
+          if (!delivered) {
+            outboundQueueRef.current.push({ payload });
+          }
+        };
+
+        void attemptSend().catch((error) =>
+          rejectPending(pendingAcksRef.current, clientMessageId, normalizeError(error)),
+        );
       });
     },
-    [notify, registerPending, rejectPending, updateMessages],
+    [notify, registerPending, rejectPending, sendViaHttp, updateMessages],
   );
 
   const sendPresence = useCallback(

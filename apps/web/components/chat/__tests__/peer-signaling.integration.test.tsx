@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 import {
   initializeMessagingTransport,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/messaging-transport";
 import type { MessagingMode } from "@/lib/messaging-mode";
 import { usePeerConversationChannel } from "../usePeerConversationChannel";
+import type { ChatMessage } from "../types";
 
 const conversationId = "conversation-test";
 const viewerProfile = {
@@ -197,6 +198,39 @@ function HeartbeatHarness({ transport }: { transport: TransportHandle }) {
   return null;
 }
 
+function FallbackHarness({
+  transport,
+  events,
+  message,
+}: {
+  transport: TransportHandle | null;
+  events: Array<{ id: string; body: string }>;
+  message: ChatMessage;
+}) {
+  const channel = usePeerConversationChannel({ transport, onHeartbeatTimeout: async () => {} });
+
+  useEffect(() =>
+    channel.subscribeMessages(conversationId, (event) => {
+      if (event.type === "message") {
+        events.push({ id: event.message.id, body: event.message.body });
+      }
+    }),
+  [channel, events]);
+
+  useEffect(() => {
+    channel
+      .sendMessage({
+        conversationId,
+        body: message.body,
+        clientMessageId: message.id,
+        optimisticMessage: message,
+      })
+      .catch(() => undefined);
+  }, [channel, message]);
+
+  return null;
+}
+
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 class SimpleTransportHandle implements TransportHandle {
@@ -312,6 +346,88 @@ class DeferredReadyTransport implements TransportHandle {
 
   async send(payload: TransportMessage) {
     this.sentPayloads.push(payload);
+  }
+
+  onMessage(listener: (payload: TransportMessage) => void) {
+    this.messageListeners.add(listener);
+    return () => this.messageListeners.delete(listener);
+  }
+
+  onStateChange(listener: (state: TransportState) => void) {
+    this.stateListeners.add(listener);
+    listener(this.state);
+    return () => this.stateListeners.delete(listener);
+  }
+
+  onError(listener: (error: Error) => void) {
+    this.errorListeners.add(listener);
+    return () => this.errorListeners.delete(listener);
+  }
+}
+
+class ImmediateAckTransport implements TransportHandle {
+  mode: MessagingMode = "progressive";
+  state: TransportState = "connected";
+  ready: Promise<void> = Promise.resolve();
+  sentPayloads: TransportMessage[] = [];
+  private readonly messageListeners = new Set<(payload: TransportMessage) => void>();
+  private readonly stateListeners = new Set<(state: TransportState) => void>();
+  private readonly errorListeners = new Set<(error: Error) => void>();
+
+  async connect() {
+    if (this.state === "connected") return;
+    this.state = "connected";
+    this.stateListeners.forEach((listener) => listener(this.state));
+  }
+
+  async disconnect() {
+    if (this.state === "closed") return;
+    this.state = "closed";
+    this.stateListeners.forEach((listener) => listener(this.state));
+  }
+
+  async send(payload: TransportMessage) {
+    this.sentPayloads.push(payload);
+    const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
+    try {
+      const parsed = JSON.parse(raw) as {
+        type?: string;
+        conversationId?: string;
+        body?: string;
+        clientMessageId?: string;
+      };
+
+      if (
+        parsed?.type === "message:send" &&
+        parsed.conversationId &&
+        parsed.clientMessageId
+      ) {
+        const now = new Date().toISOString();
+        const ackFrame = {
+          type: "message:ack",
+          conversationId: parsed.conversationId,
+          clientMessageId: parsed.clientMessageId,
+          message: {
+            id: parsed.clientMessageId,
+            conversationId: parsed.conversationId,
+            senderId: "peer-1",
+            body: parsed.body ?? "",
+            createdAt: now,
+            updatedAt: now,
+            sender: {
+              id: "peer-1",
+              email: null,
+              firstName: "Peer",
+              lastName: null,
+              image: null,
+            },
+          },
+        } as const;
+        this.messageListeners.forEach((listener) => listener(JSON.stringify(ackFrame)));
+      }
+    } catch {
+      // ignore malformed payloads
+    }
   }
 
   onMessage(listener: (payload: TransportMessage) => void) {
@@ -459,5 +575,109 @@ describe("peer signaling integration", () => {
     await act(async () => {
       renderer?.unmount();
     });
+  });
+
+  it("delivers messages over HTTP when the transport is unavailable", async () => {
+    const events: Array<{ id: string; body: string }> = [];
+    const optimistic: ChatMessage = {
+      id: "http-client-1",
+      conversationId,
+      senderId: viewerProfile.id,
+      body: "hello via http",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sender: viewerProfile,
+    };
+
+    const delivered: ChatMessage = {
+      ...optimistic,
+      id: "server-http-1",
+      body: "delivered via http",
+    };
+
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify({ message: delivered }), { status: 200 }),
+    );
+    (globalThis as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
+
+    let renderer: TestRenderer.ReactTestRenderer | null = null;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <FallbackHarness transport={null} events={events} message={optimistic} />,
+      );
+    });
+
+    await act(async () => {
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(events.some((event) => event.id === delivered.id)).toBe(true);
+
+    await act(async () => {
+      renderer?.unmount();
+    });
+
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
+  });
+
+  it("flushes queued messages once a transport becomes available", async () => {
+    const events: Array<{ id: string; body: string }> = [];
+    const optimistic: ChatMessage = {
+      id: "queued-client-1",
+      conversationId,
+      senderId: viewerProfile.id,
+      body: "queued while offline",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sender: viewerProfile,
+    };
+
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async () => new Response("offline", { status: 500 }));
+    (globalThis as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
+
+    let renderer: TestRenderer.ReactTestRenderer | null = null;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <FallbackHarness transport={null} events={events} message={optimistic} />,
+      );
+    });
+
+    await act(async () => {
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
+
+    const transport = new ImmediateAckTransport();
+    await act(async () => {
+      renderer?.update(
+        <FallbackHarness transport={transport} events={events} message={optimistic} />,
+      );
+      await flushPromises();
+      await flushPromises();
+    });
+
+    expect(
+      transport.sentPayloads.some((payload) => {
+        try {
+          const parsed = JSON.parse(payload as string) as { type?: string; clientMessageId?: string };
+          return parsed.type === "message:send" && parsed.clientMessageId === optimistic.id;
+        } catch {
+          return false;
+        }
+      }),
+    ).toBe(true);
+    expect(events.some((event) => event.id === optimistic.id)).toBe(true);
+
+    await act(async () => {
+      renderer?.unmount();
+    });
+
+    (globalThis as { fetch: typeof fetch }).fetch = originalFetch;
   });
 });
