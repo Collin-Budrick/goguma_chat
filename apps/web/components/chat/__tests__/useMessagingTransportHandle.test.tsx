@@ -133,7 +133,7 @@ describe("useMessagingTransportHandle", () => {
 
   it("does not restart when the handshake token is unchanged after a transient disconnect", async () => {
     function Harness() {
-      useMessagingTransportHandle();
+      useMessagingTransportHandle({ conversationId: "conversation-id" });
       return null;
     }
 

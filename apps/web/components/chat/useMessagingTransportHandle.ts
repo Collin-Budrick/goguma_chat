@@ -180,7 +180,7 @@ export function useMessagingTransportHandle(
       return () => undefined;
     }
 
-    if (!shouldInitialize) {
+    if (!shouldInitialize || !conversationId) {
       scheduleMicrotask(() => {
         attachHandle(null, { force: true });
       });
