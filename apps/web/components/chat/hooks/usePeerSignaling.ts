@@ -301,16 +301,12 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
       return false;
     }
 
-    if (snapshot.role === "host") {
-      return Boolean(snapshot.remoteAnswer);
-    }
-
     if (snapshot.role === "guest") {
       return Boolean(snapshot.remoteInvite);
     }
 
-    return false;
-  }, [controller, snapshot.remoteAnswer, snapshot.remoteInvite, snapshot.role]);
+    return snapshot.role === "host";
+  }, [controller, snapshot.remoteInvite, snapshot.role]);
 
   const inviteExpiresIn = useMemo(() => {
     if (!snapshot.inviteExpiresAt) return null;
