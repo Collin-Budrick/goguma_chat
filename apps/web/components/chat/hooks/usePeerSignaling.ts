@@ -162,16 +162,57 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     offer: null,
     answer: null,
   });
+  const publishStateRef = useRef<
+    Record<"offer" | "answer", { pending: string | null; attempts: number; inFlight: boolean; blocked: boolean }>
+  >({
+    offer: { pending: null, attempts: 0, inFlight: false, blocked: false },
+    answer: { pending: null, attempts: 0, inFlight: false, blocked: false },
+  });
+  const retryTimeoutRef = useRef<Record<"offer" | "answer", number | null>>({
+    offer: null,
+    answer: null,
+  });
+  const lastConnectedRef = useRef<boolean>(snapshot.connected);
   const remoteTokensRef = useRef<Set<string>>(new Set());
 
+  const resetPublishState = useCallback(() => {
+    ["offer", "answer"].forEach((kind) => {
+      const key = kind as "offer" | "answer";
+      const timer = retryTimeoutRef.current[key];
+      if (timer && typeof window !== "undefined") {
+        window.clearTimeout(timer);
+      }
+      retryTimeoutRef.current[key] = null;
+      publishStateRef.current[key] = {
+        pending: null,
+        attempts: 0,
+        inFlight: false,
+        blocked: false,
+      };
+      publishedTokensRef.current[key] = null;
+    });
+  }, []);
+
   useEffect(() => {
-    publishedTokensRef.current.offer = null;
-    publishedTokensRef.current.answer = null;
-  }, [conversationId, viewerId, snapshot.sessionId]);
+    resetPublishState();
+  }, [conversationId, viewerId, resetPublishState, snapshot.sessionId]);
 
   useEffect(() => {
     remoteTokensRef.current.clear();
   }, [conversationId, snapshot.role, snapshot.sessionId]);
+
+  useEffect(() => {
+    if (snapshot.remoteAnswer) {
+      resetPublishState();
+    }
+  }, [resetPublishState, snapshot.remoteAnswer]);
+
+  useEffect(() => {
+    if (snapshot.connected && !lastConnectedRef.current) {
+      resetPublishState();
+    }
+    lastConnectedRef.current = snapshot.connected;
+  }, [resetPublishState, snapshot.connected]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -182,47 +223,154 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
       return;
     }
 
-    const publishToken = async (kind: "offer" | "answer", token: string) => {
-      try {
-        logPeerSignaling("publishing peer signaling token", {
-          conversationId,
-          kind,
-          role: snapshot.role,
-          sessionId: snapshot.sessionId,
-        });
-        const response = await fetch(`/api/peer-signaling/${conversationId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            viewerId,
-            sessionId: snapshot.sessionId,
-            role: snapshot.role,
-            kind,
-            token,
-          }),
-        });
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          logPeerSignaling("failed to publish peer signaling token", {
-            kind,
-            status: response.status,
-            error: payload?.error ?? "unknown error",
-          });
-        } else {
-          logPeerSignaling("published peer signaling token", { kind });
-        }
-      } catch (error) {
-        console.error("Failed to publish peer signaling token", error);
+    const MAX_PUBLISH_ATTEMPTS = 3;
+    const BASE_RETRY_DELAY_MS = 1_000;
+
+    const clearRetry = (kind: "offer" | "answer") => {
+      const timer = retryTimeoutRef.current[kind];
+      if (timer && typeof window !== "undefined") {
+        window.clearTimeout(timer);
       }
+      retryTimeoutRef.current[kind] = null;
+    };
+
+    const markBlocked = (kind: "offer" | "answer") => {
+      publishStateRef.current[kind].blocked = true;
+    };
+
+    const publishToken = async (kind: "offer" | "answer", token: string) => {
+      logPeerSignaling("publishing peer signaling token", {
+        conversationId,
+        kind,
+        role: snapshot.role,
+        sessionId: snapshot.sessionId,
+        attempt: publishStateRef.current[kind].attempts,
+      });
+
+      const response = await fetch(`/api/peer-signaling/${conversationId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          viewerId,
+          sessionId: snapshot.sessionId,
+          role: snapshot.role,
+          kind,
+          token,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        const message = payload?.error ?? "unknown error";
+        logPeerSignaling("failed to publish peer signaling token", {
+          kind,
+          status: response.status,
+          error: message,
+        });
+        throw new Error(message);
+      }
+
+      logPeerSignaling("published peer signaling token", { kind });
+    };
+
+    const startPublish = (kind: "offer" | "answer") => {
+      const state = publishStateRef.current[kind];
+      const token = state.pending;
+      if (!token) return;
+
+      clearRetry(kind);
+      state.inFlight = true;
+      state.attempts += 1;
+
+      publishToken(kind, token)
+        .then(() => {
+          state.inFlight = false;
+          state.blocked = false;
+          state.pending = null;
+          state.attempts = 0;
+          publishedTokensRef.current[kind] = token;
+        })
+        .catch((error) => {
+          state.inFlight = false;
+          markBlocked(kind);
+          console.error("Failed to publish peer signaling token", error);
+
+          if (state.attempts >= MAX_PUBLISH_ATTEMPTS) {
+            logPeerSignaling("publish attempts exhausted; waiting for reconnect", {
+              kind,
+              attempts: state.attempts,
+              sessionId: snapshot.sessionId,
+            });
+            return;
+          }
+
+          const delay = Math.min(BASE_RETRY_DELAY_MS * state.attempts, 10_000);
+          logPeerSignaling("scheduling peer signaling publish retry", {
+            kind,
+            attempts: state.attempts,
+            delay,
+          });
+
+          if (typeof window === "undefined") {
+            return;
+          }
+
+          retryTimeoutRef.current[kind] = window.setTimeout(() => {
+            startPublish(kind);
+          }, delay);
+        });
     };
 
     const ensurePublished = (kind: "offer" | "answer", value: string | null) => {
       if (!value) return;
-      if (publishedTokensRef.current[kind] === value) {
+      if (snapshot.remoteAnswer) {
+        logPeerSignaling("skipping publish because remote answer already exists", {
+          kind,
+          sessionId: snapshot.sessionId,
+        });
         return;
       }
-      publishedTokensRef.current[kind] = value;
-      void publishToken(kind, value);
+
+      const hasError = Boolean(snapshot.error);
+      const recoveringFromDisconnect = lastConnectedRef.current && !snapshot.connected;
+      if (hasError || recoveringFromDisconnect) {
+        logPeerSignaling("skipping publish while controller is recovering", {
+          kind,
+          sessionId: snapshot.sessionId,
+          hasError,
+          recoveringFromDisconnect,
+        });
+        return;
+      }
+
+      const alreadyPublished = publishedTokensRef.current[kind] === value;
+      const state = publishStateRef.current[kind];
+
+      if (alreadyPublished) {
+        return;
+      }
+
+      if (state.inFlight) {
+        logPeerSignaling("skipping publish because a previous attempt is in flight", {
+          kind,
+          sessionId: snapshot.sessionId,
+        });
+        return;
+      }
+
+      if (state.blocked) {
+        logPeerSignaling("skipping publish because previous attempts failed", {
+          kind,
+          sessionId: snapshot.sessionId,
+        });
+        return;
+      }
+
+      state.pending = value;
+      state.blocked = false;
+      state.attempts = 0;
+
+      startPublish(kind);
     };
 
     ensurePublished("offer", snapshot.localOfferToken);
@@ -235,7 +383,12 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     if (!snapshot.localAnswerToken) {
       publishedTokensRef.current.answer = null;
     }
-  }, [conversationId, snapshot.localAnswerToken, snapshot.localOfferToken, snapshot.role, snapshot.sessionId, viewerId]);
+
+    return () => {
+      clearRetry("offer");
+      clearRetry("answer");
+    };
+  }, [conversationId, snapshot.connected, snapshot.error, snapshot.localAnswerToken, snapshot.localOfferToken, snapshot.remoteAnswer, snapshot.role, snapshot.sessionId, viewerId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
