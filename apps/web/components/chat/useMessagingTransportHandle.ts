@@ -24,6 +24,7 @@ const toError = (value: unknown): Error =>
 type MessagingTransportOptions = {
   conversationId?: string | null;
   viewerId?: string | null;
+  enabled?: boolean;
 };
 
 export function useMessagingTransportHandle(
@@ -37,10 +38,13 @@ export function useMessagingTransportHandle(
 
   const conversationId = options?.conversationId ?? null;
   const viewerId = options?.viewerId ?? null;
+  const enabled = options?.enabled ?? true;
   const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling({
     conversationId,
     viewerId,
   });
+
+  const isInitializationAllowed = enabled && shouldInitialize;
 
   const peerSessionId = useMemo(() => {
     if (!snapshot.role) {
@@ -180,7 +184,7 @@ export function useMessagingTransportHandle(
       return () => undefined;
     }
 
-    if (!shouldInitialize || !conversationId) {
+    if (!isInitializationAllowed || !conversationId) {
       scheduleMicrotask(() => {
         attachHandle(null, { force: true });
       });
@@ -246,7 +250,7 @@ export function useMessagingTransportHandle(
     dependencies,
     detachListeners,
     scheduleMicrotask,
-    shouldInitialize,
+    isInitializationAllowed,
     connectOptions,
   ]);
 
