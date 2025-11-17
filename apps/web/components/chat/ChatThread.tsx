@@ -43,6 +43,10 @@ import type {
 import { mergeMessages, toDate } from "./message-utils";
 import { usePeerConversationChannel } from "./usePeerConversationChannel";
 import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
+import {
+  peerSignalingController,
+  type PeerSignalingRole,
+} from "@/lib/messaging-transport";
 
 type ChatThreadProps = {
   viewerId: string;
@@ -104,6 +108,58 @@ function getParticipantProfile(
   );
 }
 
+function derivePeerRole(
+  conversation: ChatConversation | null,
+  viewerId: string,
+): PeerSignalingRole | null {
+  if (!conversation) {
+    return null;
+  }
+
+  if (conversation.type === "direct") {
+    const directKey = conversation.directKey;
+    if (directKey) {
+      const [left, right] = directKey.split(":");
+      if (left && right) {
+        if (viewerId === left) {
+          return "host";
+        }
+        if (viewerId === right) {
+          return "guest";
+        }
+
+        const [first] = [left, right].sort();
+        if (first) {
+          return viewerId === first ? "host" : "guest";
+        }
+      }
+    }
+
+    const otherParticipant = conversation.participants.find(
+      (participant) => participant.userId !== viewerId,
+    );
+    if (otherParticipant) {
+      return viewerId.localeCompare(otherParticipant.userId) <= 0
+        ? "host"
+        : "guest";
+    }
+  }
+
+  const participantIds = conversation.participants.map(
+    (participant) => participant.userId,
+  );
+  if (!participantIds.includes(viewerId)) {
+    participantIds.push(viewerId);
+  }
+
+  if (!participantIds.length) {
+    return null;
+  }
+
+  participantIds.sort();
+  return viewerId === participantIds[0] ? "host" : "guest";
+}
+
 export default function ChatThread({
   viewerId,
   viewerProfile,
@@ -162,6 +218,11 @@ export default function ChatThread({
     viewerId,
     enabled: isTransportEnabled,
   });
+
+  const derivedPeerRole = useMemo(
+    () => derivePeerRole(conversation, viewerId),
+    [conversation, viewerId],
+  );
 
   const {
     sendMessage: sendPeerMessage,
@@ -253,6 +314,14 @@ export default function ChatThread({
       pendingThreadControllerRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    const controller = peerSignalingController;
+    const currentRole = controller.getSnapshot().role ?? null;
+    if (derivedPeerRole !== currentRole) {
+      controller.setRole(derivedPeerRole);
+    }
+  }, [derivedPeerRole]);
 
   const bootstrapKey = shouldUseInitialData
     ? `${initialFriendId ?? ""}:${initialConversation?.id ?? ""}`
