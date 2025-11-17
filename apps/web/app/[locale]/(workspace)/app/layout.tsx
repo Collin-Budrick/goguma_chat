@@ -20,7 +20,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
 function AppLayoutShell() {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32">
-      <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.02]" />
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.02]" />
+      </div>
     </div>
   );
 }
@@ -34,7 +36,7 @@ async function ProtectedApp({ children }: PropsWithChildren) {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32">
-      <div className="flex-1">{children}</div>
+      <div className="flex flex-1 min-h-0">{children}</div>
     </div>
   );
 }
