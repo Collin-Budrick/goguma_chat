@@ -7,14 +7,10 @@ export const metadata = {
   title: "Workspace | Goguma Chat",
 };
 
-export const experimental_ppr = true;
-
-type AppLayoutProps = PropsWithChildren<{ params: Promise<{ locale: string }> }>;
-
-export default function AppLayout({ children, params }: AppLayoutProps) {
+export default function AppLayout({ children }: PropsWithChildren) {
   return (
     <Suspense fallback={<AppLayoutShell />}>
-      <ProtectedApp params={params}>{children}</ProtectedApp>
+      <ProtectedApp>{children}</ProtectedApp>
     </Suspense>
   );
 }

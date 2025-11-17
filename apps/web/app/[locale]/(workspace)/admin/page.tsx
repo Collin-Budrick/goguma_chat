@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
+
+import WorkspacePageShell from "@/components/workspace-page-shell";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -15,7 +18,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function AdminHomePage({ params }: PageProps) {
+export default function AdminHomePage(props: PageProps) {
+  return (
+    <Suspense fallback={<WorkspacePageShell lines={3} />}>
+      <AdminHomeContent {...props} />
+    </Suspense>
+  );
+}
+
+async function AdminHomeContent({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "AdminHome" });
 

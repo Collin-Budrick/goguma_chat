@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 
+import ChatPageShell from "@/components/chat/chat-page-shell";
 import ChatThread from "@/components/chat/ChatThread";
 import type { FriendSummary } from "@/components/contacts/types";
 import { auth } from "@/lib/auth";
@@ -49,7 +51,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function FriendChatPage({ params }: PageProps) {
+export default function FriendChatPage(props: PageProps) {
+  return (
+    <Suspense fallback={<ChatPageShell />}>
+      <FriendChatContent {...props} />
+    </Suspense>
+  );
+}
+
+async function FriendChatContent({ params }: PageProps) {
   const { locale, friendSlug } = await params;
   const session = await auth();
 

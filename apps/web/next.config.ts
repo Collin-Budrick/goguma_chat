@@ -8,6 +8,7 @@ const configDir = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   transpilePackages: ["@goguma/ui"],
   async headers() {
     return [

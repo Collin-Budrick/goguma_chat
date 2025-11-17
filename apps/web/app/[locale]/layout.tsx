@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { PropsWithChildren } from "react";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
@@ -62,7 +63,17 @@ export function generateStaticParams() {
   return routing.locales.map((locale: Locale) => ({ locale }));
 }
 
-export default async function LocaleLayout({
+export default function LocaleLayout(
+  props: PropsWithChildren<{ params: Promise<{ locale: string }> }>,
+) {
+  return (
+    <Suspense fallback={<LocaleLayoutShell />}>
+      <LocaleLayoutContent {...props} />
+    </Suspense>
+  );
+}
+
+async function LocaleLayoutContent({
   children,
   params,
 }: PropsWithChildren<{ params: Promise<{ locale: string }> }>) {
@@ -89,5 +100,13 @@ export default async function LocaleLayout({
         <SiteDock />
       </TransitionProvider>
     </NextIntlClientProvider>
+  );
+}
+
+function LocaleLayoutShell() {
+  return (
+    <div className="app-shell flex min-h-screen flex-col">
+      <div className="app-gradient min-h-full bg-gradient-to-br from-black via-black to-neutral-950" />
+    </div>
   );
 }

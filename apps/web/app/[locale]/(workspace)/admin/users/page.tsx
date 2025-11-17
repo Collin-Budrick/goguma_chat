@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
 import SimplePage from "@/components/simple-page";
+import WorkspacePageShell from "@/components/workspace-page-shell";
 
 const operators = [
   { name: "Mina Park", roleKey: "admin", statusKey: "active" },
@@ -24,7 +26,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function AdminUsersPage({ params }: PageProps) {
+export default function AdminUsersPage(props: PageProps) {
+  return (
+    <Suspense fallback={<WorkspacePageShell lines={operators.length + 2} />}>
+      <AdminUsersContent {...props} />
+    </Suspense>
+  );
+}
+
+async function AdminUsersContent({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "AdminUsers" });
 

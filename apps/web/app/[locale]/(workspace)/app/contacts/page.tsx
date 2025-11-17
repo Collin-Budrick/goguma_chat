@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
 
 import ContactsClient from "@/components/contacts/ContactsClient";
 import { FRIENDS_CACHE_KEY, type ContactsState } from "@/components/contacts/types";
+import WorkspacePageShell from "@/components/workspace-page-shell";
 import { getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
 
@@ -92,7 +94,15 @@ function serializeState(state: Awaited<ReturnType<typeof getFriendState>>): Cont
   };
 }
 
-export default async function ContactsPage({ params }: PageProps) {
+export default function ContactsPage(props: PageProps) {
+  return (
+    <Suspense fallback={<WorkspacePageShell lines={6} />}>
+      <ContactsPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function ContactsPageContent({ params }: PageProps) {
   const { locale } = await params;
   const session = await auth();
 

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
 import SimplePage from "@/components/simple-page";
+import WorkspacePageShell from "@/components/workspace-page-shell";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -19,7 +21,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function AdminPushPage({ params }: PageProps) {
+export default function AdminPushPage(props: PageProps) {
+  return (
+    <Suspense fallback={<WorkspacePageShell lines={5} />}>
+      <AdminPushContent {...props} />
+    </Suspense>
+  );
+}
+
+async function AdminPushContent({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "AdminPush" });
 

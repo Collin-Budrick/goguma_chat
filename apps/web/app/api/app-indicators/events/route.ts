@@ -9,9 +9,6 @@ import {
 const encoder = new TextEncoder();
 const HEARTBEAT_INTERVAL = 25_000;
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 const formatEvent = (event: string, payload: object) =>
   `event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`;
 

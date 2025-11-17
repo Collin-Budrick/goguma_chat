@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
+
+import MarketingPageShell from "@/components/marketing-page-shell";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -16,7 +19,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function CapturePage({ params }: PageProps) {
+export default function CapturePage(props: PageProps) {
+  return (
+    <Suspense fallback={<MarketingPageShell sections={1} itemsPerSection={1} />}>
+      <CapturePageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function CapturePageContent({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Capture" });
 

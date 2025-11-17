@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
+import MarketingPageShell from "@/components/marketing-page-shell";
 import SimplePage from "@/components/simple-page";
 
 type PageProps = {
@@ -20,7 +22,15 @@ export async function generateMetadata({
   };
 }
 
-export default async function SupportPage({ params }: PageProps) {
+export default function SupportPage(props: PageProps) {
+  return (
+    <Suspense fallback={<MarketingPageShell sections={bundleKeys.length} />}>
+      <SupportPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function SupportPageContent({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "Support" });
 
