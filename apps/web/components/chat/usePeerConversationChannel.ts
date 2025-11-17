@@ -1064,7 +1064,8 @@ export function usePeerConversationChannel(options: {
       body: string;
       clientMessageId: string;
     }) => {
-      if (directOnly) {
+      const transport = transportRef.current;
+      if (directOnly && transport?.state === "connected") {
         return false;
       }
       try {
@@ -1093,7 +1094,7 @@ export function usePeerConversationChannel(options: {
         return false;
       }
     },
-    [directOnly, handleFrame],
+    [directOnly, handleFrame, transportRef],
   );
 
   const flushOutboundQueue = useCallback(async () => {

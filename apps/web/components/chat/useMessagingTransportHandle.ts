@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   initializeMessagingTransport,
+  type PeerSignalingRole,
   type TransportHandle,
   type TransportState,
 } from "@/lib/messaging-transport";
@@ -25,6 +26,7 @@ type MessagingTransportOptions = {
   conversationId?: string | null;
   viewerId?: string | null;
   enabled?: boolean;
+  peerId?: string | null;
 };
 
 export function useMessagingTransportHandle(
@@ -44,6 +46,28 @@ export function useMessagingTransportHandle(
     viewerId,
     enabled,
   });
+
+  const peerId = options?.peerId ?? null;
+  const peerRole = useMemo<PeerSignalingRole | null>(() => {
+    if (!viewerId || !peerId || viewerId === peerId) {
+      return null;
+    }
+    return viewerId.localeCompare(peerId) < 0 ? "host" : "guest";
+  }, [peerId, viewerId]);
+
+  useEffect(() => {
+    const snapshotRole = controller.getSnapshot().role;
+    if (!enabled || !conversationId || !peerRole) {
+      if (snapshotRole !== null) {
+        controller.setRole(null);
+      }
+      return;
+    }
+
+    if (snapshotRole !== peerRole) {
+      controller.setRole(peerRole);
+    }
+  }, [conversationId, controller, enabled, peerRole]);
 
   const isInitializationAllowed = enabled && shouldInitialize;
 

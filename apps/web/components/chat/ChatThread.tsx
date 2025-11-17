@@ -161,6 +161,7 @@ export default function ChatThread({
     conversationId,
     viewerId,
     enabled: isTransportEnabled,
+    peerId: friendId,
   });
 
   const {
@@ -382,7 +383,7 @@ export default function ChatThread({
   }, [friendId]);
 
   useEffect(() => {
-    setIsTransportEnabled(false);
+    setIsTransportEnabled(Boolean(friendId));
   }, [friendId]);
 
   useEffect(() => {
