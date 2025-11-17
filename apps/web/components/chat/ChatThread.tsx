@@ -75,7 +75,10 @@ function formatMessageTime(value: string, locale: string) {
   }
 }
 
-function getMessageSignature(message: ChatMessage) {
+function getMessageKey(message: ChatMessage) {
+  if (message.id) {
+    return `id:${message.id}`;
+  }
   return `${message.senderId}:${message.body}:${message.createdAt}`;
 }
 
@@ -83,11 +86,11 @@ function dedupeMessages(messages: ChatMessage[]) {
   const seen = new Set<string>();
   const unique: ChatMessage[] = [];
   for (const message of messages) {
-    const signature = getMessageSignature(message);
-    if (seen.has(signature)) {
+    const key = getMessageKey(message);
+    if (seen.has(key)) {
       continue;
     }
-    seen.add(signature);
+    seen.add(key);
     unique.push(message);
   }
   return unique;
