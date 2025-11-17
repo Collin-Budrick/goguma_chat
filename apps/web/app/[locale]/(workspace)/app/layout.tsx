@@ -9,10 +9,12 @@ export const metadata = {
 
 export const experimental_ppr = true;
 
-export default function AppLayout({ children }: PropsWithChildren) {
+type AppLayoutProps = PropsWithChildren<{ params: Promise<{ locale: string }> }>;
+
+export default function AppLayout({ children, params }: AppLayoutProps) {
   return (
     <Suspense fallback={<AppLayoutShell />}>
-      <ProtectedApp>{children}</ProtectedApp>
+      <ProtectedApp params={params}>{children}</ProtectedApp>
     </Suspense>
   );
 }
