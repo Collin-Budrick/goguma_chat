@@ -180,7 +180,7 @@ export default function ChatClient({
   const threadInitialCursor = isBootstrapFriend ? initialCursor : null;
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-0 w-full overflow-hidden lg:h-full lg:flex-row">
+    <div className="flex flex-1 flex-col gap-6 h-full min-h-0 w-full max-h-full overflow-hidden lg:h-full lg:flex-row">
       <section className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-white backdrop-blur lg:w-80">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
