@@ -170,15 +170,9 @@ export function useMessagingTransportHandle(
     }
 
     if (!isInitializationAllowed || !conversationId) {
-      if (transportRef.current) {
-        scheduleMicrotask(() => {
-          attachHandle(null, { force: true });
-        });
-      } else {
-        setTransport(null);
-        setState("idle");
-        setLastError(null);
-      }
+      scheduleMicrotask(() => {
+        attachHandle(null, { force: true });
+      });
       return () => undefined;
     }
 
