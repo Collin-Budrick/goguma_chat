@@ -1097,6 +1097,64 @@ export function usePeerConversationChannel(options: {
     [directOnly, handleFrame, transportRef],
   );
 
+  const syncViaHttp = useCallback(
+    async ({ friendId, limit, signal }: SyncHistoryOptions) => {
+      if (!friendId) {
+        return { ...fallbackConversation } satisfies SyncHistoryResult;
+      }
+
+      const response = await fetch("/api/conversations/direct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ friendId, limit }),
+        signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP history sync failed with status ${response.status}`);
+      }
+
+      const json = (await response.json()) as {
+        conversation?: ChatConversation | null;
+        messages?: ChatMessage[];
+        nextCursor?: string | null;
+      };
+
+      const conversationId = json.conversation?.id ?? null;
+      const messages = json.messages ?? [];
+      const nextCursor = json.nextCursor ?? null;
+
+      if (conversationId) {
+        if (json.conversation) {
+          updateConversation(conversationId, json.conversation);
+          notify(conversationId, {
+            type: "conversation",
+            conversation: json.conversation,
+          });
+        }
+
+        if (messages.length) {
+          updateMessages(conversationId, messages);
+        }
+
+        updateCursor(conversationId, nextCursor);
+        notify(conversationId, {
+          type: "history",
+          mode: "replace",
+          messages,
+          nextCursor,
+        });
+      }
+
+      return {
+        conversation: json.conversation ?? null,
+        messages,
+        nextCursor,
+      } satisfies SyncHistoryResult;
+    },
+    [notify, updateConversation, updateCursor, updateMessages],
+  );
+
   const flushOutboundQueue = useCallback(async () => {
     if (!outboundQueueRef.current.length) {
       return;
@@ -1386,43 +1444,42 @@ export function usePeerConversationChannel(options: {
       initialCursor,
       conversationIdHint,
     }: SyncHistoryOptions): Promise<SyncHistoryResult> => {
+      let hydratedConversationId: string | null = null;
+
       if (initialConversation?.id) {
-        const conversationId = initialConversation.id;
-        updateConversation(conversationId, initialConversation);
+        hydratedConversationId = initialConversation.id;
+        updateConversation(hydratedConversationId, initialConversation);
         if (initialMessages?.length) {
-          updateMessages(conversationId, initialMessages);
+          updateMessages(hydratedConversationId, initialMessages);
         }
-        updateCursor(conversationId, initialCursor ?? null);
-        notify(conversationId, {
+        updateCursor(hydratedConversationId, initialCursor ?? null);
+        notify(hydratedConversationId, {
           type: "conversation",
           conversation: initialConversation,
         });
-        notify(conversationId, {
+        notify(hydratedConversationId, {
           type: "history",
           mode: "replace",
           messages: initialMessages ?? [],
           nextCursor: initialCursor ?? null,
         });
-        return {
-          conversation: initialConversation,
-          messages: initialMessages ?? [],
-          nextCursor: initialCursor ?? null,
-        };
       }
 
-      const candidateConversationId = conversationIdHint ?? null;
+      const candidateConversationId = conversationIdHint ?? hydratedConversationId ?? null;
 
       const transport = transportRef.current;
       if (!transport) {
         if (candidateConversationId) {
           const cached = await readStoredAsync(candidateConversationId);
-          return {
-            conversation: cached.conversation,
-            messages: cached.messages,
-            nextCursor: cached.nextCursor,
-          } satisfies SyncHistoryResult;
+          if (cached.conversation || cached.messages.length) {
+            return {
+              conversation: cached.conversation,
+              messages: cached.messages,
+              nextCursor: cached.nextCursor,
+            } satisfies SyncHistoryResult;
+          }
         }
-        return { ...fallbackConversation } satisfies SyncHistoryResult;
+        return syncViaHttp({ friendId, limit, signal });
       }
 
       await transport.ready.catch(() => undefined);
@@ -1435,40 +1492,62 @@ export function usePeerConversationChannel(options: {
         requestId,
       };
 
-      return new Promise<SyncHistoryResult>((resolve, reject) => {
-        const cleanup = registerPending(
-          pendingHistoryRef.current,
-          requestId,
-          (result) => resolve(result),
-          (error) => reject(error),
-          HISTORY_TIMEOUT_MS,
-        );
+      const attemptPeerSync = () =>
+        new Promise<SyncHistoryResult>((resolve, reject) => {
+          const cleanup = registerPending(
+            pendingHistoryRef.current,
+            requestId,
+            (result) => resolve(result),
+            (error) => reject(error),
+            HISTORY_TIMEOUT_MS,
+          );
 
-        const abortHandler = () => {
-          cleanup();
-          reject(new Error("History sync aborted"));
-        };
+          const abortHandler = () => {
+            cleanup();
+            reject(new Error("History sync aborted"));
+          };
 
-        if (signal) {
-          if (signal.aborted) {
-            abortHandler();
-            return;
+          if (signal) {
+            if (signal.aborted) {
+              abortHandler();
+              return;
+            }
+            signal.addEventListener("abort", abortHandler, { once: true });
           }
-          signal.addEventListener("abort", abortHandler, { once: true });
+
+          transport
+            .send(JSON.stringify(payload))
+            .catch((error) => {
+              cleanup();
+              reject(normalizeError(error));
+            });
+        });
+
+      try {
+        return await attemptPeerSync();
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          throw error;
         }
 
-        transport
-          .send(JSON.stringify(payload))
-          .catch((error) => {
-            cleanup();
-            reject(normalizeError(error));
-          });
-      });
+        if (isTransportDisconnectedError(error)) {
+          return syncViaHttp({ friendId, limit, signal });
+        }
+
+        try {
+          return await syncViaHttp({ friendId, limit, signal });
+        } catch (fallbackError) {
+          throw fallbackError instanceof Error
+            ? fallbackError
+            : normalizeError(fallbackError);
+        }
+      }
     },
     [
       notify,
       readStoredAsync,
       registerPending,
+      syncViaHttp,
       updateConversation,
       updateCursor,
       updateMessages,
