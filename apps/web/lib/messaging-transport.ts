@@ -2883,39 +2883,72 @@ const defaultCreatePush = async (
     }
   };
 
-    const teardown = () => {
-      closed = true;
-      clearReconnectTimer();
-      clearSource();
-      while (persistentCleanup.length) {
-        persistentCleanup.pop()?.();
-      }
-    };
+  const teardown = () => {
+    closed = true;
+    clearReconnectTimer();
+    clearSource();
+    while (persistentCleanup.length) {
+      persistentCleanup.pop()?.();
+    }
+  };
 
-    const readyPromise = new Promise<void>((resolve, reject) => {
-      const handleAbort = () => {
-        readyCleanupListeners.forEach((cleanup) => cleanup());
-        cleanupListeners.forEach((cleanup) => cleanup());
-        source?.close();
-        reject(createAbortError());
+  const readyPromise = new Promise<void>((resolve, reject) => {
+    const handleAbort = () => {
+      readyCleanupListeners.forEach((cleanup) => cleanup());
+      cleanupListeners.forEach((cleanup) => cleanup());
+      source?.close();
+      reject(createAbortError());
     };
 
     signal.addEventListener("abort", handleAbort, { once: true });
     readyCleanupListeners.push(() => signal.removeEventListener("abort", handleAbort));
 
-      const connectSource = () => {
+    const scheduleReconnect = () => {
+      if (closed || signal.aborted) {
+        return;
+      }
+
+      clearReconnectTimer();
+      reconnectAttempts += 1;
+
+      const delay = Math.min(1000 * reconnectAttempts, 16000);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
         if (closed || signal.aborted) {
           return;
         }
+        connectSource();
+      }, delay);
+    };
 
-      readyCleanupListeners.push(() => {
-        source?.removeEventListener("open", handleReady);
-        source?.removeEventListener("ready", handleReady as never);
-        source?.removeEventListener("error", handleError as never);
-      });
+    const handleError = (event: Event | Error) => {
+      const normalized = normalizeError(
+        event instanceof ErrorEvent ? event.error ?? event : event,
+      );
+      startOptions.emitError(normalized);
 
-      const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
-      source = localSource;
+      if (closed || signal.aborted) {
+        return;
+      }
+
+      if (!readySettled) {
+        readySettled = true;
+        readyCleanupListeners.forEach((cleanup) => cleanup());
+        cleanupListeners.forEach((cleanup) => cleanup());
+        clearSource();
+        reject(normalized);
+        return;
+      }
+
+      startOptions.emitState("recovering");
+      clearSource();
+      scheduleReconnect();
+    };
+
+    const connectSource = () => {
+      if (closed || signal.aborted) {
+        return;
+      }
 
       const handleReady = () => {
         reconnectAttempts = 0;
@@ -2926,20 +2959,14 @@ const defaultCreatePush = async (
         resolve();
       };
 
-      const handleError = (event: Event | Error) => {
-        const normalized = normalizeError(
-          event instanceof ErrorEvent ? event.error ?? event : event,
-        );
-        startOptions.emitError(normalized);
+      readyCleanupListeners.push(() => {
+        source?.removeEventListener("open", handleReady);
+        source?.removeEventListener("ready", handleReady as never);
+        source?.removeEventListener("error", handleError as never);
+      });
 
-        if (closed || signal.aborted) {
-          return;
-        }
-
-        startOptions.emitState("recovering");
-        clearSource();
-        scheduleReconnect();
-      };
+      const localSource: EventSourceLike = new EventSourceCtor(endpointCandidate);
+      source = localSource;
 
       localSource.addEventListener("open", handleReady);
       localSource.addEventListener("ready", handleReady as never);
@@ -2989,23 +3016,6 @@ const defaultCreatePush = async (
           localSource.removeEventListener(eventName, handleMessageEvent as never),
         );
       });
-    };
-    const scheduleReconnect = () => {
-      if (closed || signal.aborted) {
-        return;
-      }
-
-      clearReconnectTimer();
-      reconnectAttempts += 1;
-
-      const delay = Math.min(1000 * reconnectAttempts, 16000);
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        if (closed || signal.aborted) {
-          return;
-        }
-        connectSource();
-      }, delay);
     };
 
     connectSource();

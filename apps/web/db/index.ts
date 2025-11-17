@@ -9,11 +9,19 @@ const globalForPool = globalThis as unknown as {
   __drizzlePool?: Pool;
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction && !process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL is required in production. Configure the environment variable (see .env.example).",
+  );
+}
+
 const connectionString =
   process.env.DATABASE_URL ??
   "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL && !isProduction) {
   console.warn(
     "DATABASE_URL is not set. Using a placeholder connection string; update your environment variables (see .env.example).",
   );
