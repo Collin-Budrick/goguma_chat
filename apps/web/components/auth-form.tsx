@@ -67,7 +67,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setError(null);
     setIsSubmitting(true);
 
-    const signInPayload: Record<string, string | undefined> = {
+    const signInPayload: Record<string, string | boolean | undefined> = {
       email,
       redirect: false,
       callbackUrl,

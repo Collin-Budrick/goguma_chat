@@ -7,6 +7,19 @@ const PEER_PERIODIC_TAG = "peer-channel-refresh";
 
 const SERVICE_WORKER_PATH = "/sw.js";
 
+type ServiceWorkerSyncManager = {
+  register(tag: string): Promise<void>;
+};
+
+type PeriodicSyncManager = {
+  register(
+    tag: string,
+    options?: {
+      minInterval?: number;
+    },
+  ): Promise<void>;
+};
+
 export function ServiceWorkerClient() {
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -70,7 +83,14 @@ export function ServiceWorkerClient() {
 
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
 
-    const ensureBackgroundCapabilities = async (registration: ServiceWorkerRegistration) => {
+    type BackgroundSyncRegistration = ServiceWorkerRegistration & {
+      sync?: ServiceWorkerSyncManager;
+      periodicSync?: PeriodicSyncManager;
+    };
+
+    const ensureBackgroundCapabilities = async (
+      registration: BackgroundSyncRegistration,
+    ) => {
       const permissions = (navigator as Navigator & {
         permissions?: {
           query(options: PermissionDescriptor): Promise<PermissionStatus>;
@@ -90,21 +110,27 @@ export function ServiceWorkerClient() {
       await queryPermission("notifications");
       await queryPermission("periodic-background-sync" as PermissionName);
 
-      if (registration.sync) {
+      const syncManager = registration.sync;
+      if (syncManager) {
         try {
-          await registration.sync.register(PEER_SYNC_TAG);
+          await syncManager.register(PEER_SYNC_TAG);
         } catch (error) {
           console.info("[sw] Background sync unavailable", error);
         }
       }
 
-      if (registration.periodicSync) {
+      const periodicSyncManager = registration.periodicSync;
+      if (periodicSyncManager) {
         try {
-          await registration.periodicSync.register(PEER_PERIODIC_TAG, {
+          await periodicSyncManager.register(PEER_PERIODIC_TAG, {
             minInterval: 15 * 60 * 1000,
           });
         } catch (error) {
-          if (error?.name !== "NotAllowedError") {
+          const name =
+            typeof error === "object" && error !== null && "name" in error
+              ? (error as { name?: string }).name
+              : undefined;
+          if (name !== "NotAllowedError") {
             console.info("[sw] Periodic sync unavailable", error);
           }
         }

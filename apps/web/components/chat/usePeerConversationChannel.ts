@@ -99,6 +99,13 @@ const fallbackConversation: ConversationSnapshot = {
   updatedAt: 0,
 };
 
+type MessageSendPayload = {
+  type: "message:send";
+  conversationId: string;
+  body: string;
+  clientMessageId: string;
+};
+
 const parseTransportMessage = (
   payload: TransportMessage,
 ): PeerTransportIncomingFrame | null => {
@@ -173,12 +180,7 @@ export function usePeerConversationChannel(options: {
   const pendingLoadRef = useRef<PendingMap<LoadMoreResult>>(new Map());
   const outboundQueueRef = useRef<
     Array<{
-      payload: {
-        type: "message:send";
-        conversationId: string;
-        body: string;
-        clientMessageId: string;
-      };
+      payload: MessageSendPayload;
     }>
   >([]);
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -507,7 +509,14 @@ export function usePeerConversationChannel(options: {
       }
 
       if (payload.type === "peer:queued-messages") {
-        const records = Array.isArray(payload.messages) ? payload.messages : [];
+        type QueuedMessageRecord = {
+          conversationId?: unknown;
+          message?: unknown;
+          id?: unknown;
+        };
+        const records = (Array.isArray(payload.messages) ? payload.messages : []) as
+          | QueuedMessageRecord[]
+          | readonly QueuedMessageRecord[];
         const ackIds: string[] = [];
         records.forEach((entry) => {
           if (!entry || typeof entry !== "object") {
@@ -1451,7 +1460,7 @@ export function usePeerConversationChannel(options: {
         });
       }
 
-      const payload = {
+      const payload: MessageSendPayload = {
         type: "message:send",
         conversationId,
         body,

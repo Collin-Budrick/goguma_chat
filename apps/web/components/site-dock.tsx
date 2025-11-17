@@ -344,7 +344,7 @@ export default function SiteDock() {
 
     let stopped = false;
     let source: EventSource | null = null;
-    let reconnectTimeout: ReturnType<typeof window.setTimeout> | null = null;
+    let reconnectTimeout: number | null = null;
 
     const indicatorListener: EventListener = (event) => {
       let payload: IndicatorEventPayload | null = null;

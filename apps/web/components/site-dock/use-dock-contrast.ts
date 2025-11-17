@@ -69,7 +69,7 @@ export type ContrastSampler = {
   setEnabled: (value: boolean) => void;
 };
 
-export const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSampler => {
+export const createContrastSampler = (ref: RefObject<HTMLElement | null>): ContrastSampler => {
   const listeners = new Set<() => void>();
   const events: Array<keyof WindowEventMap> = ["scroll", "resize", "pointermove"];
   let tone: ContrastTheme = "dark";
@@ -230,7 +230,7 @@ export const createContrastSampler = (ref: RefObject<HTMLElement>): ContrastSamp
   };
 };
 
-export function useDockContrast(ref: RefObject<HTMLElement>): ContrastTheme {
+export function useDockContrast(ref: RefObject<HTMLElement | null>): ContrastTheme {
   const [sampler] = useState(() => createContrastSampler(ref));
 
   useEffect(() => {

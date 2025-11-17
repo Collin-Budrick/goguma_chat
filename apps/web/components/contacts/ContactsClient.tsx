@@ -37,11 +37,22 @@ function generateId(prefix: string) {
 }
 
 function toISOString(value: unknown, fallback?: string) {
-  if (!value) {
+  if (value === undefined || value === null) {
     return fallback ?? new Date().toISOString();
   }
 
-  const date = value instanceof Date ? value : new Date(value);
+  const normalizedValue =
+    value instanceof Date
+      ? value
+      : typeof value === "string" || typeof value === "number"
+      ? value
+      : null;
+
+  if (normalizedValue === null) {
+    return fallback ?? new Date().toISOString();
+  }
+
+  const date = new Date(normalizedValue);
   if (Number.isNaN(date.getTime())) {
     return fallback ?? new Date().toISOString();
   }

@@ -1,7 +1,8 @@
 import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
-
 import { db } from "./index";
+import type { NodePgDatabase, NodePgTransaction } from "drizzle-orm/node-postgres";
 import {
+  appSchema,
   conversationParticipants,
   conversationReads,
   conversations,
@@ -12,6 +13,10 @@ import {
 } from "./schema";
 const DIRECT_CONVERSATION = "direct" satisfies
   (typeof conversationTypeEnum.enumValues)[number];
+
+type AppSchema = typeof appSchema;
+type AppDatabase = NodePgDatabase<AppSchema>;
+type AppTransaction = NodePgTransaction<AppSchema, AppSchema>;
 
 const MAX_MESSAGE_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 30;
@@ -103,7 +108,7 @@ export async function findDirectConversation(
 async function assertFriendship(
   userId: string,
   friendId: string,
-  client = db,
+  client: AppDatabase | AppTransaction,
 ) {
   const [friendship] = await client
     .select({ id: friendships.id })
