@@ -19,8 +19,8 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
 function AppLayoutShell() {
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32 overflow-hidden">
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+    <div className="mx-auto flex h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32 overflow-hidden">
+      <div className="flex flex-1 min-h-0 h-full overflow-hidden">
         <div className="flex-1 rounded-3xl border border-white/10 bg-white/[0.02]" />
       </div>
     </div>
@@ -35,8 +35,8 @@ async function ProtectedApp({ children }: PropsWithChildren) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32 overflow-hidden">
-      <div className="flex flex-1 min-h-0 overflow-hidden">{children}</div>
+    <div className="mx-auto flex h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32 overflow-hidden">
+      <div className="flex flex-1 min-h-0 h-full overflow-hidden">{children}</div>
     </div>
   );
 }
