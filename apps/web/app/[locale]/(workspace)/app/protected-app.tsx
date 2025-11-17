@@ -3,16 +3,11 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 
-type ProtectedAppProps = PropsWithChildren<{
-  params: Promise<{ locale: string }>;
-}>;
-
-export default async function ProtectedApp({ children, params }: ProtectedAppProps) {
-  const { locale } = await params;
+export default async function ProtectedApp({ children }: PropsWithChildren) {
   const session = await auth();
 
   if (!session?.user) {
-    redirect(`/${locale}/login`);
+    redirect("/login");
   }
 
   return (
