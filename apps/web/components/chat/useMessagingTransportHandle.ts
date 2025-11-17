@@ -42,6 +42,7 @@ export function useMessagingTransportHandle(
   const { dependencies, snapshot, controller, shouldInitialize } = usePeerSignaling({
     conversationId,
     viewerId,
+    enabled,
   });
 
   const isInitializationAllowed = enabled && shouldInitialize;
@@ -102,13 +103,6 @@ export function useMessagingTransportHandle(
 
   const attachHandle = useCallback(
     (handle: TransportHandle | null, options?: { force?: boolean }) => {
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:transport] attachHandle invoked", {
-          sameHandle: transportRef.current === handle,
-          force: Boolean(options?.force),
-          incomingState: handle?.state,
-        });
-      }
       const sameHandle = transportRef.current === handle;
 
       if (sameHandle && !options?.force) {
@@ -125,9 +119,6 @@ export function useMessagingTransportHandle(
         setState("idle");
         lastDegradedRef.current = null;
         setLastDegradedAt(null);
-        if (typeof console !== "undefined" && typeof console.info === "function") {
-          console.info("[chat:transport] detached handle; state reset to idle");
-        }
         return;
       }
 
@@ -167,12 +158,6 @@ export function useMessagingTransportHandle(
       });
 
       errorUnsubscribeRef.current = handle.onError((error) => {
-        if (typeof console !== "undefined" && typeof console.info === "function") {
-          console.info("[chat:transport] handle error event", {
-            state: handle.state,
-            error,
-          });
-        }
         setLastError(toError(error));
       });
     },
@@ -205,12 +190,6 @@ export function useMessagingTransportHandle(
     let cancelled = false;
 
     const attachCurrentHandle = (force?: boolean) => {
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:transport] attachCurrentHandle", {
-          hasTransport: Boolean(instance.transport),
-          force,
-        });
-      }
       if (cancelled) return;
       attachHandle(instance.transport ?? null, force ? { force: true } : undefined);
     };
