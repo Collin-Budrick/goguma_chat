@@ -158,6 +158,7 @@ type SendDeliveryPresenceOptions = {
 export function usePeerConversationChannel(options: {
   transport: TransportHandle | null;
   onHeartbeatTimeout?: () => Promise<void>;
+  directOnly?: boolean;
 }) {
   const transportRef = useRef<TransportHandle | null>(options.transport);
   const listenersRef = useRef<Map<string, Set<ChannelListener>>>(new Map());
@@ -841,7 +842,7 @@ export function usePeerConversationChannel(options: {
     ],
   );
 
-  const { transport: transportOption, onHeartbeatTimeout } = options;
+  const { transport: transportOption, onHeartbeatTimeout, directOnly } = options;
 
   useEffect(() => {
     transportRef.current = options.transport;
@@ -1085,6 +1086,9 @@ export function usePeerConversationChannel(options: {
       body: string;
       clientMessageId: string;
     }) => {
+      if (directOnly) {
+        return false;
+      }
       try {
         const response = await fetch(
           `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
@@ -1114,7 +1118,7 @@ export function usePeerConversationChannel(options: {
         return false;
       }
     },
-    [handleFrame],
+    [directOnly, handleFrame],
   );
 
   const flushOutboundQueue = useCallback(async () => {
