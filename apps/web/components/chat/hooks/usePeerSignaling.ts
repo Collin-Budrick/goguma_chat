@@ -421,6 +421,10 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
       return;
     }
 
+    if (!conversationId || !viewerId || !snapshot.role) {
+      return;
+    }
+
     const handlePayload = (payload: RemoteTokenPayload) => {
       if (!payload?.token) {
         return;
