@@ -56,6 +56,7 @@ type ChatThreadProps = {
 
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
+const CONFIRM_DUPLICATE_WINDOW_MS = 5_000;
 
 function generateClientMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -75,6 +76,22 @@ function formatMessageTime(value: string, locale: string) {
   }
 }
 
+function isOptimisticMessage(message: ChatMessage) {
+  return message.id.startsWith("client-");
+}
+
+function isConfirmedMatch(optimistic: ChatMessage, confirmed: ChatMessage) {
+  const delta = Math.abs(
+    toDate(optimistic.createdAt).getTime() -
+      toDate(confirmed.createdAt).getTime(),
+  );
+  return (
+    optimistic.senderId === confirmed.senderId &&
+    optimistic.body === confirmed.body &&
+    delta < CONFIRM_DUPLICATE_WINDOW_MS
+  );
+}
+
 function getMessageKey(message: ChatMessage) {
   if (message.id) {
     return `id:${message.id}`;
@@ -85,7 +102,14 @@ function getMessageKey(message: ChatMessage) {
 function dedupeMessages(messages: ChatMessage[]) {
   const seen = new Set<string>();
   const unique: ChatMessage[] = [];
+  const confirmedMessages = messages.filter((message) => !isOptimisticMessage(message));
   for (const message of messages) {
+    if (
+      isOptimisticMessage(message) &&
+      confirmedMessages.some((confirmed) => isConfirmedMatch(message, confirmed))
+    ) {
+      continue;
+    }
     const key = getMessageKey(message);
     if (seen.has(key)) {
       continue;
@@ -841,8 +865,13 @@ export default function ChatThread({
       return toDate(message.createdAt).getTime() > clearedHistoryCutoff;
     });
 
-    return dedupeMessages(filtered);
-  }, [clearedHistoryCutoff, conversationId, messages]);
+    return dedupeMessages(filtered.map((message) => {
+      if (message.senderId === viewerId && message.id.startsWith("client-")) {
+        return { ...message, id: message.id };
+      }
+      return message;
+    }));
+  }, [clearedHistoryCutoff, conversationId, messages, viewerId]);
 
   const sendTyping = useCallback(
     (isTyping: boolean) => {
