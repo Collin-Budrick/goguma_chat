@@ -96,7 +96,7 @@ export async function POST(
       clientMessageId:
         typeof payload.clientMessageId === "string"
           ? payload.clientMessageId
-          : undefined,
+          : null,
     });
 
     try {

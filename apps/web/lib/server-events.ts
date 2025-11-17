@@ -16,7 +16,7 @@ type ConversationEvent =
       type: "message";
       conversationId: string;
       message: SerializedMessage;
-      clientMessageId?: string;
+      clientMessageId?: string | null;
     }
   | { type: "typing"; conversationId: string; typing: TypingPayload };
 
@@ -65,6 +65,14 @@ const indicatorEmitter =
   })();
 
 export function emitConversationEvent(event: ConversationEvent) {
+  if (event.type === "message") {
+    conversationEmitter.emit(event.conversationId, {
+      ...event,
+      clientMessageId: event.clientMessageId ?? null,
+    });
+    return;
+  }
+
   conversationEmitter.emit(event.conversationId, event);
 }
 
