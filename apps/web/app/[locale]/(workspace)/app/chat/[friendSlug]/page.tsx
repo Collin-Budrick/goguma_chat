@@ -67,7 +67,7 @@ export default async function FriendChatPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full">
+    <div className="flex flex-1 h-full min-h-0 w-full">
       <ChatThread
         viewerId={viewerId}
         viewerProfile={viewerProfile}
