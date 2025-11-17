@@ -1125,10 +1125,13 @@ export function usePeerConversationChannel(options: {
   }, [options.transport, refreshHttpFallbacks]);
 
   useEffect(() => {
+    const fallbacks = httpFallbackRef.current;
+    const subscribedIds = subscribedConversationIdsRef.current;
+
     return () => {
-      httpFallbackRef.current.forEach((cleanup) => cleanup());
-      httpFallbackRef.current.clear();
-      subscribedConversationIdsRef.current.clear();
+      fallbacks.forEach((cleanup) => cleanup());
+      fallbacks.clear();
+      subscribedIds.clear();
     };
   }, []);
 
@@ -1302,7 +1305,7 @@ export function usePeerConversationChannel(options: {
         stopHttpFallback(conversationId);
       };
     },
-    [refreshHttpFallbacks, stopHttpFallback],
+    [readStored, refreshHttpFallbacks, stopHttpFallback],
   );
 
   const sendViaHttp = useCallback(
@@ -1341,7 +1344,7 @@ export function usePeerConversationChannel(options: {
           message: json.message ?? undefined,
         });
         return true;
-      } catch (error) {
+      } catch {
         return false;
       }
     },
@@ -1421,8 +1424,7 @@ export function usePeerConversationChannel(options: {
         try {
           await transport.send(JSON.stringify(entry.payload));
           delivered = true;
-        } catch (error) {
-        }
+        } catch {}
       }
 
       if (!delivered) {
@@ -1536,7 +1538,7 @@ export function usePeerConversationChannel(options: {
         console.error("Failed to send presence update", error);
       }
     },
-    [readStored],
+    [],
   );
 
   const sendPresenceTyping = useCallback(

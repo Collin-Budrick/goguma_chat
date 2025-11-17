@@ -351,7 +351,7 @@ const normalizeTransportMessage = async (
   throw new Error("Unsupported transport payload for encryption");
 };
 
-const decodeTransportMessage = (bytes: Uint8Array): TransportMessage =>
+const decodeTransportMessage = (bytes: Uint8Array): string =>
   textDecoder.decode(bytes);
 
 const compareUint8Arrays = (left: Uint8Array, right: Uint8Array): number => {
@@ -492,10 +492,11 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
 
     try {
       const normalized = await normalizeTransportMessage(payload);
+      const normalizedBytes = new Uint8Array(normalized);
       const ciphertext = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv },
         key,
-        normalized,
+        normalizedBytes,
       );
       const envelope: EnvelopeData = {
         version: 1,
@@ -507,6 +508,10 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
         iv: bufferToBase64(iv.buffer),
         ciphertext: bufferToBase64(ciphertext),
       };
+      if (!this.transmit) {
+        throw new Error("Missing transmitter for encrypted payload");
+      }
+
       await this.transmit(JSON.stringify(envelope));
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
@@ -587,7 +592,7 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       kind: "handshake",
       sessionId: this.sessionId,
       publicKey: bufferToBase64(publicKeyRaw),
-      salt: bufferToBase64(this.localSalt.buffer),
+      salt: bufferToBase64(this.localSalt.slice().buffer),
       rotation: this.localRotation,
     };
 
@@ -725,11 +730,16 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       this.remoteRotation,
     );
 
+    const saltBuffer = combinedSalt.buffer.slice(
+      combinedSalt.byteOffset,
+      combinedSalt.byteOffset + combinedSalt.byteLength,
+    ) as ArrayBuffer;
+
     const baseKey = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveKey"]);
     const aesKey = await crypto.subtle.deriveKey(
       {
         name: "HKDF",
-        salt: combinedSalt,
+        salt: saltBuffer,
         info: KEY_ROTATION_INFO,
         hash: "SHA-256",
       },
@@ -755,7 +765,9 @@ class PeerCryptoSessionImpl implements PeerCryptoSession {
       const next = this.queuedIncoming.shift();
       if (!next) continue;
       try {
-        const envelope = JSON.parse(next) as EnvelopeData;
+        const normalized = await normalizeTransportMessage(next);
+        const decoded = decodeTransportMessage(normalized);
+        const envelope = JSON.parse(decoded) as EnvelopeData;
         await this.handleEncrypted(envelope);
       } catch (error) {
         console.error("Failed to process queued encrypted frame", error);

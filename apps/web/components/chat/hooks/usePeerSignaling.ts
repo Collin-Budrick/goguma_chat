@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   peerSignalingController,
@@ -151,24 +158,15 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
   const viewerId = options?.viewerId ?? null;
   const enabled = options?.enabled ?? true;
   const controller = peerSignalingController;
-  const [snapshot, setSnapshot] = useState<PeerSignalingSnapshot>(
-    controller.getSnapshot(),
+  const snapshot = useSyncExternalStore(
+    (listener) => controller.subscribe(listener),
+    () => controller.getSnapshot(),
+    () => controller.getSnapshot(),
   );
-  const [status, setStatus] = useState<PeerSignalingStatus>(() =>
-    enabled ? deriveStatus(controller.getSnapshot()) : "idle",
+  const status: PeerSignalingStatus = useMemo(
+    () => (enabled ? deriveStatus(snapshot) : "idle"),
+    [enabled, snapshot],
   );
-
-  useEffect(() => {
-    if (!enabled) {
-      setSnapshot(controller.getSnapshot());
-      return () => undefined;
-    }
-
-    const unsubscribe = controller.subscribe(setSnapshot);
-    return () => {
-      unsubscribe();
-    };
-  }, [controller, enabled]);
 
   const publishedTokensRef = useRef<{ offer: string | null; answer: string | null }>({
     offer: null,
@@ -544,14 +542,6 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
       abortController.abort();
     };
   }, [conversationId, controller, enabled, snapshot.role, snapshot.sessionId, viewerId]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setStatus("idle");
-      return;
-    }
-    setStatus(deriveStatus(snapshot));
-  }, [enabled, snapshot]);
 
   const { inviteExpiresAt, answerExpiresAt } = snapshot;
 
