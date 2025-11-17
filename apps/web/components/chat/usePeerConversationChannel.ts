@@ -166,6 +166,8 @@ export function usePeerConversationChannel(options: {
   const storagePromiseRef = useRef<
     Promise<ConversationStorage | null> | null
   >(null);
+  const httpFallbackRef = useRef<Map<string, () => void>>(new Map());
+  const subscribedConversationIdsRef = useRef<Set<string>>(new Set());
   const pendingAcksRef = useRef<PendingMap<ChatMessage>>(new Map());
   const pendingHistoryRef = useRef<PendingMap<SyncHistoryResult>>(new Map());
   const pendingLoadRef = useRef<PendingMap<LoadMoreResult>>(new Map());
@@ -834,6 +836,222 @@ export function usePeerConversationChannel(options: {
 
   const { transport: transportOption, onHeartbeatTimeout, directOnly } = options;
 
+  const shouldUseHttpEvents = useCallback(() => {
+    if (!directOnly) {
+      return false;
+    }
+
+    const transport = transportRef.current;
+    return !transport || transport.state !== "connected";
+  }, [directOnly]);
+
+  const stopHttpFallback = useCallback((conversationId: string) => {
+    if (!conversationId) {
+      return;
+    }
+
+    const cleanup = httpFallbackRef.current.get(conversationId);
+    if (cleanup) {
+      cleanup();
+      httpFallbackRef.current.delete(conversationId);
+    }
+  }, []);
+
+  const startHttpFallback = useCallback(
+    (conversationId: string) => {
+      if (!conversationId || !shouldUseHttpEvents()) {
+        return;
+      }
+
+      if (httpFallbackRef.current.has(conversationId)) {
+        return;
+      }
+
+      let closed = false;
+      let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+      let source: EventSource | null = null;
+      let abortController: AbortController | null = null;
+      let buffer = "";
+
+      const url = `/api/conversations/${encodeURIComponent(conversationId)}/events`;
+
+      const clearTimers = () => {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      };
+
+      const cleanup = () => {
+        closed = true;
+        clearTimers();
+        if (source) {
+          source.close();
+          source = null;
+        }
+        if (abortController) {
+          abortController.abort();
+          abortController = null;
+        }
+        httpFallbackRef.current.delete(conversationId);
+      };
+
+      const handleEvent = (eventType: string, rawData: string | null) => {
+        if (!shouldUseHttpEvents() || closed) {
+          return;
+        }
+
+        if (eventType === "ready" || eventType === "ping") {
+          return;
+        }
+
+        if (eventType === "message") {
+          try {
+            const parsed = rawData ? JSON.parse(rawData) : null;
+            const message = parsed?.message as ChatMessage | undefined;
+            if (!message) {
+              return;
+            }
+            const clientMessageId =
+              typeof parsed?.clientMessageId === "string"
+                ? (parsed.clientMessageId as string)
+                : null;
+            handleFrame({
+              type: "message",
+              conversationId,
+              message,
+              clientMessageId,
+            });
+          } catch (error) {
+            console.error("Failed to process HTTP fallback message", error);
+          }
+          return;
+        }
+
+        if (eventType === "typing") {
+          try {
+            const parsed = rawData ? JSON.parse(rawData) : null;
+            if (!parsed) {
+              return;
+            }
+            handleFrame({ type: "typing", conversationId, typing: parsed });
+          } catch (error) {
+            console.error("Failed to process HTTP fallback typing event", error);
+          }
+        }
+      };
+
+      const processBuffer = () => {
+        const segments = buffer.split(/\n\n/);
+        buffer = segments.pop() ?? "";
+        segments.forEach((segment) => {
+          if (!segment.trim()) return;
+          let eventType = "message";
+          const dataLines: string[] = [];
+          segment.split(/\r?\n/).forEach((line) => {
+            if (line.startsWith("event:")) {
+              eventType = line.slice("event:".length).trim();
+            } else if (line.startsWith("data:")) {
+              dataLines.push(line.slice("data:".length).trim());
+            }
+          });
+          handleEvent(eventType, dataLines.join("\n"));
+        });
+      };
+
+      const scheduleReconnect = () => {
+        if (closed || !shouldUseHttpEvents()) {
+          return;
+        }
+        clearTimers();
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          if (!closed && shouldUseHttpEvents()) {
+            connect();
+          }
+        }, 2000);
+      };
+
+      const connect = () => {
+        if (closed || !shouldUseHttpEvents()) {
+          return;
+        }
+
+        if (typeof window !== "undefined" && typeof window.EventSource === "function") {
+          const localSource = new window.EventSource(url);
+          source = localSource;
+
+          const handlePayload = (event: MessageEvent<string>) => {
+            handleEvent(event.type, event.data ?? null);
+          };
+
+          const handleError = () => {
+            if (closed) {
+              return;
+            }
+            localSource.close();
+            if (source === localSource) {
+              source = null;
+            }
+            scheduleReconnect();
+          };
+
+          ["message", "typing", "ready", "ping"].forEach((eventName) => {
+            localSource.addEventListener(eventName, handlePayload as never);
+          });
+          localSource.addEventListener("error", handleError as never);
+
+          return;
+        }
+
+        abortController = new AbortController();
+        buffer = "";
+        fetch(url, {
+          signal: abortController.signal,
+          headers: { Accept: "text/event-stream" },
+          cache: "no-store",
+        })
+          .then(async (response) => {
+            const reader = response.body?.getReader();
+            if (!reader) {
+              throw new Error("Missing event stream reader");
+            }
+            const decoder = new TextDecoder();
+            while (!closed) {
+              const { value, done } = await reader.read();
+              if (done) {
+                break;
+              }
+              buffer += decoder.decode(value, { stream: true });
+              processBuffer();
+            }
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (!closed && shouldUseHttpEvents()) {
+              scheduleReconnect();
+            }
+          });
+      };
+
+      connect();
+      httpFallbackRef.current.set(conversationId, cleanup);
+    },
+    [handleFrame, shouldUseHttpEvents],
+  );
+
+  const refreshHttpFallbacks = useCallback(() => {
+    const shouldFallback = shouldUseHttpEvents();
+    subscribedConversationIdsRef.current.forEach((conversationId) => {
+      if (!conversationId) return;
+      if (shouldFallback) {
+        startHttpFallback(conversationId);
+      } else {
+        stopHttpFallback(conversationId);
+      }
+    });
+  }, [shouldUseHttpEvents, startHttpFallback, stopHttpFallback]);
+
   useEffect(() => {
     transportRef.current = options.transport;
     if (!options.transport) {
@@ -884,6 +1102,26 @@ export function usePeerConversationChannel(options: {
       unsubscribe();
     };
   }, [options.transport, rejectAllPending]);
+
+  useEffect(() => {
+    refreshHttpFallbacks();
+    const transport = transportRef.current;
+    if (!transport) {
+      return () => undefined;
+    }
+    const unsubscribe = transport.onStateChange(() => {
+      refreshHttpFallbacks();
+    });
+    return () => unsubscribe();
+  }, [options.transport, refreshHttpFallbacks]);
+
+  useEffect(() => {
+    return () => {
+      httpFallbackRef.current.forEach((cleanup) => cleanup());
+      httpFallbackRef.current.clear();
+      subscribedConversationIdsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const transport = transportRef.current;
@@ -1024,6 +1262,8 @@ export function usePeerConversationChannel(options: {
       if (!conversationId) {
         return () => undefined;
       }
+      subscribedConversationIdsRef.current.add(conversationId);
+      refreshHttpFallbacks();
       const listeners = listenersRef.current.get(conversationId) ?? new Set();
       listeners.add(listener);
       listenersRef.current.set(conversationId, listeners);
@@ -1049,9 +1289,11 @@ export function usePeerConversationChannel(options: {
         if (!current.size) {
           listenersRef.current.delete(conversationId);
         }
+        subscribedConversationIdsRef.current.delete(conversationId);
+        stopHttpFallback(conversationId);
       };
     },
-    [],
+    [refreshHttpFallbacks, stopHttpFallback],
   );
 
   const sendViaHttp = useCallback(
