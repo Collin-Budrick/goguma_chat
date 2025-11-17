@@ -595,7 +595,16 @@ export default function ChatThread({
         setMessages((prev) => {
           const withoutClient = clientMessageId
             ? prev.filter((item) => item.id !== clientMessageId)
-            : prev;
+            : prev.filter((item) => {
+                const isSameSender = item.senderId === message.senderId;
+                const isSameBody = item.body === message.body;
+                const createdAtDelta =
+                  Math.abs(toDate(item.createdAt).getTime() -
+                    toDate(message.createdAt).getTime());
+                const isNearSameTimestamp = createdAtDelta < 5_000;
+
+                return !(isSameSender && isSameBody && isNearSameTimestamp);
+              });
           return mergeMessages(withoutClient, [message]);
         });
         setConversation((prev) =>

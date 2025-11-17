@@ -64,7 +64,7 @@ async function handlePost(request: Request) {
       conversationId: body.conversationId,
       message: serialized,
       clientMessageId:
-        typeof body.clientMessageId === "string" ? body.clientMessageId : undefined,
+        typeof body.clientMessageId === "string" ? body.clientMessageId : null,
     });
 
     try {
