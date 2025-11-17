@@ -255,6 +255,7 @@ export function useMessagingTransportHandle(
     scheduleMicrotask,
     isInitializationAllowed,
     connectOptions,
+    conversationId,
   ]);
 
   const restart = useCallback(async () => {

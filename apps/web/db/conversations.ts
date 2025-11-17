@@ -1,8 +1,7 @@
 import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { db } from "./index";
-import type { NodePgDatabase, NodePgTransaction } from "drizzle-orm/node-postgres";
 import {
-  appSchema,
   conversationParticipants,
   conversationReads,
   conversations,
@@ -14,9 +13,8 @@ import {
 const DIRECT_CONVERSATION = "direct" satisfies
   (typeof conversationTypeEnum.enumValues)[number];
 
-type AppSchema = typeof appSchema;
-type AppDatabase = NodePgDatabase<AppSchema>;
-type AppTransaction = NodePgTransaction<AppSchema, AppSchema>;
+type AppDatabase = typeof db;
+type AppTransaction = Parameters<Parameters<AppDatabase["transaction"]>[0]>[0];
 
 const MAX_MESSAGE_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 30;
@@ -123,7 +121,7 @@ async function assertFriendship(
 
 async function getParticipants(
   conversationId: string,
-  client = db,
+  client: AppDatabase | AppTransaction = db,
 ): Promise<ConversationParticipant[]> {
   return client
     .select({
@@ -294,18 +292,17 @@ export async function listConversationMessages(
     cursorId = cursor.id;
   }
 
-  const conditions = [eq(messages.conversationId, conversationId)];
+  const conditions: SQL<unknown>[] = [eq(messages.conversationId, conversationId)];
 
-  if (cursorCreatedAt && cursorId) {
-    conditions.push(
-      or(
-        lt(messages.createdAt, cursorCreatedAt),
-        and(
-          eq(messages.createdAt, cursorCreatedAt),
-          lt(messages.id, cursorId),
-        ),
-      ),
+  if (cursorCreatedAt !== null && cursorId !== null) {
+    const cursorCondition = or(
+      lt(messages.createdAt, cursorCreatedAt),
+      and(eq(messages.createdAt, cursorCreatedAt), lt(messages.id, cursorId)),
     );
+
+    if (cursorCondition) {
+      conditions.push(cursorCondition);
+    }
   }
 
   const results = await db

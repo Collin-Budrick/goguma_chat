@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bunx --bun next dev",
-    "build": "bunx --bun next build",
-    "start": "bunx --bun next start",
+    "dev": "node ../../node_modules/next/dist/bin/next dev",
+    "build": "node ../../node_modules/next/dist/bin/next build",
+    "start": "node ../../node_modules/next/dist/bin/next start",
     "lint": "bunx --bun eslint .",
     "db:generate": "bunx --bun drizzle-kit generate --config ../../drizzle.config.ts",
     "db:push": "bunx --bun drizzle-kit push --config ../../drizzle.config.ts",

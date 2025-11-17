@@ -512,10 +512,13 @@ type WebSocketLike = {
 type EventSourceLike = {
   readonly readyState?: number;
   close: () => void;
-  addEventListener: (type: string, listener: (event: MessageEvent<any>) => void) => void;
+  addEventListener: (
+    type: string,
+    listener: (event: MessageEvent<TransportMessage>) => void,
+  ) => void;
   removeEventListener: (
     type: string,
-    listener: (event: MessageEvent<any>) => void,
+    listener: (event: MessageEvent<TransportMessage>) => void,
   ) => void;
 };
 
@@ -1538,7 +1541,21 @@ export const createPeerSignalingController = (
             if (channel.readyState !== "open") {
               throw new Error("WebRTC data channel is not open");
             }
-            channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+            if (typeof payload === "string") {
+              channel.send(payload);
+            } else if (payload instanceof Blob) {
+              channel.send(payload);
+            } else if (payload instanceof ArrayBuffer) {
+              channel.send(payload);
+            } else if (ArrayBuffer.isView(payload)) {
+              const viewCopy = new Uint8Array(payload.byteLength);
+              viewCopy.set(
+                new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength),
+              );
+              channel.send(viewCopy);
+            } else {
+              throw new Error("Unsupported payload type for WebRTC channel");
+            }
           },
           async close() {
             channel.close();
@@ -1633,7 +1650,21 @@ export const createPeerSignalingController = (
           if (channel.readyState !== "open") {
             throw new Error("WebRTC data channel is not open");
           }
-          channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+          if (typeof payload === "string") {
+            channel.send(payload);
+          } else if (payload instanceof Blob) {
+            channel.send(payload);
+          } else if (payload instanceof ArrayBuffer) {
+            channel.send(payload);
+          } else if (ArrayBuffer.isView(payload)) {
+            const viewCopy = new Uint8Array(payload.byteLength);
+            viewCopy.set(
+              new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength),
+            );
+            channel.send(viewCopy);
+          } else {
+            throw new Error("Unsupported payload type for WebRTC channel");
+          }
         },
         async close() {
           channel.close();
@@ -1655,7 +1686,7 @@ export const createPeerSignalingController = (
       pushEndpoint: (options) =>
         typeof options?.roomId === "string"
           ? `/api/conversations/${options.roomId}/events`
-          : undefined,
+          : `/api/conversations/events`,
       EventSourceConstructor:
         typeof EventSource !== "undefined"
           ? (EventSource as unknown as new (url: string) => EventSourceLike)
@@ -2192,10 +2223,18 @@ const defaultCreateWebRTC = async (
         return;
       }
 
+      const removeIceCandidate = (
+        peer as unknown as {
+          removeIceCandidate?: (candidate: RTCIceCandidateInit) => Promise<void>;
+        }
+      ).removeIceCandidate;
+
+      if (!removeIceCandidate) {
+        return;
+      }
+
       await Promise.all(
-        removals.map((candidate) =>
-          peer.removeIceCandidate(candidate).catch(() => undefined),
-        ),
+        removals.map((candidate) => removeIceCandidate(candidate).catch(() => undefined)),
       );
     } catch (error) {
       console.warn("Failed to prune ICE candidates", error);
@@ -2436,7 +2475,19 @@ const defaultCreateWebRTC = async (
         throw new Error("WebRTC data channel is not open");
       }
 
-      channel.send(payload as string | ArrayBuffer | ArrayBufferView | Blob);
+      if (typeof payload === "string") {
+        channel.send(payload);
+      } else if (payload instanceof Blob) {
+        channel.send(payload);
+      } else if (payload instanceof ArrayBuffer) {
+        channel.send(payload);
+      } else if (ArrayBuffer.isView(payload)) {
+        const viewCopy = new Uint8Array(payload.byteLength);
+        viewCopy.set(new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength));
+        channel.send(viewCopy);
+      } else {
+        throw new Error("Unsupported payload type for WebRTC channel");
+      }
     },
     async close() {
       closed = true;
@@ -2832,55 +2883,30 @@ const defaultCreatePush = async (
     }
   };
 
-  const teardown = () => {
-    closed = true;
-    clearReconnectTimer();
-    clearSource();
-    while (persistentCleanup.length) {
-      persistentCleanup.pop()?.();
-    }
-  };
+    const teardown = () => {
+      closed = true;
+      clearReconnectTimer();
+      clearSource();
+      while (persistentCleanup.length) {
+        persistentCleanup.pop()?.();
+      }
+    };
 
-  const readyPromise = new Promise<void>((resolve, reject) => {
-    let hasConnected = false;
-
-    const handleAbort = () => {
-      readyCleanupListeners.forEach((cleanup) => cleanup());
-      cleanupListeners.forEach((cleanup) => cleanup());
-      source?.close();
-      reject(createAbortError());
+    const readyPromise = new Promise<void>((resolve, reject) => {
+      const handleAbort = () => {
+        readyCleanupListeners.forEach((cleanup) => cleanup());
+        cleanupListeners.forEach((cleanup) => cleanup());
+        source?.close();
+        reject(createAbortError());
     };
 
     signal.addEventListener("abort", handleAbort, { once: true });
     readyCleanupListeners.push(() => signal.removeEventListener("abort", handleAbort));
 
-    const handleReady = () => {
-      hasConnected = true;
-      startOptions.emitState("connected");
-      readyCleanupListeners.forEach((cleanup) => cleanup());
-      resolve();
-    };
-
-    const handleError = (event: Event | Error) => {
-      const normalizedError = normalizeError(
-        event instanceof ErrorEvent ? event.error ?? event : event,
-      );
-
-      startOptions.emitError(normalizedError);
-
-      if (!hasConnected) {
-        startOptions.emitState("error");
-        readyCleanupListeners.forEach((cleanup) => cleanup());
-        cleanupListeners.forEach((cleanup) => cleanup());
-        reject(normalizedError);
-        source?.close();
-      }
-    };
-
-    const connectSource = () => {
-      if (closed || signal.aborted) {
-        return;
-      }
+      const connectSource = () => {
+        if (closed || signal.aborted) {
+          return;
+        }
 
       readyCleanupListeners.push(() => {
         source?.removeEventListener("open", handleReady);
@@ -2996,15 +3022,17 @@ const defaultCreatePush = async (
     throw new Error("Push transport source could not be initialized");
   }
 
+  const runtimeSource = source as EventSourceLike;
+
   const handleRuntimeError = (event: Event | Error) => {
     startOptions.emitError(
       normalizeError(event instanceof ErrorEvent ? event.error ?? event : event),
     );
   };
 
-  source.addEventListener("error", handleRuntimeError as never);
+  runtimeSource.addEventListener("error", handleRuntimeError as never);
   cleanupListeners.push(() =>
-    source.removeEventListener("error", handleRuntimeError as never),
+    runtimeSource.removeEventListener("error", handleRuntimeError as never),
   );
 
   return {

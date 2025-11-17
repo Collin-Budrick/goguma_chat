@@ -59,7 +59,7 @@ export const viewport: Viewport = {
 };
 
 export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
+  return routing.locales.map((locale: Locale) => ({ locale }));
 }
 
 export default async function LocaleLayout({

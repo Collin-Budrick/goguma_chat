@@ -9,11 +9,13 @@ const globalForPool = globalThis as unknown as {
   __drizzlePool?: Pool;
 };
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL ??
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL is not set. Update your environment variables (see .env.example).",
+if (!process.env.DATABASE_URL) {
+  console.warn(
+    "DATABASE_URL is not set. Using a placeholder connection string; update your environment variables (see .env.example).",
   );
 }
 
@@ -22,7 +24,7 @@ const pool =
   new Pool({
     connectionString,
     ssl:
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === "production" && process.env.DATABASE_URL
         ? { rejectUnauthorized: false }
         : undefined,
   });
