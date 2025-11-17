@@ -1058,7 +1058,7 @@ export default function ChatThread({
       : "text-xs text-white/70";
 
   return (
-    <section className="relative flex flex-1 flex-col h-full min-h-0 overflow-hidden max-h-full rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
+    <section className="relative flex flex-1 flex-col h-full min-h-0 overflow-hidden max-h-full justify-between rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
       {friendContact ? (
         <>
           <header className="relative flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
@@ -1208,10 +1208,11 @@ export default function ChatThread({
               </div>
             </div>
           </header>
-          <div
-            className="flex-1 min-h-0 overflow-y-auto px-6 py-4"
-            ref={messageContainerRef}
-          >
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div
+              className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4"
+              ref={messageContainerRef}
+            >
             {threadError ? (
               <p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {threadError}
@@ -1299,7 +1300,8 @@ export default function ChatThread({
               </>
             ) : null}
           </div>
-          <footer className="border-t border-white/10 px-6 py-4">
+        </div>
+        <footer className="border-t border-white/10 px-6 py-4">
             <form className="flex flex-col gap-3" onSubmit={handleComposerSubmit}>
               {sendError ? (
                 <p className="text-xs text-red-300">{sendError}</p>
