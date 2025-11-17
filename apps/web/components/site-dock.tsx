@@ -182,6 +182,7 @@ export default function SiteDock() {
         const response = await fetch("/api/friend-requests", {
           method: "GET",
           signal: controller.signal,
+          credentials: "include",
         });
 
         if (response.ok) {
@@ -218,6 +219,7 @@ export default function SiteDock() {
         const response = await fetch(unreadUrl, {
           method: "GET",
           signal: controller.signal,
+          credentials: "include",
         });
 
         if (response.ok) {
@@ -389,7 +391,9 @@ export default function SiteDock() {
 
       cleanupSource();
 
-      const next = new EventSource("/api/app-indicators/events");
+      const next = new EventSource("/api/app-indicators/events", {
+        withCredentials: true,
+      });
       source = next;
 
       next.addEventListener("indicator", indicatorListener);
