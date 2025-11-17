@@ -74,6 +74,24 @@ function formatMessageTime(value: string, locale: string) {
     return value;
   }
 }
+
+function getMessageSignature(message: ChatMessage) {
+  return `${message.senderId}:${message.body}:${message.createdAt}`;
+}
+
+function dedupeMessages(messages: ChatMessage[]) {
+  const seen = new Set<string>();
+  const unique: ChatMessage[] = [];
+  for (const message of messages) {
+    const signature = getMessageSignature(message);
+    if (seen.has(signature)) {
+      continue;
+    }
+    seen.add(signature);
+    unique.push(message);
+  }
+  return unique;
+}
 function createOptimisticMessage(
   conversationId: string,
   viewerId: string,
@@ -810,15 +828,17 @@ export default function ChatThread({
 
   const visibleMessages = useMemo(() => {
     if (!conversationId || !clearedHistoryCutoff) {
-      return messages;
+      return dedupeMessages(messages);
     }
 
-    return messages.filter((message) => {
+    const filtered = messages.filter((message) => {
       if (message.conversationId !== conversationId) {
         return true;
       }
       return toDate(message.createdAt).getTime() > clearedHistoryCutoff;
     });
+
+    return dedupeMessages(filtered);
   }, [clearedHistoryCutoff, conversationId, messages]);
 
   const sendTyping = useCallback(
