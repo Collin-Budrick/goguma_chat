@@ -17,7 +17,6 @@ import {
   getContactName,
   getInitials,
 } from "@/components/contacts/types";
-import MessagingTransportOptions from "@/components/settings/MessagingTransportOptions";
 import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -34,10 +33,6 @@ import {
   persistConversationClearedAt,
   removeConversationClear,
 } from "@/lib/chat-history";
-import {
-  type MessagingMode,
-  DEFAULT_MESSAGING_MODE,
-} from "@/lib/messaging-mode";
 import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
 
 import type {
@@ -46,12 +41,8 @@ import type {
   ChatUserProfile,
 } from "./types";
 import { mergeMessages, toDate } from "./message-utils";
-import {
-  peerSignalingController,
-  type PeerSignalingRole,
-} from "@/lib/messaging-transport";
-import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
 import { usePeerConversationChannel } from "./usePeerConversationChannel";
+import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
 
 type ChatThreadProps = {
   viewerId: string;
@@ -113,58 +104,6 @@ function getParticipantProfile(
   );
 }
 
-function derivePeerRole(
-  conversation: ChatConversation | null,
-  viewerId: string,
-): PeerSignalingRole | null {
-  if (!conversation) {
-    return null;
-  }
-
-  if (conversation.type === "direct") {
-    const directKey = conversation.directKey;
-    if (directKey) {
-      const [left, right] = directKey.split(":");
-      if (left && right) {
-        if (viewerId === left) {
-          return "host";
-        }
-        if (viewerId === right) {
-          return "guest";
-        }
-
-        const [first] = [left, right].sort();
-        if (first) {
-          return viewerId === first ? "host" : "guest";
-        }
-      }
-    }
-
-    const otherParticipant = conversation.participants.find(
-      (participant) => participant.userId !== viewerId,
-    );
-    if (otherParticipant) {
-      return viewerId.localeCompare(otherParticipant.userId) <= 0
-        ? "host"
-        : "guest";
-    }
-  }
-
-  const participantIds = conversation.participants.map(
-    (participant) => participant.userId,
-  );
-  if (!participantIds.includes(viewerId)) {
-    participantIds.push(viewerId);
-  }
-
-  if (!participantIds.length) {
-    return null;
-  }
-
-  participantIds.sort();
-  return viewerId === participantIds[0] ? "host" : "guest";
-}
-
 export default function ChatThread({
   viewerId,
   viewerProfile,
@@ -212,31 +151,18 @@ export default function ChatThread({
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
     () => DEFAULT_DISPLAY_SETTINGS,
   );
-  const messagingMode: MessagingMode = DEFAULT_MESSAGING_MODE;
+  const [isTransportEnabled, setIsTransportEnabled] = useState(false);
   const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
   const [presenceToast, setPresenceToast] = useState<string | null>(null);
-  const [connectionNotice, setConnectionNotice] = useState<
-    | { tone: "warning" | "success" | "error"; message: string }
-    | null
-  >(null);
 
-  const derivedPeerRole = useMemo(
-    () => derivePeerRole(conversation, viewerId),
-    [conversation, viewerId],
-  );
-
-  const {
-    transport: transportHandle,
-    state: transportState,
-    lastDegradedAt: transportDegradedAt,
-    lastRecoveredAt: transportRecoveredAt,
-    lastError: transportError,
-    restart: restartTransport,
-  } = useMessagingTransportHandle({
-    conversationId: conversation?.id ?? null,
+  const conversationId = conversation?.id ?? null;
+  const { transport } = useMessagingTransportHandle({
+    conversationId,
     viewerId,
+    enabled: isTransportEnabled,
   });
+
   const {
     sendMessage: sendPeerMessage,
     subscribeMessages,
@@ -244,8 +170,8 @@ export default function ChatThread({
     syncHistory,
     presence,
   } = usePeerConversationChannel({
-    transport: transportHandle,
-    onHeartbeatTimeout: restartTransport,
+    transport,
+    directOnly: true,
   });
 
   const messageContainerRef = useRef<HTMLDivElement | null>(null);
@@ -261,7 +187,6 @@ export default function ChatThread({
   const lastConversationReadKeyRef = useRef<string | null>(null);
   const settingsPanelRef = useRef<HTMLDivElement | null>(null);
   const settingsTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const connectionNoticeTimeoutRef = useRef<number | null>(null);
 
   const playPresenceChime = useCallback(() => {
     if (typeof window === "undefined") {
@@ -328,14 +253,6 @@ export default function ChatThread({
       pendingThreadControllerRef.current?.abort();
     };
   }, []);
-
-  useEffect(() => {
-    const controller = peerSignalingController;
-    const currentRole = controller.getSnapshot().role ?? null;
-    if (derivedPeerRole !== currentRole) {
-      controller.setRole(derivedPeerRole);
-    }
-  }, [derivedPeerRole]);
 
   const bootstrapKey = shouldUseInitialData
     ? `${initialFriendId ?? ""}:${initialConversation?.id ?? ""}`
@@ -462,6 +379,10 @@ export default function ChatThread({
 
   useEffect(() => {
     setIsSettingsOpen(false);
+  }, [friendId]);
+
+  useEffect(() => {
+    setIsTransportEnabled(false);
   }, [friendId]);
 
   useEffect(() => {
@@ -830,76 +751,6 @@ export default function ChatThread({
     };
   }, [presenceToast]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return () => undefined;
-    }
-
-    if (connectionNoticeTimeoutRef.current !== null) {
-      window.clearTimeout(connectionNoticeTimeoutRef.current);
-      connectionNoticeTimeoutRef.current = null;
-    }
-
-    let timeout: number | null = null;
-
-    const clearPending = () => {
-      if (timeout !== null) {
-        window.clearTimeout(timeout);
-        timeout = null;
-      }
-      if (connectionNoticeTimeoutRef.current !== null) {
-        window.clearTimeout(connectionNoticeTimeoutRef.current);
-        connectionNoticeTimeoutRef.current = null;
-      }
-    };
-
-    if (transportState === "degraded") {
-      setConnectionNotice({
-        tone: "warning",
-        message: t("thread.connection.degraded"),
-      });
-    } else if (transportState === "recovering") {
-      setConnectionNotice({
-        tone: "warning",
-        message: t("thread.connection.recovering"),
-      });
-    } else if (transportState === "closed") {
-      setConnectionNotice({
-        tone: "warning",
-        message: t("thread.connection.reconnecting"),
-      });
-    } else if (transportState === "error") {
-      setConnectionNotice({
-        tone: "error",
-        message: transportError?.message ?? t("thread.connection.failed"),
-      });
-    } else if (transportState === "connected" && transportRecoveredAt) {
-      setConnectionNotice({
-        tone: "success",
-        message: t("thread.connection.restored"),
-      });
-      timeout = window.setTimeout(() => {
-        setConnectionNotice(null);
-        if (connectionNoticeTimeoutRef.current !== null) {
-          window.clearTimeout(connectionNoticeTimeoutRef.current);
-          connectionNoticeTimeoutRef.current = null;
-        }
-      }, 4_000);
-      connectionNoticeTimeoutRef.current = timeout;
-    } else if (!transportDegradedAt) {
-      setConnectionNotice(null);
-    }
-
-    return () => {
-      clearPending();
-    };
-  }, [
-    t,
-    transportDegradedAt,
-    transportError,
-    transportRecoveredAt,
-    transportState,
-  ]);
 
   const viewerParticipant = useMemo(
     () => getParticipantProfile(conversation, viewerId) ?? viewerProfile,
@@ -933,7 +784,6 @@ export default function ChatThread({
     return `${names[0]} and others are typing...`;
   }, [typingProfiles]);
 
-  const conversationId = conversation?.id ?? null;
   const clearedHistoryCutoff = clearedHistoryAt
     ? toDate(clearedHistoryAt).getTime()
     : null;
@@ -1028,6 +878,10 @@ export default function ChatThread({
         return;
       }
 
+      if (!isTransportEnabled) {
+        setIsTransportEnabled(true);
+      }
+
       const clientMessageId = generateClientMessageId();
       const optimistic = createOptimisticMessage(
         conversationId,
@@ -1070,6 +924,7 @@ export default function ChatThread({
       conversation,
       conversationId,
       draft,
+      isTransportEnabled,
       sendPeerMessage,
       sendTyping,
       t,
@@ -1191,15 +1046,6 @@ export default function ChatThread({
     toggleTheme === "light"
       ? "text-xs text-slate-600"
       : "text-xs text-white/70";
-  const messagingOptions = useMemo(
-    () =>
-      (["push"] as MessagingMode[]).map((mode) => ({
-        id: mode,
-        label: t(`thread.settings.unified.transport.options.${mode}.label`),
-        description: t(`thread.settings.unified.transport.options.${mode}.description`),
-      })),
-    [t],
-  );
 
   return (
     <section className="relative flex flex-1 flex-col rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
@@ -1237,140 +1083,118 @@ export default function ChatThread({
                   </p>
                 </div>
               </div>
-              <div className="relative flex flex-wrap items-center gap-3 text-right text-xs text-white/50">
-                <div>
-                  <p className="uppercase tracking-[0.3em]">
-                    {t("thread.transport.label")}
-                  </p>
-                  <p>{t(`thread.transport.mode.${messagingMode}`)}</p>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    ref={settingsTriggerRef}
-                    onClick={() => setIsSettingsOpen((prev) => !prev)}
-                    aria-haspopup="dialog"
-                    aria-expanded={isSettingsOpen}
-                    aria-label={
-                      isSettingsOpen
-                        ? t("thread.settings.close")
-                        : t("thread.settings.open")
-                    }
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:border-white/40 hover:bg-white/10"
+              <div className="relative">
+                <button
+                  type="button"
+                  ref={settingsTriggerRef}
+                  onClick={() => setIsSettingsOpen((prev) => !prev)}
+                  aria-haspopup="dialog"
+                  aria-expanded={isSettingsOpen}
+                  aria-label={
+                    isSettingsOpen
+                      ? t("thread.settings.close")
+                      : t("thread.settings.open")
+                  }
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:border-white/40 hover:bg-white/10"
+                >
+                  <span className="sr-only">
+                    {isSettingsOpen
+                      ? t("thread.settings.close")
+                      : t("thread.settings.open")}
+                  </span>
+                  <img
+                    src="/icons/gear.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  />
+                </button>
+                {isSettingsOpen ? (
+                  <div
+                    ref={settingsPanelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={t("thread.settings.panelLabel")}
+                    className="absolute right-0 top-full z-30 mt-3 w-72 rounded-2xl border border-white/15 bg-black/90 p-4 text-left shadow-xl backdrop-blur"
                   >
-                    <span className="sr-only">
-                      {isSettingsOpen
-                        ? t("thread.settings.close")
-                        : t("thread.settings.open")}
-                    </span>
-                    <img
-                      src="/icons/gear.svg"
-                      alt=""
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                    />
-                  </button>
-                  {isSettingsOpen ? (
-                    <div
-                      ref={settingsPanelRef}
-                      role="dialog"
-                      aria-modal="true"
-                      aria-label={t("thread.settings.panelLabel")}
-                      className="absolute right-0 top-full z-30 mt-3 w-72 rounded-2xl border border-white/15 bg-black/90 p-4 text-left shadow-xl backdrop-blur"
-                    >
-                      <div className="space-y-6">
-                        <section>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
-                            {t("thread.settings.unified.title")}
-                          </p>
-                          <p className="mt-1 text-xs text-white/50">
-                            {t("thread.settings.unified.description")}
-                          </p>
-                          <MessagingTransportOptions
-                            className="mt-3"
-                            value={messagingMode}
-                            options={messagingOptions}
-                            disabled={!conversation?.id}
+                    <div className="space-y-6">
+                      <section>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+                          {t("thread.settings.local.title")}
+                        </p>
+                        <p className="mt-1 text-xs text-white/50">
+                          {t("thread.settings.local.description")}
+                        </p>
+                        <div className="mt-3 flex flex-col gap-2">
+                          <PreferenceToggle
+                            label={t("thread.settings.local.options.magnify.label")}
+                            description={t("thread.settings.local.options.magnify.description")}
+                            value={displaySettings.magnify}
+                            theme={toggleTheme}
+                            onChange={() =>
+                              updateDisplaySettings((prev) => ({
+                                ...prev,
+                                magnify: !prev.magnify,
+                              }))
+                            }
                           />
-                        </section>
-                        <section>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
-                            {t("thread.settings.local.title")}
-                          </p>
-                          <p className="mt-1 text-xs text-white/50">
-                            {t("thread.settings.local.description")}
-                          </p>
-                          <div className="mt-3 flex flex-col gap-2">
-                            <PreferenceToggle
-                              label={t("thread.settings.local.options.magnify.label")}
-                              description={t("thread.settings.local.options.magnify.description")}
-                              value={displaySettings.magnify}
-                              theme={toggleTheme}
-                              onChange={() =>
-                                updateDisplaySettings((prev) => ({
-                                  ...prev,
-                                  magnify: !prev.magnify,
-                                }))
-                              }
-                            />
-                            <PreferenceToggle
-                              label={t("thread.settings.local.options.labels.label")}
-                              description={t("thread.settings.local.options.labels.description")}
-                              value={displaySettings.showLabels}
-                              theme={toggleTheme}
-                              onChange={() =>
-                                updateDisplaySettings((prev) => ({
-                                  ...prev,
-                                  showLabels: !prev.showLabels,
-                                }))
-                              }
-                            />
-                            <PreferenceToggle
-                              label={t("thread.settings.local.options.theme.label")}
-                              description={t("thread.settings.local.options.theme.description")}
-                              value={displaySettings.theme === "light"}
-                              theme={toggleTheme}
-                              onChange={() =>
-                                updateDisplaySettings((prev) => ({
-                                  ...prev,
-                                  theme: prev.theme === "light" ? "dark" : "light",
-                                }))
-                              }
-                            />
-                            <button
-                              type="button"
-                              onClick={handleSyncHistory}
-                              disabled={isSyncHistoryDisabled}
-                              className={syncButtonClasses}
-                            >
-                              <span className={syncButtonLabelClasses}>
-                                {isSyncingHistory
-                                  ? t("thread.settings.local.options.syncHistory.syncing")
-                                  : t("thread.settings.local.options.syncHistory.label")}
-                              </span>
-                              <span className={syncButtonDescriptionClasses}>
-                                {t("thread.settings.local.options.syncHistory.description")}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleClearHistory}
-                              disabled={isClearHistoryDisabled}
-                              className={clearButtonClasses}
-                            >
-                              <span className={clearButtonLabelClasses}>
-                                {t("thread.settings.local.options.clearHistory.label")}
-                              </span>
-                              <span className={clearButtonDescriptionClasses}>
-                                {t("thread.settings.local.options.clearHistory.description")}
-                              </span>
-                            </button>
-                          </div>
-                        </section>
-                      </div>
+                          <PreferenceToggle
+                            label={t("thread.settings.local.options.labels.label")}
+                            description={t("thread.settings.local.options.labels.description")}
+                            value={displaySettings.showLabels}
+                            theme={toggleTheme}
+                            onChange={() =>
+                              updateDisplaySettings((prev) => ({
+                                ...prev,
+                                showLabels: !prev.showLabels,
+                              }))
+                            }
+                          />
+                          <PreferenceToggle
+                            label={t("thread.settings.local.options.theme.label")}
+                            description={t("thread.settings.local.options.theme.description")}
+                            value={displaySettings.theme === "light"}
+                            theme={toggleTheme}
+                            onChange={() =>
+                              updateDisplaySettings((prev) => ({
+                                ...prev,
+                                theme: prev.theme === "light" ? "dark" : "light",
+                              }))
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSyncHistory}
+                            disabled={isSyncHistoryDisabled}
+                            className={syncButtonClasses}
+                          >
+                            <span className={syncButtonLabelClasses}>
+                              {isSyncingHistory
+                                ? t("thread.settings.local.options.syncHistory.syncing")
+                                : t("thread.settings.local.options.syncHistory.label")}
+                            </span>
+                            <span className={syncButtonDescriptionClasses}>
+                              {t("thread.settings.local.options.syncHistory.description")}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearHistory}
+                            disabled={isClearHistoryDisabled}
+                            className={clearButtonClasses}
+                          >
+                            <span className={clearButtonLabelClasses}>
+                              {t("thread.settings.local.options.clearHistory.label")}
+                            </span>
+                            <span className={clearButtonDescriptionClasses}>
+                              {t("thread.settings.local.options.clearHistory.description")}
+                            </span>
+                          </button>
+                        </div>
+                      </section>
                     </div>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </header>
@@ -1379,21 +1203,6 @@ export default function ChatThread({
               <p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                 {threadError}
               </p>
-            ) : null}
-
-            {connectionNotice ? (
-              <div
-                className={cn(
-                  "mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm",
-                  connectionNotice.tone === "warning"
-                    ? "border-amber-400/40 bg-amber-500/10 text-amber-100"
-                    : connectionNotice.tone === "error"
-                    ? "border-red-400/40 bg-red-500/10 text-red-100"
-                    : "border-emerald-400/40 bg-emerald-500/10 text-emerald-100",
-                )}
-              >
-                {connectionNotice.message}
-              </div>
             ) : null}
 
             {presenceToast ? (

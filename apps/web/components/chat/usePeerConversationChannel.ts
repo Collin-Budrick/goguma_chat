@@ -158,6 +158,7 @@ type SendDeliveryPresenceOptions = {
 export function usePeerConversationChannel(options: {
   transport: TransportHandle | null;
   onHeartbeatTimeout?: () => Promise<void>;
+  directOnly?: boolean;
 }) {
   const transportRef = useRef<TransportHandle | null>(options.transport);
   const listenersRef = useRef<Map<string, Set<ChannelListener>>>(new Map());
@@ -599,19 +600,9 @@ export function usePeerConversationChannel(options: {
     };
 
     map.set(key, entry);
-    if (typeof console !== "undefined" && typeof console.info === "function") {
-      console.info("[chat:peer] registerPending", {
-        key,
-        timeoutMs,
-        pendingCount: map.size,
-      });
-    }
 
     if (typeof window !== "undefined" && timeoutMs > 0) {
       timer = window.setTimeout(() => {
-        if (typeof console !== "undefined" && typeof console.info === "function") {
-          console.info("[chat:peer] pending entry timed out", { key });
-        }
         entry.reject(new Error("Timed out waiting for peer response"));
       }, timeoutMs);
     }
@@ -841,15 +832,12 @@ export function usePeerConversationChannel(options: {
     ],
   );
 
-  const { transport: transportOption, onHeartbeatTimeout } = options;
+  const { transport: transportOption, onHeartbeatTimeout, directOnly } = options;
 
   useEffect(() => {
     transportRef.current = options.transport;
     if (!options.transport) {
       rejectAllPending(new Error("Peer transport is unavailable"));
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:peer] transport detached");
-      }
       awaitingHeartbeatAckRef.current = false;
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
@@ -863,16 +851,10 @@ export function usePeerConversationChannel(options: {
     }
 
     const unsubscribe = options.transport.onMessage((payload) => {
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:peer] transport message received");
-      }
       handleFrame(parseTransportMessage(payload));
     });
     const unsubscribeError = options.transport.onError((error) => {
       console.error("Peer transport error", error);
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:peer] transport error event", { error });
-      }
     });
 
     return () => {
@@ -887,9 +869,6 @@ export function usePeerConversationChannel(options: {
       return () => undefined;
     }
     const unsubscribe = transport.onStateChange((state) => {
-      if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info("[chat:peer] transport state change", { state });
-      }
       if (
         state === "error" ||
         state === "closed" ||
@@ -1085,6 +1064,9 @@ export function usePeerConversationChannel(options: {
       body: string;
       clientMessageId: string;
     }) => {
+      if (directOnly) {
+        return false;
+      }
       try {
         const response = await fetch(
           `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
@@ -1108,13 +1090,10 @@ export function usePeerConversationChannel(options: {
         });
         return true;
       } catch (error) {
-        if (typeof console !== "undefined" && typeof console.info === "function") {
-          console.info("[chat:peer] HTTP send fallback failed", { error, clientMessageId });
-        }
         return false;
       }
     },
-    [handleFrame],
+    [directOnly, handleFrame],
   );
 
   const flushOutboundQueue = useCallback(async () => {
@@ -1133,9 +1112,6 @@ export function usePeerConversationChannel(options: {
           await transport.send(JSON.stringify(entry.payload));
           delivered = true;
         } catch (error) {
-          if (typeof console !== "undefined" && typeof console.info === "function") {
-            console.info("[chat:peer] flushOutboundQueue send failed", { error });
-          }
         }
       }
 
@@ -1182,12 +1158,6 @@ export function usePeerConversationChannel(options: {
       };
 
       return new Promise<SendMessageResult>((resolve, reject) => {
-        if (typeof console !== "undefined" && typeof console.info === "function") {
-          console.info("[chat:peer] sendMessage", {
-            conversationId,
-            clientMessageId,
-          });
-        }
         registerPending(
           pendingAcksRef.current,
           clientMessageId,
@@ -1204,14 +1174,6 @@ export function usePeerConversationChannel(options: {
               await handle.send(JSON.stringify(payload));
               return;
             } catch (error) {
-              if (
-                typeof console !== "undefined" && typeof console.info === "function"
-              ) {
-                console.info("[chat:peer] sendMessage transport send failed", {
-                  clientMessageId,
-                  error,
-                });
-              }
               rejectPending(
                 pendingAcksRef.current,
                 clientMessageId,
@@ -1405,12 +1367,6 @@ export function usePeerConversationChannel(options: {
         transport
           .send(JSON.stringify(payload))
           .catch((error) => {
-            if (typeof console !== "undefined" && typeof console.info === "function") {
-              console.info("[chat:peer] loadMore send failed", {
-                requestId,
-                error,
-              });
-            }
             cleanup();
             reject(normalizeError(error));
           });
@@ -1503,12 +1459,6 @@ export function usePeerConversationChannel(options: {
         transport
           .send(JSON.stringify(payload))
           .catch((error) => {
-            if (typeof console !== "undefined" && typeof console.info === "function") {
-              console.info("[chat:peer] syncHistory send failed", {
-                requestId,
-                error,
-              });
-            }
             cleanup();
             reject(normalizeError(error));
           });

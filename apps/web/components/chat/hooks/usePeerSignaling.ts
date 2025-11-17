@@ -87,6 +87,7 @@ const sequenceExpiration = (
 type PeerSignalingOptions = {
   conversationId?: string | null;
   viewerId?: string | null;
+  enabled?: boolean;
 };
 
 type RemoteTokenPayload = {
@@ -148,15 +149,26 @@ export const deriveShouldInitializeTransport = (
 export function usePeerSignaling(options?: PeerSignalingOptions) {
   const conversationId = options?.conversationId ?? null;
   const viewerId = options?.viewerId ?? null;
+  const enabled = options?.enabled ?? true;
   const controller = peerSignalingController;
   const [snapshot, setSnapshot] = useState<PeerSignalingSnapshot>(
     controller.getSnapshot(),
   );
   const [status, setStatus] = useState<PeerSignalingStatus>(() =>
-    deriveStatus(controller.getSnapshot()),
+    enabled ? deriveStatus(controller.getSnapshot()) : "idle",
   );
 
-  useEffect(() => controller.subscribe(setSnapshot), [controller]);
+  useEffect(() => {
+    if (!enabled) {
+      setSnapshot(controller.getSnapshot());
+      return () => undefined;
+    }
+
+    const unsubscribe = controller.subscribe(setSnapshot);
+    return () => {
+      unsubscribe();
+    };
+  }, [controller, enabled]);
 
   const publishedTokensRef = useRef<{ offer: string | null; answer: string | null }>({
     offer: null,
@@ -195,11 +207,11 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
   useEffect(() => {
     resetPublishState();
-  }, [conversationId, viewerId, resetPublishState, snapshot.sessionId]);
+  }, [conversationId, enabled, viewerId, resetPublishState, snapshot.sessionId]);
 
   useEffect(() => {
     remoteTokensRef.current.clear();
-  }, [conversationId, snapshot.connected, snapshot.role, snapshot.sessionId, viewerId]);
+  }, [conversationId, enabled, snapshot.connected, snapshot.role, snapshot.sessionId, viewerId]);
 
   useEffect(() => {
     if (snapshot.remoteAnswer) {
@@ -215,7 +227,7 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
   }, [resetPublishState, snapshot.connected]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!enabled || typeof window === "undefined") {
       return;
     }
 
@@ -402,14 +414,10 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
       clearRetry("offer");
       clearRetry("answer");
     };
-  }, [conversationId, snapshot.connected, snapshot.error, snapshot.localAnswerToken, snapshot.localOfferToken, snapshot.remoteAnswer, snapshot.role, snapshot.sessionId, viewerId]);
+  }, [conversationId, enabled, snapshot.connected, snapshot.error, snapshot.localAnswerToken, snapshot.localOfferToken, snapshot.remoteAnswer, snapshot.role, snapshot.sessionId, viewerId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (!conversationId || !viewerId || !snapshot.role) {
+    if (!enabled || typeof window === "undefined") {
       return;
     }
 
@@ -531,21 +539,27 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
     return () => {
       abortController.abort();
     };
-  }, [conversationId, controller, snapshot.role, snapshot.sessionId, viewerId]);
+  }, [conversationId, controller, enabled, snapshot.role, snapshot.sessionId, viewerId]);
 
   useEffect(() => {
+    if (!enabled) {
+      setStatus("idle");
+      return;
+    }
     setStatus(deriveStatus(snapshot));
-  }, [snapshot]);
+  }, [enabled, snapshot]);
 
   const { inviteExpiresAt, answerExpiresAt } = snapshot;
 
   useEffect(
     () =>
-      sequenceExpiration(controller, {
-        inviteExpiresAt,
-        answerExpiresAt,
-      }),
-    [controller, inviteExpiresAt, answerExpiresAt],
+      enabled
+        ? sequenceExpiration(controller, {
+            inviteExpiresAt,
+            answerExpiresAt,
+          })
+        : () => undefined,
+    [controller, enabled, inviteExpiresAt, answerExpiresAt],
   );
 
   const dependencies = useMemo(
@@ -583,12 +597,12 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
   );
 
   const shouldInitialize = useMemo(
-    () => deriveShouldInitializeTransport(controller.shouldInitialize(), snapshot),
-    [controller, snapshot],
+    () => enabled && deriveShouldInitializeTransport(controller.shouldInitialize(), snapshot),
+    [controller, enabled, snapshot],
   );
 
-  const inviteExpiresIn = useRemainingTime(snapshot.inviteExpiresAt);
-  const answerExpiresIn = useRemainingTime(snapshot.answerExpiresAt);
+  const inviteExpiresIn = useRemainingTime(enabled ? snapshot.inviteExpiresAt : null);
+  const answerExpiresIn = useRemainingTime(enabled ? snapshot.answerExpiresAt : null);
 
   return {
     controller,
