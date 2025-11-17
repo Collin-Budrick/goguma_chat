@@ -1058,7 +1058,7 @@ export default function ChatThread({
       : "text-xs text-white/70";
 
   return (
-    <section className="relative flex flex-1 flex-col h-full min-h-0 rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
+    <section className="relative flex flex-1 flex-col h-full min-h-0 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-black/60 via-black/40 to-black/30 text-white">
       {friendContact ? (
         <>
           <header className="relative flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
