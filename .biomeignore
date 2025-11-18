@@ -1,0 +1,6 @@
+.next/
+placeholder_chat/
+apps/web/.next/
+node_modules/
+.turbo/
+.vscode/

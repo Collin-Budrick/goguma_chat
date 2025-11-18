@@ -6,45 +6,47 @@ import MarketingPageShell from "@/components/marketing-page-shell";
 import SimplePage from "@/components/simple-page";
 
 type PageProps = {
-  params: Promise<{ locale: string }>;
+	params: Promise<{ locale: string }>;
 };
 
 export async function generateMetadata({
-  params,
+	params,
 }: PageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "Terms" });
-  return {
-    title: t("metadata.title"),
-    description: t("metadata.description"),
-  };
+	const { locale } = await params;
+	const t = await getTranslations({ locale, namespace: "Terms" });
+	return {
+		title: t("metadata.title"),
+		description: t("metadata.description"),
+	};
 }
 
 export default function TermsPage(props: PageProps) {
-  return (
-    <Suspense fallback={<MarketingPageShell sections={2} itemsPerSection={2} />}>
-      <TermsPageContent {...props} />
-    </Suspense>
-  );
+	return (
+		<Suspense
+			fallback={<MarketingPageShell sections={2} itemsPerSection={2} />}
+		>
+			<TermsPageContent {...props} />
+		</Suspense>
+	);
 }
 
 async function TermsPageContent({ params }: PageProps) {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "Terms" });
+	const { locale } = await params;
+	const t = await getTranslations({ locale, namespace: "Terms" });
 
-  return (
-    <SimplePage title={t("title")} description={t("description")}>
-      <p>{t("body.commitment")}</p>
-      <p>
-        {t("body.customAgreements")} {" "}
-        <a
-          className="underline decoration-white/40 underline-offset-4"
-          href="mailto:legal@goguma.chat"
-        >
-          legal@goguma.chat
-        </a>
-        .
-      </p>
-    </SimplePage>
-  );
+	return (
+		<SimplePage title={t("title")} description={t("description")}>
+			<p>{t("body.commitment")}</p>
+			<p>
+				{t("body.customAgreements")}{" "}
+				<a
+					className="underline decoration-white/40 underline-offset-4"
+					href="mailto:legal@goguma.chat"
+				>
+					legal@goguma.chat
+				</a>
+				.
+			</p>
+		</SimplePage>
+	);
 }

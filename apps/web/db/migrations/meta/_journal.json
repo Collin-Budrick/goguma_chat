@@ -1,62 +1,62 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1762150522242,
-      "tag": "0000_wild_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1762904220950,
-      "tag": "0001_known_miek",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1762904221950,
-      "tag": "0002_add_conversations",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1762928019608,
-      "tag": "0003_ambiguous_champions",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1762935166732,
-      "tag": "0004_breezy_ken_ellis",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1762935166733,
-      "tag": "0005_unified_chat_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1763309993524,
-      "tag": "0006_push_delivery_default",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1763311927439,
-      "tag": "0007_remove_messaging_mode",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1762150522242,
+			"tag": "0000_wild_avengers",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1762904220950,
+			"tag": "0001_known_miek",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1762904221950,
+			"tag": "0002_add_conversations",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1762928019608,
+			"tag": "0003_ambiguous_champions",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1762935166732,
+			"tag": "0004_breezy_ken_ellis",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1762935166733,
+			"tag": "0005_unified_chat_settings",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1763309993524,
+			"tag": "0006_push_delivery_default",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1763311927439,
+			"tag": "0007_remove_messaging_mode",
+			"breakpoints": true
+		}
+	]
 }

@@ -1,26 +1,26 @@
 {
-  "extends": "@goguma/config/tsconfig/base",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"],
-      "@goguma/ui": ["../../packages/ui/index.ts"],
-      "@goguma/ui/*": ["../../packages/ui/src/*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.d.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
+	"extends": "@goguma/config/tsconfig/base",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"plugins": [
+			{
+				"name": "next"
+			}
+		],
+		"paths": {
+			"@/*": ["./*"],
+			"@goguma/ui": ["../../packages/ui/index.ts"],
+			"@goguma/ui/*": ["../../packages/ui/src/*"]
+		}
+	},
+	"include": [
+		"next-env.d.ts",
+		"**/*.ts",
+		"**/*.tsx",
+		".next/types/**/*.ts",
+		".next/dev/types/**/*.ts",
+		"**/*.d.ts",
+		"**/*.mts"
+	],
+	"exclude": ["node_modules"]
 }

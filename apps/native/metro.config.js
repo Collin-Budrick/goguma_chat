@@ -10,12 +10,12 @@ config.watchFolders = [workspaceRoot];
 
 config.resolver.disableHierarchicalLookup = true;
 config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, "node_modules"),
-  path.resolve(workspaceRoot, "node_modules"),
+	path.resolve(projectRoot, "node_modules"),
+	path.resolve(workspaceRoot, "node_modules"),
 ];
 config.resolver.alias = {
-  ...(config.resolver.alias ?? {}),
-  "@goguma/ui": path.resolve(workspaceRoot, "packages/ui"),
+	...(config.resolver.alias ?? {}),
+	"@goguma/ui": path.resolve(workspaceRoot, "packages/ui"),
 };
 
 module.exports = config;

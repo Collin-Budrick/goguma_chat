@@ -1,17 +1,17 @@
 {
-  "extends": "@goguma/config/tsconfig/base",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "jsx": "react-native",
-    "moduleDetection": "force",
-    "customConditions": ["react-native"]
-  },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "../../packages/ui/src/**/*.ts",
-    "../../packages/ui/src/**/*.tsx"
-  ]
+	"extends": "@goguma/config/tsconfig/base",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"jsx": "react-native",
+		"moduleDetection": "force",
+		"customConditions": ["react-native"]
+	},
+	"include": [
+		"**/*.ts",
+		"**/*.tsx",
+		".expo/types/**/*.ts",
+		"expo-env.d.ts",
+		"../../packages/ui/src/**/*.ts",
+		"../../packages/ui/src/**/*.tsx"
+	]
 }

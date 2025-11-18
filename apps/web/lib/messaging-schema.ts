@@ -1,17 +1,17 @@
 import type {
-  ChatConversation,
-  ChatMessage,
-  TypingEvent,
+	ChatConversation,
+	ChatMessage,
+	TypingEvent,
 } from "@/components/chat/types";
 
 /**
  * Describes a direct message sent across the peer transport channel.
  */
 export type PeerMessageFrame = {
-  type: "message";
-  conversationId: string;
-  message: ChatMessage;
-  clientMessageId?: string | null;
+	type: "message";
+	conversationId: string;
+	message: ChatMessage;
+	clientMessageId?: string | null;
 };
 
 /**
@@ -19,42 +19,42 @@ export type PeerMessageFrame = {
  * canonical message payload so optimistic UI entries can be reconciled.
  */
 export type PeerMessageAckFrame = {
-  type: "message:ack";
-  conversationId: string | null;
-  message?: ChatMessage;
-  clientMessageId?: string | null;
-  error?: string;
+	type: "message:ack";
+	conversationId: string | null;
+	message?: ChatMessage;
+	clientMessageId?: string | null;
+	error?: string;
 };
 
 /**
  * Provides a full snapshot of a conversation plus the next pagination cursor.
  */
 export type PeerHistorySyncFrame = {
-  type: "history:sync";
-  conversationId: string | null;
-  messages: ChatMessage[];
-  nextCursor?: string | null;
-  conversation?: ChatConversation | null;
-  requestId?: string;
+	type: "history:sync";
+	conversationId: string | null;
+	messages: ChatMessage[];
+	nextCursor?: string | null;
+	conversation?: ChatConversation | null;
+	requestId?: string;
 };
 
 /**
  * Provides a page of historical messages for a conversation.
  */
 export type PeerHistoryPageFrame = {
-  type: "history:page";
-  conversationId: string | null;
-  messages: ChatMessage[];
-  nextCursor?: string | null;
-  requestId?: string;
+	type: "history:page";
+	conversationId: string | null;
+	messages: ChatMessage[];
+	nextCursor?: string | null;
+	requestId?: string;
 };
 
 /**
  * Broadcasts an updated conversation descriptor (e.g. when settings change).
  */
 export type PeerConversationFrame = {
-  type: "conversation";
-  conversation: ChatConversation;
+	type: "conversation";
+	conversation: ChatConversation;
 };
 
 /**
@@ -62,9 +62,9 @@ export type PeerConversationFrame = {
  * experimental builds.
  */
 export type PeerLegacyTypingFrame = {
-  type: "typing";
-  conversationId: string;
-  typing: TypingEvent;
+	type: "typing";
+	conversationId: string;
+	typing: TypingEvent;
 };
 
 /**
@@ -72,19 +72,19 @@ export type PeerLegacyTypingFrame = {
  * request.
  */
 export type PeerErrorFrame = {
-  type: "error";
-  message?: string;
-  conversationId?: string;
-  requestId?: string;
+	type: "error";
+	message?: string;
+	conversationId?: string;
+	requestId?: string;
 };
 
 /**
  * Presence payload indicating when a participant is actively composing text.
  */
 export type PeerPresenceTyping = {
-  kind: "typing";
-  conversationId: string;
-  typing: TypingEvent;
+	kind: "typing";
+	conversationId: string;
+	typing: TypingEvent;
 };
 
 /**
@@ -92,11 +92,11 @@ export type PeerPresenceTyping = {
  * message in a conversation.
  */
 export type PeerPresenceReadReceipt = {
-  kind: "read";
-  conversationId: string;
-  userId: string;
-  lastMessageId: string | null;
-  readAt: string;
+	kind: "read";
+	conversationId: string;
+	userId: string;
+	lastMessageId: string | null;
+	readAt: string;
 };
 
 /**
@@ -104,26 +104,26 @@ export type PeerPresenceReadReceipt = {
  * by the receiving participant.
  */
 export type PeerPresenceDeliveryAck = {
-  kind: "delivery";
-  conversationId: string;
-  userId: string;
-  messageId: string;
-  clientMessageId?: string | null;
-  deliveredAt: string;
+	kind: "delivery";
+	conversationId: string;
+	userId: string;
+	messageId: string;
+	clientMessageId?: string | null;
+	deliveredAt: string;
 };
 
 export type PeerPresenceUpdate =
-  | PeerPresenceTyping
-  | PeerPresenceReadReceipt
-  | PeerPresenceDeliveryAck;
+	| PeerPresenceTyping
+	| PeerPresenceReadReceipt
+	| PeerPresenceDeliveryAck;
 
 /**
  * Envelope for all presence related peer events.
  */
 export type PeerPresenceFrame = {
-  type: "presence";
-  conversationId: string;
-  presence: PeerPresenceUpdate;
+	type: "presence";
+	conversationId: string;
+	presence: PeerPresenceUpdate;
 };
 
 /**
@@ -131,17 +131,17 @@ export type PeerPresenceFrame = {
  * stalled transports and trigger reconnection flows.
  */
 export type PeerHeartbeatFrame = {
-  type: "heartbeat";
-  kind: "ping" | "pong";
-  timestamp: number;
+	type: "heartbeat";
+	kind: "ping" | "pong";
+	timestamp: number;
 };
 
 export type PeerHandshakeFrame = {
-  type: "handshake";
-  handshake: {
-    kind: "offer" | "answer";
-    token: string;
-  };
+	type: "handshake";
+	handshake: {
+		kind: "offer" | "answer";
+		token: string;
+	};
 };
 
 /**
@@ -149,13 +149,13 @@ export type PeerHandshakeFrame = {
  * channel.
  */
 export type PeerTransportIncomingFrame =
-  | PeerMessageFrame
-  | PeerMessageAckFrame
-  | PeerHistorySyncFrame
-  | PeerHistoryPageFrame
-  | PeerConversationFrame
-  | PeerPresenceFrame
-  | PeerLegacyTypingFrame
-  | PeerErrorFrame
-  | PeerHeartbeatFrame
-  | PeerHandshakeFrame;
+	| PeerMessageFrame
+	| PeerMessageAckFrame
+	| PeerHistorySyncFrame
+	| PeerHistoryPageFrame
+	| PeerConversationFrame
+	| PeerPresenceFrame
+	| PeerLegacyTypingFrame
+	| PeerErrorFrame
+	| PeerHeartbeatFrame
+	| PeerHandshakeFrame;

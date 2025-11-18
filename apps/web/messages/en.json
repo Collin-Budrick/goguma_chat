@@ -1,694 +1,694 @@
 {
-  "Metadata": {
-    "title": "Yaong-i Chat",
-    "titleTemplate": "%s | Yaong-i Chat",
-    "description": "A whimsical cat-run chat lounge where Korean, Japanese, and English threads curl up together."
-  },
-  "Marketing": {
-    "heroEyebrow": "Whiskered hangout",
-    "heroTitle": "Yaong-i Chat",
-    "heroDescription": "Yaong-i is a playful, cat-themed chat home where Korean, Japanese, and English friends lounge together. Cozy gradients, soft paw animations, and instant translation keep every thread feeling like a shared windowsill.",
-    "heroPrimaryCta": "Open the app",
-    "heroSecondaryCta": "See how it works",
-    "stats": {
-      "activeTeams": {
-        "label": "Cat circles",
-        "subtext": "Lounging right meow"
-      },
-      "csat": {
-        "label": "Languages",
-        "subtext": "KO · JA · EN per paw"
-      },
-      "responseTime": {
-        "label": "Streaks",
-        "subtext": "Daily cozy streaks kept"
-      }
-    },
-    "whyEyebrow": "Why Yaong-i",
-    "whyTitle": "A cat-curated social lounge for every surface.",
-    "whyDescription": "OLED-friendly darks, gentle glows, and paw-print accents let photos and stickers pop while Yaong-i keeps the vibe soft and feline.",
-    "features": {
-      "fluid": {
-        "title": "Purr-fect translation",
-        "description": "Yaong-i perks its ears for Korean, Japanese, and English lines, translating them side-by-side so every friend keeps pace."
-      },
-      "signals": {
-        "title": "Soft paw moderation",
-        "description": "Gentle nudges, auto-muting, and mood summaries keep your rooms cozy while our mascot keeps watch."
-      },
-      "integrations": {
-        "title": "Cat toys & add-ons",
-        "description": "Drop playlists, ambient sounds, or AR cat ears into the thread without app juggling."
-      }
-    },
-    "testimonialEyebrow": "Instant comfort",
-    "testimonialQuote": "“Yaong-i feels like a sleepy cat weaving between us—suddenly everyone’s relaxed and ready to share in three languages.”",
-    "testimonialAttribution": "Hana K. · Seoul ↔ Osaka group chat host",
-    "callouts": {
-      "encrypted": {
-        "eyebrow": "Whisker-safe",
-        "title": "Private by default",
-        "description": "End-to-end encryption and region-based storage keep every secret tucked under Yaong-i’s paw."
-      },
-      "insights": {
-        "eyebrow": "Mood tracker",
-        "title": "See the vibe at a glance",
-        "description": "Heatmaps, streak counters, and translation stats show when the lounge needs another playful ping."
-      }
-    },
-    "chatLiveRoomLabel": "Cat tower",
-    "chatResolutionLabel": "Reply streak · 52 naps",
-    "chatMessages": {
-      "syncPause": "Morning pride! Rooftop sunbeam later? I’ll bring the milk tea.",
-      "ledgerUpdate": "Yes!! Need to feed the actual cat first, then I’m in. DM the room link.",
-      "jobRestarted": "Dropped it—plus a playlist of purring beats so we stay focused.",
-      "dashboardUpdated": "Claws crossed for 21:00 KST!"
-    },
-    "ctaEyebrow": "Ready to play",
-    "ctaTitle": "Let Yaong-i host your multilingual cat chat.",
-    "ctaDescription": "Spin up a room, choose a feline theme, and invite friends across time zones. Translation, reactions, and paw-sitive vibes are built in.",
-    "ctaPrimary": "Jump in for free",
-    "ctaSecondary": "Browse rooms"
-  },
-  "Shell": {
-    "footer": {
-      "copy": "© {year} Yaong-i Chat. Built for night-owl and cat-nap chats everywhere.",
-      "links": {
-        "privacy": "Privacy",
-        "terms": "Terms",
-        "status": "Status",
-        "support": "Help"
-      }
-    },
-    "dock": {
-      "nav": {
-        "marketing": {
-          "home": "Home",
-          "account": "Join"
-        },
-        "shared": {
-          "display": "Display"
-        },
-        "app": {
-          "overview": "Lounge",
-          "chats": "Chats",
-          "contacts": "Contacts",
-          "settings": "Settings",
-          "profile": "Me"
-        },
-        "admin": {
-          "console": "Studio",
-          "broadcasts": "Announcements",
-          "roster": "Hosts"
-        }
-      },
-      "panel": {
-        "title": "Display",
-        "close": "Close display settings"
-      },
-      "preferences": {
-        "magnify": {
-          "label": "Dock magnification",
-          "description": "Enlarge icons when you hover."
-        },
-        "labels": {
-          "label": "Label tooltips",
-          "description": "Show names over each icon."
-        },
-        "lightMode": {
-          "label": "Light mode",
-          "description": "Swap to airy whites and warm grays."
-        },
-        "language": {
-          "label": "한국어 UI",
-          "description": "Switch every label to Korean."
-        }
-      },
-      "aria": {
-        "toolbar": "Application dock",
-        "localeOverlay": "Switching language"
-      }
-    }
-  },
-  "Auth": {
-    "form": {
-      "headings": {
-        "login": "Log in",
-        "signup": "Create your account"
-      },
-      "fields": {
-        "email": {
-          "label": "Email address",
-          "placeholder": "you@email.com"
-        },
-        "password": {
-          "label": "Password",
-          "placeholder": "••••••••"
-        },
-        "firstName": {
-          "placeholder": "Jane",
-          "required": "First name *",
-          "optional": "First name (optional)"
-        },
-        "lastName": {
-          "placeholder": "Doe",
-          "required": "Last name *",
-          "optional": "Last name (optional)"
-        }
-      },
-      "errors": {
-        "emailRequired": "Enter your email to continue.",
-        "passwordRequired": "Enter your password to continue.",
-        "signInFailed": "We couldn’t sign you in with those details. Try again."
-      },
-      "buttons": {
-        "loading": "Signing you in…"
-      }
-    }
-  },
-  "Login": {
-    "metadata": {
-      "title": "Log in | Yaong-i Chat",
-      "description": "Return to your cat-lounge chats."
-    },
-    "backLink": "← Back to home",
-    "title": "Login",
-    "subtitle": "Pick up the conversation where you left it.",
-    "forgot": "Forgot your password? <link>Contact support</link>.",
-    "signupPrompt": "New here? <link>Create an account</link>."
-  },
-  "Signup": {
-    "metadata": {
-      "title": "Create account | Yaong-i Chat",
-      "description": "Open your cozy cat-themed chat lounge."
-    },
-    "backLink": "← Back to home",
-    "title": "Create your Yaong-i account",
-    "subtitle": "Pick a display name, invite friends, and start chatting in seconds.",
-    "terms": "By continuing you agree to the <terms>Community Guidelines</terms> and <privacy>Privacy Policy</privacy>.",
-    "loginPrompt": "Already hanging out here? <link>Log in instead</link>."
-  },
-  "About": {
-    "metadata": {
-      "title": "About Yaong-i Chat",
-      "description": "We build a cat-themed multilingual chat space for day-one friends and far-away family."
-    },
-    "title": "About Yaong-i Chat",
-    "description": "We’re obsessed with building a cat-comfy place for conversations that span oceans.",
-    "paragraphs": {
-      "craft": "Yaong-i began as a mascot doodle for our Seoul, Tokyo, and LA friend groups. The cat stuck—now the UI leans into velvety blacks so photos, stickers, and whisker doodles pop on any screen.",
-      "orchestration": "Translation layers, shared playlists, and memory reels are woven in so you can glide between Korean, Japanese, and English without breaking the feline flow.",
-      "mission": "We’re a tiny distributed crew chasing warmth over vanity metrics. Mission: help people feel close, keep communities kind, and let a playful cat spirit guide late-night chats."
-    }
-  },
-  "Capture": {
-    "metadata": {
-      "title": "Background Capture | Yaong-i Chat",
-      "description": "Clean monochrome canvas for streaming, journaling, or sharing your screen."
-    },
-    "srText": "Frosted background capture surface for recordings."
-  },
-  "Contact": {
-    "metadata": {
-      "title": "Contact | Yaong-i Chat",
-      "description": "Say hi anytime. We keep the lantern on for the Yaong-i community."
-    },
-    "title": "Contact",
-    "description": "We keep a friendly inbox for feedback, ideas, and support.",
-    "intro": "Pick the channel that fits your vibe. Someone from our crew will respond across time zones.",
-    "channels": {
-      "email": {
-        "label": "Email",
-        "value": "support@yaongi.chat",
-        "description": "Usually replies within a few hours."
-      },
-      "signal": {
-        "label": "Signal hotline",
-        "value": "+1 (415) 555-0195",
-        "description": "Urgent moderation help or safety concerns."
-      },
-      "community": {
-        "label": "Community",
-        "value": "community.yaongi.chat",
-        "description": "Share stories, vote on features, and meet other hosts."
-      }
-    }
-  },
-  "Support": {
-    "metadata": {
-      "title": "Support | Yaong-i Chat",
-      "description": "Choose how much help you want from the Yaong-i crew."
-    },
-    "title": "Support options",
-    "description": "From casual questions to community-sized events, we’ve got you.",
-    "bundles": {
-      "starter": {
-        "title": "Starter",
-        "sla": "Email replies in under 8 hours.",
-        "price": "Included"
-      },
-      "growth": {
-        "title": "Creator",
-        "sla": "24/7 chat with a community guide.",
-        "price": "$29 / month"
-      },
-      "enterprise": {
-        "title": "Community",
-        "sla": "Shared channel, moderation tooling, on-call escalation.",
-        "price": "Custom"
-      }
-    }
-  },
-  "Terms": {
-    "metadata": {
-      "title": "Terms of Service | Yaong-i Chat",
-      "description": "Understand the ground rules for keeping Yaong-i safe and friendly."
-    },
-    "title": "Terms of Service",
-    "description": "Plain-language promises about availability, data ownership, and respectful behavior.",
-    "body": {
-      "commitment": "You own the photos, messages, and memories you share. We deliver 99.95% uptime, give heads-up before major changes, and remove content that breaks our community guidelines.",
-      "customAgreements": "Need something special for a large community? Reach out to"
-    }
-  },
-  "Privacy": {
-    "metadata": {
-      "title": "Privacy Policy | Yaong-i Chat",
-      "description": "See how Yaong-i Chat protects and processes your data."
-    },
-    "title": "Privacy Policy",
-    "description": "We encrypt, minimize, and guard the conversations entrusted to us.",
-    "body": {
-      "storage": "Yaong-i stores messages in region-specific clusters with envelope encryption and strict access controls. You can request exports or deletion anytime, and we honor data requests within 72 hours.",
-      "contact": "Contact"
-    }
-  },
-  "Status": {
-    "metadata": {
-      "title": "Status | Yaong-i Chat",
-      "description": "Live view into Yaong-i Chat uptime and maintenance windows."
-    },
-    "title": "Service status",
-    "description": "Snapshots refresh every 60 seconds. Subscribe for push or email updates.",
-    "services": {
-      "chatApi": {
-        "name": "Messages",
-        "status": "Operational",
-        "note": "All clusters healthy."
-      },
-      "presence": {
-        "name": "Realtime presence",
-        "status": "Degraded",
-        "note": "Increased latency in EU West."
-      },
-      "automation": {
-        "name": "Live translation",
-        "status": "Operational",
-        "note": "No incidents reported."
-      },
-      "exports": {
-        "name": "Media uploads",
-        "status": "Monitoring",
-        "note": "Queued clips clearing after spike."
-      }
-    }
-  },
-  "Integrations": {
-    "metadata": {
-      "title": "Integrations | Yaong-i Chat",
-      "description": "Connect music, games, and creative tools that make every chat feel alive."
-    },
-    "title": "Integrations",
-    "description": "A few cat-approved add-ons Yaong-i hosts plug into their rooms.",
-    "items": {
-      "bevy": {
-        "description": "Stream shared gaming sessions or watch parties directly inside Yaong-i with low-latency previews."
-      },
-      "motion": {
-        "description": "Trigger smooth ambient animations that react when the room hits new streaks, meows, or milestones."
-      },
-      "faker": {
-        "description": "Spin up playful sample profiles for testing layouts or onboarding friends without exposing real info."
-      },
-      "iconify": {
-        "description": "Access thousands of icons to give channels personality and keep notifications fun."
-      },
-      "unpic": {
-        "description": "Share lossless photos and scans so every sticker, doodle, and screenshot looks sharp on OLED screens."
-      }
-    }
-  },
-  "AdminHome": {
-    "metadata": {
-      "title": "Host Console | Yaong-i Chat"
-    },
-    "title": "Host console",
-    "description": "Pick a panel to check room health, drop announcements, or invite new moderators."
-  },
-  "AdminPush": {
-    "metadata": {
-      "title": "Hosts · Announcements | Yaong-i Chat"
-    },
-    "title": "Send announcements",
-    "description": "Schedule monochrome toasts or long-form updates for your community.",
-    "targetHeading": "Audience",
-    "composeHeading": "Compose",
-    "placeholder": "Share what’s new with your members…",
-    "audiences": {
-      "all": "All rooms I host",
-      "enterprise": "Verified communities only",
-      "sandbox": "Test spaces",
-      "custom": "Custom list (CSV upload)"
-    },
-    "actions": {
-      "sendNow": "Send now",
-      "schedule": "Schedule"
-    }
-  },
-  "AdminUsers": {
-    "metadata": {
-      "title": "Hosts · People | Yaong-i Chat"
-    },
-    "title": "Moderator roster",
-    "description": "Manage who can help run your rooms and adjust their permissions.",
-    "table": {
-      "name": "Name",
-      "role": "Role",
-      "status": "Status"
-    },
-    "roles": {
-      "admin": "Admin",
-      "supervisor": "Moderator",
-      "agent": "Member"
-    },
-    "statuses": {
-      "active": "Active",
-      "invited": "Invited",
-      "suspended": "Suspended"
-    }
-  },
-  "WorkspaceContacts": {
-    "metadata": {
-      "title": "Contacts | Yaong-i Chat"
-    },
-    "title": "Contact hub",
-    "headline": "Keep friends close to every chat",
-    "description": "Profiles stay beside every message so the story never leaves the chat.",
-    "lastSynced": "Last synced {timestamp}",
-    "toast": {
-      "dismiss": "Dismiss"
-    },
-    "errors": {
-      "load": "We couldn't refresh your contacts. Please try again.",
-      "request": "We couldn't update that request. Please try again.",
-      "search": "Search failed. Try again soon.",
-      "removeFriend": "We couldn't remove that friend. Please try again."
-    },
-    "lists": {
-      "friends": {
-        "title": "Friends",
-        "empty": "No friends yet. Start by sending an invite.",
-        "count": "{count, plural, one {# friend} other {# friends}}",
-        "syncing": "Syncing…",
-        "since": "Since {timestamp}"
-      },
-      "incoming": {
-        "title": "Incoming requests",
-        "empty": "No new requests right now.",
-        "badge": "Incoming"
-      },
-      "outgoing": {
-        "title": "Outgoing requests",
-        "empty": "You haven't sent any requests.",
-        "badge": "Outgoing"
-      },
-      "requests": {
-        "timestamp": "Requested {timestamp}"
-      }
-    },
-    "actions": {
-      "accept": "Accept",
-      "decline": "Decline",
-      "cancel": "Cancel",
-      "remove": "Remove",
-      "removing": "Removing…"
-    },
-    "search": {
-      "title": "Search directory",
-      "hint": "Type at least {count} letters to find new contacts.",
-      "label": "Search",
-      "placeholder": "Search by name or email",
-      "tooShort": "Enter a little more to start searching.",
-      "loading": "Searching…",
-      "empty": "No people found. Try a different spelling.",
-      "action": "Add friend",
-      "pending": "Sending…",
-      "status": {
-        "friend": "Friend",
-        "incoming": "Request received",
-        "outgoing": "Request sent"
-      }
-    }
-  },
-  "Dashboard": {
-    "metrics": {
-      "title": "Community pulse",
-      "description": "Rolling updates refresh every 15 seconds.",
-      "items": {
-        "openConversations": {
-          "label": "Rooms live",
-          "value": "42",
-          "delta": "+8 vs yesterday"
-        },
-        "firstResponse": {
-          "label": "Avg reply time",
-          "value": "47s",
-          "delta": "+6s vs goal"
-        },
-        "resolvedToday": {
-          "label": "Photos shared today",
-          "value": "318",
-          "delta": "+12% vs yesterday"
-        }
-      }
-    },
-    "spotlight": {
-      "title": "Spotlight · Translation boost",
-      "body": "Live translation saved 280 minutes this morning and helped 63% of members join conversations outside their primary language."
-    },
-    "queues": {
-      "title": "Rooms",
-      "description": "Tap to jump into the next conversation.",
-      "items": {
-        "priority": {
-          "name": "Late-night study",
-          "count": "8",
-          "status": "🟢 Cozy"
-        },
-        "billing": {
-          "name": "Anime watch party",
-          "count": "14",
-          "status": "🟡 Filling up"
-        },
-        "feedback": {
-          "name": "Photo drop",
-          "count": "2",
-          "status": "🟢 Clear"
-        },
-        "logistics": {
-          "name": "Language exchange",
-          "count": "18",
-          "status": "🟠 Buzzing"
-        }
-      }
-    }
-  },
-  "Chat": {
-    "roster": {
-      "title": "Conversations",
-      "new": "New chat",
-      "searchPlaceholder": "Search friends…",
-      "createHint": "Pick a friend to start a direct message.",
-      "empty": "Add friends from Contacts to start chatting.",
-      "emptyPreview": "No messages yet",
-      "openChat": "Open chat",
-      "lastActive": "Last activity {time}"
-    },
-    "thread": {
-      "header": "Direct message",
-      "back": "Back to chats",
-      "directWith": "Chat with {name}",
-      "me": "You",
-      "loading": "Loading conversation…",
-      "empty": "Send the first message to get things rolling.",
-      "placeholder": {
-        "title": "Select a conversation",
-        "body": "Choose a friend from the list to open your messages."
-      },
-      "transport": {
-        "label": "Transport",
-        "connect": "Connect",
-        "mode": {
-          "push": "Push",
-          "progressive": "Progressive",
-          "udp": "UDP"
-        }
-      },
-      "settings": {
-        "open": "Open chat settings",
-        "close": "Close chat settings",
-        "panelLabel": "Chat settings",
-        "unified": {
-          "title": "Unified chat settings",
-          "description": "Everyone in this conversation sees these choices.",
-          "transport": {
-            "options": {
-              "push": {
-                "label": "Push delivery",
-                "description": "Server push stream that keeps chats fresh without WebSocket connections."
-              },
-              "progressive": {
-                "label": "Progressive delivery",
-                "description": "Adaptive WebRTC/WebTransport pipeline with congestion helpers."
-              },
-              "udp": {
-                "label": "UDP relay",
-                "description": "Experimental low-latency UDP path that may drop packets."
-              }
-            }
-          }
-        },
-        "local": {
-          "title": "My chat settings",
-          "description": "These tweaks only affect your view.",
-          "options": {
-            "magnify": {
-              "label": "Comfortable bubble size",
-              "description": "Add extra padding and larger type to messages."
-            },
-            "labels": {
-              "label": "Show message labels",
-              "description": "Display sender names and timestamps above each message."
-            },
-            "theme": {
-              "label": "Use light bubbles",
-              "description": "Switch your outgoing messages to a lighter appearance."
-            },
-            "syncHistory": {
-              "label": "Sync chat history",
-              "syncing": "Syncing chat…",
-              "description": "Pull the latest history from your friend and restore cleared messages.",
-              "error": "We couldn’t sync that chat. Try again."
-            },
-            "clearHistory": {
-              "label": "Clear chat history",
-              "description": "Remove this conversation's history from your view.",
-              "confirm": "Clear this conversation's history? This only removes it for you."
-            }
-          }
-        }
-      },
-      "composer": {
-        "placeholder": "Write a message…",
-        "send": "Send",
-        "sending": "Sending…"
-      },
-    "presence": {
-      "readToast": "{name} read your latest messages.",
-      "deliveryToast": "Delivered to {name}.",
-      "readFallback": "Your friend",
-      "deliveryFallback": "your friend"
-    },
-    "connection": {
-      "degraded": "We’re having trouble reaching your peer. Trying to reconnect…",
-      "recovering": "Re-establishing the channel…",
-      "reconnecting": "Connection lost. Attempting to reconnect…",
-      "restored": "Connection restored.",
-      "failed": "The peer connection dropped. We’ll keep retrying.",
-      "status": {
-        "connected": "Peer link active",
-        "connecting": "Connecting…",
-        "reconnecting": "Reconnecting…",
-        "error": "Connection unavailable"
-      }
-    }
-  },
-    "alerts": {
-      "history": "We couldn’t load that conversation. Try again in a moment.",
-      "send": "We couldn’t send that message. Try again.",
-      "settings": "We couldn’t update these chat settings. Try again in a moment."
-    }
-  },
-  "Settings": {
-    "appearance": {
-      "title": "Appearance",
-      "description": "Personalize your OLED lounge vibe.",
-      "modes": {
-        "dark": "Dark mode",
-        "light": "Light mode"
-      }
-    },
-    "messaging": {
-      "title": "Messaging transport",
-      "description": "Messaging transport now lives inside each conversation's chat settings.",
-      "relocated": {
-        "body": "Open a chat and use the gear icon to pick UDP or Progressive for everyone in the thread.",
-        "cta": "Open chats"
-      }
-    },
-    "motion": {
-      "title": "Motion",
-      "description": "Reduce motion if you get woozy or are screen recording.",
-      "on": "Motion on",
-      "off": "Motion off"
-    },
-    "preferences": {
-      "title": "Preferences",
-      "description": "Pick the helpers that keep your chats feeling effortless.",
-      "items": {
-        "notifications": {
-          "label": "Push notifications",
-          "description": "Get alerts for mentions, replies, and event reminders."
-        },
-        "aiDrafts": {
-          "label": "AI drafting",
-          "description": "Suggest playful replies using past conversations."
-        },
-        "presence": {
-          "label": "Smart presence",
-          "description": "Auto-update my status when I’m focusing or away."
-        }
-      },
-      "state": {
-        "on": "On",
-        "off": "Off"
-      }
-    },
-    "session": {
-      "title": "Session",
-      "description": "Leave the lounge and clear this device's cookies.",
-      "logout": "Log out",
-      "loggingOut": "Logging out…"
-    }
-  },
-  "Profile": {
-    "metadata": {
-      "title": "Profile | Yaong-i Chat",
-      "description": "Review your identity and presence settings inside Yaong-i Chat."
-    },
-    "title": "Your profile",
-    "description": "Control how friends and followers see you across chats.",
-    "fields": {
-      "displayName": "Display name",
-      "role": "Account type",
-      "email": "Email",
-      "timezone": "Time zone",
-      "created": "Account created",
-      "updated": "Last synced"
-    },
-    "values": {
-      "role": "Member",
-      "timezone": "UTC"
-    }
-  }
+	"Metadata": {
+		"title": "Yaong-i Chat",
+		"titleTemplate": "%s | Yaong-i Chat",
+		"description": "A whimsical cat-run chat lounge where Korean, Japanese, and English threads curl up together."
+	},
+	"Marketing": {
+		"heroEyebrow": "Whiskered hangout",
+		"heroTitle": "Yaong-i Chat",
+		"heroDescription": "Yaong-i is a playful, cat-themed chat home where Korean, Japanese, and English friends lounge together. Cozy gradients, soft paw animations, and instant translation keep every thread feeling like a shared windowsill.",
+		"heroPrimaryCta": "Open the app",
+		"heroSecondaryCta": "See how it works",
+		"stats": {
+			"activeTeams": {
+				"label": "Cat circles",
+				"subtext": "Lounging right meow"
+			},
+			"csat": {
+				"label": "Languages",
+				"subtext": "KO · JA · EN per paw"
+			},
+			"responseTime": {
+				"label": "Streaks",
+				"subtext": "Daily cozy streaks kept"
+			}
+		},
+		"whyEyebrow": "Why Yaong-i",
+		"whyTitle": "A cat-curated social lounge for every surface.",
+		"whyDescription": "OLED-friendly darks, gentle glows, and paw-print accents let photos and stickers pop while Yaong-i keeps the vibe soft and feline.",
+		"features": {
+			"fluid": {
+				"title": "Purr-fect translation",
+				"description": "Yaong-i perks its ears for Korean, Japanese, and English lines, translating them side-by-side so every friend keeps pace."
+			},
+			"signals": {
+				"title": "Soft paw moderation",
+				"description": "Gentle nudges, auto-muting, and mood summaries keep your rooms cozy while our mascot keeps watch."
+			},
+			"integrations": {
+				"title": "Cat toys & add-ons",
+				"description": "Drop playlists, ambient sounds, or AR cat ears into the thread without app juggling."
+			}
+		},
+		"testimonialEyebrow": "Instant comfort",
+		"testimonialQuote": "“Yaong-i feels like a sleepy cat weaving between us—suddenly everyone’s relaxed and ready to share in three languages.”",
+		"testimonialAttribution": "Hana K. · Seoul ↔ Osaka group chat host",
+		"callouts": {
+			"encrypted": {
+				"eyebrow": "Whisker-safe",
+				"title": "Private by default",
+				"description": "End-to-end encryption and region-based storage keep every secret tucked under Yaong-i’s paw."
+			},
+			"insights": {
+				"eyebrow": "Mood tracker",
+				"title": "See the vibe at a glance",
+				"description": "Heatmaps, streak counters, and translation stats show when the lounge needs another playful ping."
+			}
+		},
+		"chatLiveRoomLabel": "Cat tower",
+		"chatResolutionLabel": "Reply streak · 52 naps",
+		"chatMessages": {
+			"syncPause": "Morning pride! Rooftop sunbeam later? I’ll bring the milk tea.",
+			"ledgerUpdate": "Yes!! Need to feed the actual cat first, then I’m in. DM the room link.",
+			"jobRestarted": "Dropped it—plus a playlist of purring beats so we stay focused.",
+			"dashboardUpdated": "Claws crossed for 21:00 KST!"
+		},
+		"ctaEyebrow": "Ready to play",
+		"ctaTitle": "Let Yaong-i host your multilingual cat chat.",
+		"ctaDescription": "Spin up a room, choose a feline theme, and invite friends across time zones. Translation, reactions, and paw-sitive vibes are built in.",
+		"ctaPrimary": "Jump in for free",
+		"ctaSecondary": "Browse rooms"
+	},
+	"Shell": {
+		"footer": {
+			"copy": "© {year} Yaong-i Chat. Built for night-owl and cat-nap chats everywhere.",
+			"links": {
+				"privacy": "Privacy",
+				"terms": "Terms",
+				"status": "Status",
+				"support": "Help"
+			}
+		},
+		"dock": {
+			"nav": {
+				"marketing": {
+					"home": "Home",
+					"account": "Join"
+				},
+				"shared": {
+					"display": "Display"
+				},
+				"app": {
+					"overview": "Lounge",
+					"chats": "Chats",
+					"contacts": "Contacts",
+					"settings": "Settings",
+					"profile": "Me"
+				},
+				"admin": {
+					"console": "Studio",
+					"broadcasts": "Announcements",
+					"roster": "Hosts"
+				}
+			},
+			"panel": {
+				"title": "Display",
+				"close": "Close display settings"
+			},
+			"preferences": {
+				"magnify": {
+					"label": "Dock magnification",
+					"description": "Enlarge icons when you hover."
+				},
+				"labels": {
+					"label": "Label tooltips",
+					"description": "Show names over each icon."
+				},
+				"lightMode": {
+					"label": "Light mode",
+					"description": "Swap to airy whites and warm grays."
+				},
+				"language": {
+					"label": "한국어 UI",
+					"description": "Switch every label to Korean."
+				}
+			},
+			"aria": {
+				"toolbar": "Application dock",
+				"localeOverlay": "Switching language"
+			}
+		}
+	},
+	"Auth": {
+		"form": {
+			"headings": {
+				"login": "Log in",
+				"signup": "Create your account"
+			},
+			"fields": {
+				"email": {
+					"label": "Email address",
+					"placeholder": "you@email.com"
+				},
+				"password": {
+					"label": "Password",
+					"placeholder": "••••••••"
+				},
+				"firstName": {
+					"placeholder": "Jane",
+					"required": "First name *",
+					"optional": "First name (optional)"
+				},
+				"lastName": {
+					"placeholder": "Doe",
+					"required": "Last name *",
+					"optional": "Last name (optional)"
+				}
+			},
+			"errors": {
+				"emailRequired": "Enter your email to continue.",
+				"passwordRequired": "Enter your password to continue.",
+				"signInFailed": "We couldn’t sign you in with those details. Try again."
+			},
+			"buttons": {
+				"loading": "Signing you in…"
+			}
+		}
+	},
+	"Login": {
+		"metadata": {
+			"title": "Log in | Yaong-i Chat",
+			"description": "Return to your cat-lounge chats."
+		},
+		"backLink": "← Back to home",
+		"title": "Login",
+		"subtitle": "Pick up the conversation where you left it.",
+		"forgot": "Forgot your password? <link>Contact support</link>.",
+		"signupPrompt": "New here? <link>Create an account</link>."
+	},
+	"Signup": {
+		"metadata": {
+			"title": "Create account | Yaong-i Chat",
+			"description": "Open your cozy cat-themed chat lounge."
+		},
+		"backLink": "← Back to home",
+		"title": "Create your Yaong-i account",
+		"subtitle": "Pick a display name, invite friends, and start chatting in seconds.",
+		"terms": "By continuing you agree to the <terms>Community Guidelines</terms> and <privacy>Privacy Policy</privacy>.",
+		"loginPrompt": "Already hanging out here? <link>Log in instead</link>."
+	},
+	"About": {
+		"metadata": {
+			"title": "About Yaong-i Chat",
+			"description": "We build a cat-themed multilingual chat space for day-one friends and far-away family."
+		},
+		"title": "About Yaong-i Chat",
+		"description": "We’re obsessed with building a cat-comfy place for conversations that span oceans.",
+		"paragraphs": {
+			"craft": "Yaong-i began as a mascot doodle for our Seoul, Tokyo, and LA friend groups. The cat stuck—now the UI leans into velvety blacks so photos, stickers, and whisker doodles pop on any screen.",
+			"orchestration": "Translation layers, shared playlists, and memory reels are woven in so you can glide between Korean, Japanese, and English without breaking the feline flow.",
+			"mission": "We’re a tiny distributed crew chasing warmth over vanity metrics. Mission: help people feel close, keep communities kind, and let a playful cat spirit guide late-night chats."
+		}
+	},
+	"Capture": {
+		"metadata": {
+			"title": "Background Capture | Yaong-i Chat",
+			"description": "Clean monochrome canvas for streaming, journaling, or sharing your screen."
+		},
+		"srText": "Frosted background capture surface for recordings."
+	},
+	"Contact": {
+		"metadata": {
+			"title": "Contact | Yaong-i Chat",
+			"description": "Say hi anytime. We keep the lantern on for the Yaong-i community."
+		},
+		"title": "Contact",
+		"description": "We keep a friendly inbox for feedback, ideas, and support.",
+		"intro": "Pick the channel that fits your vibe. Someone from our crew will respond across time zones.",
+		"channels": {
+			"email": {
+				"label": "Email",
+				"value": "support@yaongi.chat",
+				"description": "Usually replies within a few hours."
+			},
+			"signal": {
+				"label": "Signal hotline",
+				"value": "+1 (415) 555-0195",
+				"description": "Urgent moderation help or safety concerns."
+			},
+			"community": {
+				"label": "Community",
+				"value": "community.yaongi.chat",
+				"description": "Share stories, vote on features, and meet other hosts."
+			}
+		}
+	},
+	"Support": {
+		"metadata": {
+			"title": "Support | Yaong-i Chat",
+			"description": "Choose how much help you want from the Yaong-i crew."
+		},
+		"title": "Support options",
+		"description": "From casual questions to community-sized events, we’ve got you.",
+		"bundles": {
+			"starter": {
+				"title": "Starter",
+				"sla": "Email replies in under 8 hours.",
+				"price": "Included"
+			},
+			"growth": {
+				"title": "Creator",
+				"sla": "24/7 chat with a community guide.",
+				"price": "$29 / month"
+			},
+			"enterprise": {
+				"title": "Community",
+				"sla": "Shared channel, moderation tooling, on-call escalation.",
+				"price": "Custom"
+			}
+		}
+	},
+	"Terms": {
+		"metadata": {
+			"title": "Terms of Service | Yaong-i Chat",
+			"description": "Understand the ground rules for keeping Yaong-i safe and friendly."
+		},
+		"title": "Terms of Service",
+		"description": "Plain-language promises about availability, data ownership, and respectful behavior.",
+		"body": {
+			"commitment": "You own the photos, messages, and memories you share. We deliver 99.95% uptime, give heads-up before major changes, and remove content that breaks our community guidelines.",
+			"customAgreements": "Need something special for a large community? Reach out to"
+		}
+	},
+	"Privacy": {
+		"metadata": {
+			"title": "Privacy Policy | Yaong-i Chat",
+			"description": "See how Yaong-i Chat protects and processes your data."
+		},
+		"title": "Privacy Policy",
+		"description": "We encrypt, minimize, and guard the conversations entrusted to us.",
+		"body": {
+			"storage": "Yaong-i stores messages in region-specific clusters with envelope encryption and strict access controls. You can request exports or deletion anytime, and we honor data requests within 72 hours.",
+			"contact": "Contact"
+		}
+	},
+	"Status": {
+		"metadata": {
+			"title": "Status | Yaong-i Chat",
+			"description": "Live view into Yaong-i Chat uptime and maintenance windows."
+		},
+		"title": "Service status",
+		"description": "Snapshots refresh every 60 seconds. Subscribe for push or email updates.",
+		"services": {
+			"chatApi": {
+				"name": "Messages",
+				"status": "Operational",
+				"note": "All clusters healthy."
+			},
+			"presence": {
+				"name": "Realtime presence",
+				"status": "Degraded",
+				"note": "Increased latency in EU West."
+			},
+			"automation": {
+				"name": "Live translation",
+				"status": "Operational",
+				"note": "No incidents reported."
+			},
+			"exports": {
+				"name": "Media uploads",
+				"status": "Monitoring",
+				"note": "Queued clips clearing after spike."
+			}
+		}
+	},
+	"Integrations": {
+		"metadata": {
+			"title": "Integrations | Yaong-i Chat",
+			"description": "Connect music, games, and creative tools that make every chat feel alive."
+		},
+		"title": "Integrations",
+		"description": "A few cat-approved add-ons Yaong-i hosts plug into their rooms.",
+		"items": {
+			"bevy": {
+				"description": "Stream shared gaming sessions or watch parties directly inside Yaong-i with low-latency previews."
+			},
+			"motion": {
+				"description": "Trigger smooth ambient animations that react when the room hits new streaks, meows, or milestones."
+			},
+			"faker": {
+				"description": "Spin up playful sample profiles for testing layouts or onboarding friends without exposing real info."
+			},
+			"iconify": {
+				"description": "Access thousands of icons to give channels personality and keep notifications fun."
+			},
+			"unpic": {
+				"description": "Share lossless photos and scans so every sticker, doodle, and screenshot looks sharp on OLED screens."
+			}
+		}
+	},
+	"AdminHome": {
+		"metadata": {
+			"title": "Host Console | Yaong-i Chat"
+		},
+		"title": "Host console",
+		"description": "Pick a panel to check room health, drop announcements, or invite new moderators."
+	},
+	"AdminPush": {
+		"metadata": {
+			"title": "Hosts · Announcements | Yaong-i Chat"
+		},
+		"title": "Send announcements",
+		"description": "Schedule monochrome toasts or long-form updates for your community.",
+		"targetHeading": "Audience",
+		"composeHeading": "Compose",
+		"placeholder": "Share what’s new with your members…",
+		"audiences": {
+			"all": "All rooms I host",
+			"enterprise": "Verified communities only",
+			"sandbox": "Test spaces",
+			"custom": "Custom list (CSV upload)"
+		},
+		"actions": {
+			"sendNow": "Send now",
+			"schedule": "Schedule"
+		}
+	},
+	"AdminUsers": {
+		"metadata": {
+			"title": "Hosts · People | Yaong-i Chat"
+		},
+		"title": "Moderator roster",
+		"description": "Manage who can help run your rooms and adjust their permissions.",
+		"table": {
+			"name": "Name",
+			"role": "Role",
+			"status": "Status"
+		},
+		"roles": {
+			"admin": "Admin",
+			"supervisor": "Moderator",
+			"agent": "Member"
+		},
+		"statuses": {
+			"active": "Active",
+			"invited": "Invited",
+			"suspended": "Suspended"
+		}
+	},
+	"WorkspaceContacts": {
+		"metadata": {
+			"title": "Contacts | Yaong-i Chat"
+		},
+		"title": "Contact hub",
+		"headline": "Keep friends close to every chat",
+		"description": "Profiles stay beside every message so the story never leaves the chat.",
+		"lastSynced": "Last synced {timestamp}",
+		"toast": {
+			"dismiss": "Dismiss"
+		},
+		"errors": {
+			"load": "We couldn't refresh your contacts. Please try again.",
+			"request": "We couldn't update that request. Please try again.",
+			"search": "Search failed. Try again soon.",
+			"removeFriend": "We couldn't remove that friend. Please try again."
+		},
+		"lists": {
+			"friends": {
+				"title": "Friends",
+				"empty": "No friends yet. Start by sending an invite.",
+				"count": "{count, plural, one {# friend} other {# friends}}",
+				"syncing": "Syncing…",
+				"since": "Since {timestamp}"
+			},
+			"incoming": {
+				"title": "Incoming requests",
+				"empty": "No new requests right now.",
+				"badge": "Incoming"
+			},
+			"outgoing": {
+				"title": "Outgoing requests",
+				"empty": "You haven't sent any requests.",
+				"badge": "Outgoing"
+			},
+			"requests": {
+				"timestamp": "Requested {timestamp}"
+			}
+		},
+		"actions": {
+			"accept": "Accept",
+			"decline": "Decline",
+			"cancel": "Cancel",
+			"remove": "Remove",
+			"removing": "Removing…"
+		},
+		"search": {
+			"title": "Search directory",
+			"hint": "Type at least {count} letters to find new contacts.",
+			"label": "Search",
+			"placeholder": "Search by name or email",
+			"tooShort": "Enter a little more to start searching.",
+			"loading": "Searching…",
+			"empty": "No people found. Try a different spelling.",
+			"action": "Add friend",
+			"pending": "Sending…",
+			"status": {
+				"friend": "Friend",
+				"incoming": "Request received",
+				"outgoing": "Request sent"
+			}
+		}
+	},
+	"Dashboard": {
+		"metrics": {
+			"title": "Community pulse",
+			"description": "Rolling updates refresh every 15 seconds.",
+			"items": {
+				"openConversations": {
+					"label": "Rooms live",
+					"value": "42",
+					"delta": "+8 vs yesterday"
+				},
+				"firstResponse": {
+					"label": "Avg reply time",
+					"value": "47s",
+					"delta": "+6s vs goal"
+				},
+				"resolvedToday": {
+					"label": "Photos shared today",
+					"value": "318",
+					"delta": "+12% vs yesterday"
+				}
+			}
+		},
+		"spotlight": {
+			"title": "Spotlight · Translation boost",
+			"body": "Live translation saved 280 minutes this morning and helped 63% of members join conversations outside their primary language."
+		},
+		"queues": {
+			"title": "Rooms",
+			"description": "Tap to jump into the next conversation.",
+			"items": {
+				"priority": {
+					"name": "Late-night study",
+					"count": "8",
+					"status": "🟢 Cozy"
+				},
+				"billing": {
+					"name": "Anime watch party",
+					"count": "14",
+					"status": "🟡 Filling up"
+				},
+				"feedback": {
+					"name": "Photo drop",
+					"count": "2",
+					"status": "🟢 Clear"
+				},
+				"logistics": {
+					"name": "Language exchange",
+					"count": "18",
+					"status": "🟠 Buzzing"
+				}
+			}
+		}
+	},
+	"Chat": {
+		"roster": {
+			"title": "Conversations",
+			"new": "New chat",
+			"searchPlaceholder": "Search friends…",
+			"createHint": "Pick a friend to start a direct message.",
+			"empty": "Add friends from Contacts to start chatting.",
+			"emptyPreview": "No messages yet",
+			"openChat": "Open chat",
+			"lastActive": "Last activity {time}"
+		},
+		"thread": {
+			"header": "Direct message",
+			"back": "Back to chats",
+			"directWith": "Chat with {name}",
+			"me": "You",
+			"loading": "Loading conversation…",
+			"empty": "Send the first message to get things rolling.",
+			"placeholder": {
+				"title": "Select a conversation",
+				"body": "Choose a friend from the list to open your messages."
+			},
+			"transport": {
+				"label": "Transport",
+				"connect": "Connect",
+				"mode": {
+					"push": "Push",
+					"progressive": "Progressive",
+					"udp": "UDP"
+				}
+			},
+			"settings": {
+				"open": "Open chat settings",
+				"close": "Close chat settings",
+				"panelLabel": "Chat settings",
+				"unified": {
+					"title": "Unified chat settings",
+					"description": "Everyone in this conversation sees these choices.",
+					"transport": {
+						"options": {
+							"push": {
+								"label": "Push delivery",
+								"description": "Server push stream that keeps chats fresh without WebSocket connections."
+							},
+							"progressive": {
+								"label": "Progressive delivery",
+								"description": "Adaptive WebRTC/WebTransport pipeline with congestion helpers."
+							},
+							"udp": {
+								"label": "UDP relay",
+								"description": "Experimental low-latency UDP path that may drop packets."
+							}
+						}
+					}
+				},
+				"local": {
+					"title": "My chat settings",
+					"description": "These tweaks only affect your view.",
+					"options": {
+						"magnify": {
+							"label": "Comfortable bubble size",
+							"description": "Add extra padding and larger type to messages."
+						},
+						"labels": {
+							"label": "Show message labels",
+							"description": "Display sender names and timestamps above each message."
+						},
+						"theme": {
+							"label": "Use light bubbles",
+							"description": "Switch your outgoing messages to a lighter appearance."
+						},
+						"syncHistory": {
+							"label": "Sync chat history",
+							"syncing": "Syncing chat…",
+							"description": "Pull the latest history from your friend and restore cleared messages.",
+							"error": "We couldn’t sync that chat. Try again."
+						},
+						"clearHistory": {
+							"label": "Clear chat history",
+							"description": "Remove this conversation's history from your view.",
+							"confirm": "Clear this conversation's history? This only removes it for you."
+						}
+					}
+				}
+			},
+			"composer": {
+				"placeholder": "Write a message…",
+				"send": "Send",
+				"sending": "Sending…"
+			},
+			"presence": {
+				"readToast": "{name} read your latest messages.",
+				"deliveryToast": "Delivered to {name}.",
+				"readFallback": "Your friend",
+				"deliveryFallback": "your friend"
+			},
+			"connection": {
+				"degraded": "We’re having trouble reaching your peer. Trying to reconnect…",
+				"recovering": "Re-establishing the channel…",
+				"reconnecting": "Connection lost. Attempting to reconnect…",
+				"restored": "Connection restored.",
+				"failed": "The peer connection dropped. We’ll keep retrying.",
+				"status": {
+					"connected": "Peer link active",
+					"connecting": "Connecting…",
+					"reconnecting": "Reconnecting…",
+					"error": "Connection unavailable"
+				}
+			}
+		},
+		"alerts": {
+			"history": "We couldn’t load that conversation. Try again in a moment.",
+			"send": "We couldn’t send that message. Try again.",
+			"settings": "We couldn’t update these chat settings. Try again in a moment."
+		}
+	},
+	"Settings": {
+		"appearance": {
+			"title": "Appearance",
+			"description": "Personalize your OLED lounge vibe.",
+			"modes": {
+				"dark": "Dark mode",
+				"light": "Light mode"
+			}
+		},
+		"messaging": {
+			"title": "Messaging transport",
+			"description": "Messaging transport now lives inside each conversation's chat settings.",
+			"relocated": {
+				"body": "Open a chat and use the gear icon to pick UDP or Progressive for everyone in the thread.",
+				"cta": "Open chats"
+			}
+		},
+		"motion": {
+			"title": "Motion",
+			"description": "Reduce motion if you get woozy or are screen recording.",
+			"on": "Motion on",
+			"off": "Motion off"
+		},
+		"preferences": {
+			"title": "Preferences",
+			"description": "Pick the helpers that keep your chats feeling effortless.",
+			"items": {
+				"notifications": {
+					"label": "Push notifications",
+					"description": "Get alerts for mentions, replies, and event reminders."
+				},
+				"aiDrafts": {
+					"label": "AI drafting",
+					"description": "Suggest playful replies using past conversations."
+				},
+				"presence": {
+					"label": "Smart presence",
+					"description": "Auto-update my status when I’m focusing or away."
+				}
+			},
+			"state": {
+				"on": "On",
+				"off": "Off"
+			}
+		},
+		"session": {
+			"title": "Session",
+			"description": "Leave the lounge and clear this device's cookies.",
+			"logout": "Log out",
+			"loggingOut": "Logging out…"
+		}
+	},
+	"Profile": {
+		"metadata": {
+			"title": "Profile | Yaong-i Chat",
+			"description": "Review your identity and presence settings inside Yaong-i Chat."
+		},
+		"title": "Your profile",
+		"description": "Control how friends and followers see you across chats.",
+		"fields": {
+			"displayName": "Display name",
+			"role": "Account type",
+			"email": "Email",
+			"timezone": "Time zone",
+			"created": "Account created",
+			"updated": "Last synced"
+		},
+		"values": {
+			"role": "Member",
+			"timezone": "UTC"
+		}
+	}
 }

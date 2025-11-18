@@ -2,16 +2,16 @@ import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { db } from "./index";
 import {
-  conversationParticipants,
-  conversationReads,
-  conversations,
-  conversationTypeEnum,
-  friendships,
-  messages,
-  users,
+	conversationParticipants,
+	conversationReads,
+	conversations,
+	conversationTypeEnum,
+	friendships,
+	messages,
+	users,
 } from "./schema";
-const DIRECT_CONVERSATION = "direct" satisfies
-  (typeof conversationTypeEnum.enumValues)[number];
+const DIRECT_CONVERSATION =
+	"direct" satisfies (typeof conversationTypeEnum.enumValues)[number];
 
 type AppDatabase = typeof db;
 type AppTransaction = Parameters<Parameters<AppDatabase["transaction"]>[0]>[0];
@@ -21,552 +21,571 @@ const DEFAULT_MESSAGE_LIMIT = 30;
 
 export type ConversationRecord = typeof conversations.$inferSelect;
 export type ConversationParticipantRecord =
-  typeof conversationParticipants.$inferSelect;
+	typeof conversationParticipants.$inferSelect;
 export type MessageRecord = typeof messages.$inferSelect;
 
 export type ConversationParticipant = ConversationParticipantRecord & {
-  user: {
-    id: string;
-    email: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    image: string | null;
-  };
+	user: {
+		id: string;
+		email: string | null;
+		firstName: string | null;
+		lastName: string | null;
+		image: string | null;
+	};
 };
 
 export type ConversationWithParticipants = ConversationRecord & {
-  participants: ConversationParticipant[];
+	participants: ConversationParticipant[];
 };
 
 export type MessageWithSender = MessageRecord & {
-  sender: {
-    id: string;
-    email: string | null;
-    firstName: string | null;
-    lastName: string | null;
-    image: string | null;
-  };
+	sender: {
+		id: string;
+		email: string | null;
+		firstName: string | null;
+		lastName: string | null;
+		image: string | null;
+	};
 };
 
 export type ConversationReadRecord = typeof conversationReads.$inferSelect;
 
 export type UnreadConversationSummary = {
-  conversationId: string;
-  unreadCount: number;
+	conversationId: string;
+	unreadCount: number;
 };
 
 type MessagePageOptions = {
-  limit?: number;
-  beforeMessageId?: string;
+	limit?: number;
+	beforeMessageId?: string;
 };
 
 type MessagePage = {
-  messages: MessageWithSender[];
-  nextCursor: string | null;
+	messages: MessageWithSender[];
+	nextCursor: string | null;
 };
 
 type MarkConversationReadOptions = {
-  lastMessageId?: string | null;
-  readAt?: Date | string | null;
+	lastMessageId?: string | null;
+	readAt?: Date | string | null;
 };
 
 function ensureDate(value: Date | string | null | undefined) {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+	if (!value) return new Date();
+	if (value instanceof Date) return value;
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function makeDirectKey(userA: string, userB: string) {
-  const [left, right] = [userA, userB].sort();
-  return `${left}:${right}`;
+	const [left, right] = [userA, userB].sort();
+	return `${left}:${right}`;
 }
 
 export async function findDirectConversation(
-  viewerId: string,
-  friendId: string,
-  client = db,
+	viewerId: string,
+	friendId: string,
+	client = db,
 ): Promise<ConversationRecord | null> {
-  const directKey = makeDirectKey(viewerId, friendId);
+	const directKey = makeDirectKey(viewerId, friendId);
 
-  const [conversation] = await client
-    .select()
-    .from(conversations)
-    .where(
-      and(
-        eq(conversations.type, DIRECT_CONVERSATION),
-        eq(conversations.directKey, directKey),
-      ),
-    )
-    .limit(1);
+	const [conversation] = await client
+		.select()
+		.from(conversations)
+		.where(
+			and(
+				eq(conversations.type, DIRECT_CONVERSATION),
+				eq(conversations.directKey, directKey),
+			),
+		)
+		.limit(1);
 
-  return conversation ?? null;
+	return conversation ?? null;
 }
 
 async function assertFriendship(
-  userId: string,
-  friendId: string,
-  client: AppDatabase | AppTransaction,
+	userId: string,
+	friendId: string,
+	client: AppDatabase | AppTransaction,
 ) {
-  const [friendship] = await client
-    .select({ id: friendships.id })
-    .from(friendships)
-    .where(and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)))
-    .limit(1);
+	const [friendship] = await client
+		.select({ id: friendships.id })
+		.from(friendships)
+		.where(
+			and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)),
+		)
+		.limit(1);
 
-  if (!friendship) {
-    throw new Error("Users are not friends");
-  }
+	if (!friendship) {
+		throw new Error("Users are not friends");
+	}
 }
 
 async function getParticipants(
-  conversationId: string,
-  client: AppDatabase | AppTransaction = db,
+	conversationId: string,
+	client: AppDatabase | AppTransaction = db,
 ): Promise<ConversationParticipant[]> {
-  return client
-    .select({
-      conversationId: conversationParticipants.conversationId,
-      userId: conversationParticipants.userId,
-      joinedAt: conversationParticipants.joinedAt,
-      user: {
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        image: users.image,
-      },
-    })
-    .from(conversationParticipants)
-    .innerJoin(users, eq(users.id, conversationParticipants.userId))
-    .where(eq(conversationParticipants.conversationId, conversationId));
+	return client
+		.select({
+			conversationId: conversationParticipants.conversationId,
+			userId: conversationParticipants.userId,
+			joinedAt: conversationParticipants.joinedAt,
+			user: {
+				id: users.id,
+				email: users.email,
+				firstName: users.firstName,
+				lastName: users.lastName,
+				image: users.image,
+			},
+		})
+		.from(conversationParticipants)
+		.innerJoin(users, eq(users.id, conversationParticipants.userId))
+		.where(eq(conversationParticipants.conversationId, conversationId));
 }
 
 export async function listConversationParticipantIds(conversationId: string) {
-  const participants = await getParticipants(conversationId);
-  return participants.map((participant) => participant.userId);
+	const participants = await getParticipants(conversationId);
+	return participants.map((participant) => participant.userId);
 }
 
 export async function getDirectConversation(
-  viewerId: string,
-  friendId: string,
+	viewerId: string,
+	friendId: string,
 ): Promise<ConversationWithParticipants> {
-  const directKey = makeDirectKey(viewerId, friendId);
+	const directKey = makeDirectKey(viewerId, friendId);
 
-  return db.transaction(async (tx) => {
-    await assertFriendship(viewerId, friendId, tx);
+	return db.transaction(async (tx) => {
+		await assertFriendship(viewerId, friendId, tx);
 
-    const [existing] = await tx
-      .select()
-      .from(conversations)
-      .where(
-        and(
-          eq(conversations.type, DIRECT_CONVERSATION),
-          eq(conversations.directKey, directKey),
-        ),
-      )
-      .limit(1);
+		const [existing] = await tx
+			.select()
+			.from(conversations)
+			.where(
+				and(
+					eq(conversations.type, DIRECT_CONVERSATION),
+					eq(conversations.directKey, directKey),
+				),
+			)
+			.limit(1);
 
-    let conversation = existing;
+		let conversation = existing;
 
-    if (!conversation) {
-      const [inserted] = await tx
-        .insert(conversations)
-        .values({ type: DIRECT_CONVERSATION, directKey })
-        .onConflictDoNothing({ target: conversations.directKey })
-        .returning();
+		if (!conversation) {
+			const [inserted] = await tx
+				.insert(conversations)
+				.values({ type: DIRECT_CONVERSATION, directKey })
+				.onConflictDoNothing({ target: conversations.directKey })
+				.returning();
 
-      if (inserted) {
-        conversation = inserted;
-      } else {
-        const [conflict] = await tx
-          .select()
-          .from(conversations)
-          .where(
-            and(
-              eq(conversations.type, DIRECT_CONVERSATION),
-              eq(conversations.directKey, directKey),
-            ),
-          )
-          .limit(1);
+			if (inserted) {
+				conversation = inserted;
+			} else {
+				const [conflict] = await tx
+					.select()
+					.from(conversations)
+					.where(
+						and(
+							eq(conversations.type, DIRECT_CONVERSATION),
+							eq(conversations.directKey, directKey),
+						),
+					)
+					.limit(1);
 
-        if (!conflict) {
-          throw new Error("Failed to load conversation");
-        }
+				if (!conflict) {
+					throw new Error("Failed to load conversation");
+				}
 
-        conversation = conflict;
-      }
-    }
+				conversation = conflict;
+			}
+		}
 
-    await tx
-      .insert(conversationParticipants)
-      .values([
-        {
-          conversationId: conversation.id,
-          userId: viewerId,
-        },
-        {
-          conversationId: conversation.id,
-          userId: friendId,
-        },
-      ])
-      .onConflictDoNothing();
+		await tx
+			.insert(conversationParticipants)
+			.values([
+				{
+					conversationId: conversation.id,
+					userId: viewerId,
+				},
+				{
+					conversationId: conversation.id,
+					userId: friendId,
+				},
+			])
+			.onConflictDoNothing();
 
-    const participants = await getParticipants(conversation.id, tx);
+		const participants = await getParticipants(conversation.id, tx);
 
-    return { ...conversation, participants };
-  });
+		return { ...conversation, participants };
+	});
 }
 
 async function assertParticipant(
-  conversationId: string,
-  userId: string,
-  client = db,
+	conversationId: string,
+	userId: string,
+	client = db,
 ) {
-  const [participant] = await client
-    .select({ userId: conversationParticipants.userId })
-    .from(conversationParticipants)
-    .where(
-      and(
-        eq(conversationParticipants.conversationId, conversationId),
-        eq(conversationParticipants.userId, userId),
-      ),
-    )
-    .limit(1);
+	const [participant] = await client
+		.select({ userId: conversationParticipants.userId })
+		.from(conversationParticipants)
+		.where(
+			and(
+				eq(conversationParticipants.conversationId, conversationId),
+				eq(conversationParticipants.userId, userId),
+			),
+		)
+		.limit(1);
 
-  if (!participant) {
-    throw new Error("User is not a conversation participant");
-  }
+	if (!participant) {
+		throw new Error("User is not a conversation participant");
+	}
 }
 
 function normalizeMessageDates(row: MessageWithSender): MessageWithSender {
-  return {
-    ...row,
-    createdAt:
-      row.createdAt instanceof Date
-        ? row.createdAt
-        : new Date(row.createdAt ?? new Date()),
-    updatedAt:
-      row.updatedAt instanceof Date
-        ? row.updatedAt
-        : new Date(row.updatedAt ?? new Date()),
-  } as MessageWithSender;
+	return {
+		...row,
+		createdAt:
+			row.createdAt instanceof Date
+				? row.createdAt
+				: new Date(row.createdAt ?? new Date()),
+		updatedAt:
+			row.updatedAt instanceof Date
+				? row.updatedAt
+				: new Date(row.updatedAt ?? new Date()),
+	} as MessageWithSender;
 }
 
 export async function listConversationMessages(
-  conversationId: string,
-  userId: string,
-  options: MessagePageOptions = {},
+	conversationId: string,
+	userId: string,
+	options: MessagePageOptions = {},
 ): Promise<MessagePage> {
-  await assertParticipant(conversationId, userId);
+	await assertParticipant(conversationId, userId);
 
-  const rawLimit =
-    typeof options.limit === "number" && Number.isFinite(options.limit)
-      ? Math.floor(options.limit)
-      : DEFAULT_MESSAGE_LIMIT;
+	const rawLimit =
+		typeof options.limit === "number" && Number.isFinite(options.limit)
+			? Math.floor(options.limit)
+			: DEFAULT_MESSAGE_LIMIT;
 
-  const limit = Math.min(Math.max(rawLimit, 1), MAX_MESSAGE_LIMIT);
+	const limit = Math.min(Math.max(rawLimit, 1), MAX_MESSAGE_LIMIT);
 
-  let cursorCreatedAt: Date | null = null;
-  let cursorId: string | null = null;
+	let cursorCreatedAt: Date | null = null;
+	let cursorId: string | null = null;
 
-  if (options.beforeMessageId) {
-    const [cursor] = await db
-      .select({
-        id: messages.id,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.id, options.beforeMessageId),
-          eq(messages.conversationId, conversationId),
-        ),
-      )
-      .limit(1);
+	if (options.beforeMessageId) {
+		const [cursor] = await db
+			.select({
+				id: messages.id,
+				createdAt: messages.createdAt,
+			})
+			.from(messages)
+			.where(
+				and(
+					eq(messages.id, options.beforeMessageId),
+					eq(messages.conversationId, conversationId),
+				),
+			)
+			.limit(1);
 
-    if (!cursor) {
-      return { messages: [], nextCursor: null };
-    }
+		if (!cursor) {
+			return { messages: [], nextCursor: null };
+		}
 
-    cursorCreatedAt = cursor.createdAt ?? null;
-    cursorId = cursor.id;
-  }
+		cursorCreatedAt = cursor.createdAt ?? null;
+		cursorId = cursor.id;
+	}
 
-  const conditions: SQL<unknown>[] = [eq(messages.conversationId, conversationId)];
+	const conditions: SQL<unknown>[] = [
+		eq(messages.conversationId, conversationId),
+	];
 
-  if (cursorCreatedAt !== null && cursorId !== null) {
-    const cursorCondition = or(
-      lt(messages.createdAt, cursorCreatedAt),
-      and(eq(messages.createdAt, cursorCreatedAt), lt(messages.id, cursorId)),
-    );
+	if (cursorCreatedAt !== null && cursorId !== null) {
+		const cursorCondition = or(
+			lt(messages.createdAt, cursorCreatedAt),
+			and(eq(messages.createdAt, cursorCreatedAt), lt(messages.id, cursorId)),
+		);
 
-    if (cursorCondition) {
-      conditions.push(cursorCondition);
-    }
-  }
+		if (cursorCondition) {
+			conditions.push(cursorCondition);
+		}
+	}
 
-  const results = await db
-    .select({
-      id: messages.id,
-      conversationId: messages.conversationId,
-      senderId: messages.senderId,
-      body: messages.body,
-      createdAt: messages.createdAt,
-      updatedAt: messages.updatedAt,
-      sender: {
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        image: users.image,
-      },
-    })
-    .from(messages)
-    .innerJoin(users, eq(users.id, messages.senderId))
-    .where(and(...conditions))
-    .orderBy(desc(messages.createdAt), desc(messages.id))
-    .limit(limit + 1);
+	const results = await db
+		.select({
+			id: messages.id,
+			conversationId: messages.conversationId,
+			senderId: messages.senderId,
+			body: messages.body,
+			createdAt: messages.createdAt,
+			updatedAt: messages.updatedAt,
+			sender: {
+				id: users.id,
+				email: users.email,
+				firstName: users.firstName,
+				lastName: users.lastName,
+				image: users.image,
+			},
+		})
+		.from(messages)
+		.innerJoin(users, eq(users.id, messages.senderId))
+		.where(and(...conditions))
+		.orderBy(desc(messages.createdAt), desc(messages.id))
+		.limit(limit + 1);
 
-  const hasMore = results.length > limit;
-  const trimmed = hasMore ? results.slice(0, limit) : results;
-  const sorted = trimmed.reverse();
+	const hasMore = results.length > limit;
+	const trimmed = hasMore ? results.slice(0, limit) : results;
+	const sorted = trimmed.reverse();
 
-  const nextCursor = hasMore ? sorted[0]?.id ?? null : null;
+	const nextCursor = hasMore ? (sorted[0]?.id ?? null) : null;
 
-  return {
-    messages: sorted.map((row) => normalizeMessageDates(row)),
-    nextCursor,
-  };
+	return {
+		messages: sorted.map((row) => normalizeMessageDates(row)),
+		nextCursor,
+	};
 }
 
 export async function getConversationWithParticipants(
-  conversationId: string,
-  userId: string,
+	conversationId: string,
+	userId: string,
 ): Promise<ConversationWithParticipants> {
-  await assertParticipant(conversationId, userId);
+	await assertParticipant(conversationId, userId);
 
-  const [conversation] = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.id, conversationId))
-    .limit(1);
+	const [conversation] = await db
+		.select()
+		.from(conversations)
+		.where(eq(conversations.id, conversationId))
+		.limit(1);
 
-  if (!conversation) {
-    throw new Error("Conversation not found");
-  }
+	if (!conversation) {
+		throw new Error("Conversation not found");
+	}
 
-  const participants = await getParticipants(conversation.id);
+	const participants = await getParticipants(conversation.id);
 
-  return { ...conversation, participants };
+	return { ...conversation, participants };
 }
 
 export async function markConversationRead(
-  conversationId: string,
-  userId: string,
-  options: MarkConversationReadOptions = {},
+	conversationId: string,
+	userId: string,
+	options: MarkConversationReadOptions = {},
 ) {
-  await assertParticipant(conversationId, userId);
+	await assertParticipant(conversationId, userId);
 
-  let messageId = options.lastMessageId ?? null;
-  let timestamp = options.readAt ? ensureDate(options.readAt) : null;
+	let messageId = options.lastMessageId ?? null;
+	let timestamp = options.readAt ? ensureDate(options.readAt) : null;
 
-  if (messageId && !timestamp) {
-    const [message] = await db
-      .select({
-        id: messages.id,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.id, messageId),
-          eq(messages.conversationId, conversationId),
-        ),
-      )
-      .limit(1);
+	if (messageId && !timestamp) {
+		const [message] = await db
+			.select({
+				id: messages.id,
+				createdAt: messages.createdAt,
+			})
+			.from(messages)
+			.where(
+				and(
+					eq(messages.id, messageId),
+					eq(messages.conversationId, conversationId),
+				),
+			)
+			.limit(1);
 
-    if (message) {
-      messageId = message.id;
-      timestamp = ensureDate(message.createdAt);
-    } else {
-      messageId = null;
-    }
-  }
+		if (message) {
+			messageId = message.id;
+			timestamp = ensureDate(message.createdAt);
+		} else {
+			messageId = null;
+		}
+	}
 
-  const lastReadAt = timestamp ?? new Date();
+	const lastReadAt = timestamp ?? new Date();
 
-  await db
-    .insert(conversationReads)
-    .values({
-      conversationId,
-      userId,
-      lastReadMessageId: messageId,
-      lastReadAt,
-    })
-    .onConflictDoUpdate({
-      target: [conversationReads.conversationId, conversationReads.userId],
-      set: {
-        lastReadMessageId: messageId,
-        lastReadAt,
-      },
-    });
+	await db
+		.insert(conversationReads)
+		.values({
+			conversationId,
+			userId,
+			lastReadMessageId: messageId,
+			lastReadAt,
+		})
+		.onConflictDoUpdate({
+			target: [conversationReads.conversationId, conversationReads.userId],
+			set: {
+				lastReadMessageId: messageId,
+				lastReadAt,
+			},
+		});
 }
 
 export async function listUnreadConversations(
-  userId: string,
-  options: { excludeConversationId?: string | null } = {},
+	userId: string,
+	options: { excludeConversationId?: string | null } = {},
 ): Promise<UnreadConversationSummary[]> {
-  const { excludeConversationId = null } = options;
+	const { excludeConversationId = null } = options;
 
-  const rows = await db
-    .select({
-      conversationId: messages.conversationId,
-      unreadCount: sql<number>`COUNT(*)`,
-    })
-    .from(conversationParticipants)
-    .innerJoin(
-      messages,
-      and(
-        eq(messages.conversationId, conversationParticipants.conversationId),
-        ne(messages.senderId, userId),
-      ),
-    )
-    .leftJoin(
-      conversationReads,
-      and(
-        eq(conversationReads.conversationId, conversationParticipants.conversationId),
-        eq(conversationReads.userId, userId),
-      ),
-    )
-    .where(() => {
-      const conditions = [
-        eq(conversationParticipants.userId, userId),
-        or(
-          isNull(conversationReads.lastReadAt),
-          gt(messages.createdAt, conversationReads.lastReadAt),
-        ),
-      ];
+	const rows = await db
+		.select({
+			conversationId: messages.conversationId,
+			unreadCount: sql<number>`COUNT(*)`,
+		})
+		.from(conversationParticipants)
+		.innerJoin(
+			messages,
+			and(
+				eq(messages.conversationId, conversationParticipants.conversationId),
+				ne(messages.senderId, userId),
+			),
+		)
+		.leftJoin(
+			conversationReads,
+			and(
+				eq(
+					conversationReads.conversationId,
+					conversationParticipants.conversationId,
+				),
+				eq(conversationReads.userId, userId),
+			),
+		)
+		.where(() => {
+			const conditions = [
+				eq(conversationParticipants.userId, userId),
+				or(
+					isNull(conversationReads.lastReadAt),
+					gt(messages.createdAt, conversationReads.lastReadAt),
+				),
+			];
 
-      if (excludeConversationId) {
-        conditions.push(ne(messages.conversationId, excludeConversationId));
-      }
+			if (excludeConversationId) {
+				conditions.push(ne(messages.conversationId, excludeConversationId));
+			}
 
-      return and(...conditions);
-    })
-    .groupBy(messages.conversationId);
+			return and(...conditions);
+		})
+		.groupBy(messages.conversationId);
 
-  return rows.map((row) => ({
-    conversationId: row.conversationId,
-    unreadCount: Number(row.unreadCount ?? 0),
-  }));
+	return rows.map((row) => ({
+		conversationId: row.conversationId,
+		unreadCount: Number(row.unreadCount ?? 0),
+	}));
 }
 
 export async function createMessage(
-  conversationId: string,
-  senderId: string,
-  body: string,
+	conversationId: string,
+	senderId: string,
+	body: string,
 ): Promise<MessageWithSender> {
-  if (!body.trim()) {
-    throw new Error("Message body is required");
-  }
+	if (!body.trim()) {
+		throw new Error("Message body is required");
+	}
 
-  await assertParticipant(conversationId, senderId);
+	await assertParticipant(conversationId, senderId);
 
-  const [inserted] = await db
-    .insert(messages)
-    .values({
-      conversationId,
-      senderId,
-      body,
-    })
-    .returning({
-      id: messages.id,
-      conversationId: messages.conversationId,
-      senderId: messages.senderId,
-      body: messages.body,
-      createdAt: messages.createdAt,
-      updatedAt: messages.updatedAt,
-    });
+	const [inserted] = await db
+		.insert(messages)
+		.values({
+			conversationId,
+			senderId,
+			body,
+		})
+		.returning({
+			id: messages.id,
+			conversationId: messages.conversationId,
+			senderId: messages.senderId,
+			body: messages.body,
+			createdAt: messages.createdAt,
+			updatedAt: messages.updatedAt,
+		});
 
-  if (!inserted) {
-    throw new Error("Failed to create message");
-  }
+	if (!inserted) {
+		throw new Error("Failed to create message");
+	}
 
-  await db
-    .update(conversations)
-    .set({ updatedAt: inserted.createdAt })
-    .where(eq(conversations.id, conversationId));
+	await db
+		.update(conversations)
+		.set({ updatedAt: inserted.createdAt })
+		.where(eq(conversations.id, conversationId));
 
-  await markConversationRead(conversationId, senderId, {
-    lastMessageId: inserted.id,
-    readAt: inserted.createdAt,
-  });
+	await markConversationRead(conversationId, senderId, {
+		lastMessageId: inserted.id,
+		readAt: inserted.createdAt,
+	});
 
-  const [sender] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      image: users.image,
-    })
-    .from(users)
-    .where(eq(users.id, senderId))
-    .limit(1);
+	const [sender] = await db
+		.select({
+			id: users.id,
+			email: users.email,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			image: users.image,
+		})
+		.from(users)
+		.where(eq(users.id, senderId))
+		.limit(1);
 
-  if (!sender) {
-    throw new Error("Sender not found");
-  }
+	if (!sender) {
+		throw new Error("Sender not found");
+	}
 
-  return {
-    ...inserted,
-    sender,
-  };
+	return {
+		...inserted,
+		sender,
+	};
 }
 
 function toISOString(value: Date | string | null | undefined) {
-  if (!value) return new Date().toISOString();
-  if (value instanceof Date) return value.toISOString();
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+	if (!value) return new Date().toISOString();
+	if (value instanceof Date) return value.toISOString();
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime())
+		? new Date().toISOString()
+		: parsed.toISOString();
 }
 
-export type SerializedConversation = Omit<ConversationRecord, "createdAt" | "updatedAt"> & {
-  createdAt: string;
-  updatedAt: string;
-  participants: (Omit<ConversationParticipant, "joinedAt"> & { joinedAt: string })[];
+export type SerializedConversation = Omit<
+	ConversationRecord,
+	"createdAt" | "updatedAt"
+> & {
+	createdAt: string;
+	updatedAt: string;
+	participants: (Omit<ConversationParticipant, "joinedAt"> & {
+		joinedAt: string;
+	})[];
 };
 
-export type SerializedMessage = Omit<MessageWithSender, "createdAt" | "updatedAt"> & {
-  createdAt: string;
-  updatedAt: string;
+export type SerializedMessage = Omit<
+	MessageWithSender,
+	"createdAt" | "updatedAt"
+> & {
+	createdAt: string;
+	updatedAt: string;
 };
 
 export function serializeConversation(
-  conversation: ConversationWithParticipants,
+	conversation: ConversationWithParticipants,
 ): SerializedConversation {
-  return {
-    ...conversation,
-    createdAt: toISOString(conversation.createdAt),
-    updatedAt: toISOString(conversation.updatedAt),
-    participants: conversation.participants.map((participant) => ({
-      ...participant,
-      joinedAt: toISOString(participant.joinedAt),
-    })),
-  };
+	return {
+		...conversation,
+		createdAt: toISOString(conversation.createdAt),
+		updatedAt: toISOString(conversation.updatedAt),
+		participants: conversation.participants.map((participant) => ({
+			...participant,
+			joinedAt: toISOString(participant.joinedAt),
+		})),
+	};
 }
 
-export function serializeMessage(message: MessageWithSender): SerializedMessage {
-  return {
-    ...message,
-    createdAt: toISOString(message.createdAt),
-    updatedAt: toISOString(message.updatedAt),
-  };
+export function serializeMessage(
+	message: MessageWithSender,
+): SerializedMessage {
+	return {
+		...message,
+		createdAt: toISOString(message.createdAt),
+		updatedAt: toISOString(message.updatedAt),
+	};
 }
 
 export async function ensureConversationParticipant(
-  conversationId: string,
-  userId: string,
+	conversationId: string,
+	userId: string,
 ) {
-  await assertParticipant(conversationId, userId);
+	await assertParticipant(conversationId, userId);
 }

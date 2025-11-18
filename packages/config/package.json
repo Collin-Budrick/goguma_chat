@@ -1,16 +1,20 @@
 {
-  "name": "@goguma/config",
-  "version": "0.1.0",
-  "private": true,
-  "type": "commonjs",
-  "files": ["eslint", "prettier", "tailwind", "tsconfig"],
-  "exports": {
-    "./eslint/root": "./eslint/root.cjs",
-    "./eslint/react": "./eslint/react.cjs",
-    "./eslint/react-native": "./eslint/react-native.cjs",
-    "./prettier": "./prettier/index.cjs",
-    "./tailwind/base": "./tailwind/base.cjs",
-    "./tsconfig/base": "./tsconfig/base.json"
-  }
+	"name": "@goguma/config",
+	"version": "0.1.0",
+	"private": true,
+	"type": "commonjs",
+	"files": [
+		"eslint",
+		"prettier",
+		"tailwind",
+		"tsconfig"
+	],
+	"exports": {
+		"./eslint/root": "./eslint/root.cjs",
+		"./eslint/react": "./eslint/react.cjs",
+		"./eslint/react-native": "./eslint/react-native.cjs",
+		"./prettier": "./prettier/index.cjs",
+		"./tailwind/base": "./tailwind/base.cjs",
+		"./tsconfig/base": "./tsconfig/base.json"
+	}
 }
-

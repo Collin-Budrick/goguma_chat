@@ -1,13 +1,9 @@
 {
-  "extends": "@goguma/config/tsconfig/base",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "jsx": "react-jsx",
-    "noEmit": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "index.ts"
-  ]
+	"extends": "@goguma/config/tsconfig/base",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"jsx": "react-jsx",
+		"noEmit": true
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx", "index.ts"]
 }

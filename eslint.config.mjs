@@ -6,35 +6,35 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
+	baseDirectory: __dirname,
 });
 
 export default [
-  {
-    ignores: [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/dist/**",
-      "**/build/**",
-      "**/.expo/**",
-      "**/android/**",
-      "**/ios/**",
-      "**/*.config.js",
-      "**/*.config.cjs",
-      "**/*.config.mjs",
-      "**/*.config.ts",
-    ],
-  },
-  ...compat.config({
-    root: true,
-    ignorePatterns: [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/android/**",
-      "**/ios/**",
-      "**/.expo/**",
-      "**/dist/**",
-      "**/build/**",
-    ],
-  }),
+	{
+		ignores: [
+			"**/node_modules/**",
+			"**/.next/**",
+			"**/dist/**",
+			"**/build/**",
+			"**/.expo/**",
+			"**/android/**",
+			"**/ios/**",
+			"**/*.config.js",
+			"**/*.config.cjs",
+			"**/*.config.mjs",
+			"**/*.config.ts",
+		],
+	},
+	...compat.config({
+		root: true,
+		ignorePatterns: [
+			"**/node_modules/**",
+			"**/.next/**",
+			"**/android/**",
+			"**/ios/**",
+			"**/.expo/**",
+			"**/dist/**",
+			"**/build/**",
+		],
+	}),
 ];

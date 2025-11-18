@@ -8,30 +8,30 @@ const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
+	baseDirectory: __dirname,
 });
 
 const baseConfig = require("@goguma/config/eslint/react");
 
 export default [
-  {
-    ignores: [
-      "**/.next/**",
-      "**/node_modules/**",
-      "**/*.config.js",
-      "**/*.config.cjs",
-      "**/*.config.mjs",
-      "**/*.config.ts",
-    ],
-  },
-  ...compat.config(baseConfig),
-  {
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      parserOptions: {
-        project: ["./tsconfig.json"],
-        tsconfigRootDir: __dirname,
-      },
-    },
-  },
+	{
+		ignores: [
+			"**/.next/**",
+			"**/node_modules/**",
+			"**/*.config.js",
+			"**/*.config.cjs",
+			"**/*.config.mjs",
+			"**/*.config.ts",
+		],
+	},
+	...compat.config(baseConfig),
+	{
+		files: ["**/*.{ts,tsx}"],
+		languageOptions: {
+			parserOptions: {
+				project: ["./tsconfig.json"],
+				tsconfigRootDir: __dirname,
+			},
+		},
+	},
 ];

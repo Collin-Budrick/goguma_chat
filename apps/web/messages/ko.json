@@ -1,694 +1,694 @@
 {
-  "Metadata": {
-    "title": "야옹이 챗",
-    "titleTemplate": "%s | 야옹이 챗",
-    "description": "한국어·일본어·영어가 고양이 감성으로 섞이는 아늑한 채팅 놀이터."
-  },
-  "Marketing": {
-    "heroEyebrow": "수염 달린 라운지",
-    "heroTitle": "야옹이 챗",
-    "heroDescription": "야옹이 챗은 한국·일본·세계 곳곳의 친구가 언어를 넘나들며 뒹구는 고양이 테마 수다방입니다. 부드러운 그라데이션, 포근한 발바닥 애니메이션, 즉시 번역이 모든 대화를 하나의 창가처럼 이어 줘요.",
-    "heroPrimaryCta": "앱 열기",
-    "heroSecondaryCta": "작동 방식 보기",
-    "stats": {
-      "activeTeams": {
-        "label": "야옹이 서클",
-        "subtext": "지금도 골골골"
-      },
-      "csat": {
-        "label": "사용 언어",
-        "subtext": "피드마다 KO · JA · EN"
-      },
-      "responseTime": {
-        "label": "연속 기록",
-        "subtext": "매일 이어지는 포근한 스트릭"
-      }
-    },
-    "whyEyebrow": "야옹이를 고르는 이유",
-    "whyTitle": "어떤 화면에도 어울리는 고양이 큐레이션 라운지.",
-    "whyDescription": "OLED 친화적인 어둠과 부드러운 빛, 발바닥 포인트가 사진과 스티커를 살리고 분위기를 포근하게 만들어요.",
-    "features": {
-      "fluid": {
-        "title": "퍼펙트 번역",
-        "description": "야옹이가 한국어·일본어·영어 메시지에 귀 기울여 나란히 번역해 누구나 흐름을 놓치지 않아요."
-      },
-      "signals": {
-        "title": "부드러운 발바닥 관리",
-        "description": "살짝 톡톡 치는 알림, 자동 음소거, 분위기 요약으로 방 온도를 고르게 지켜 줍니다."
-      },
-      "integrations": {
-        "title": "고양이 장난감 애드온",
-        "description": "플레이리스트, 무드 사운드, AR 고양이 귀를 앱 전환 없이 바로 떨어뜨려요."
-      }
-    },
-    "testimonialEyebrow": "즉시 전해지는 편안함",
-    "testimonialQuote": "“야옹이는 졸린 고양이가 우리 사이를 왔다 갔다 하는 느낌이라 모두가 금세 편안해져요.”",
-    "testimonialAttribution": "김하나 · 서울↔오사카 방장",
-    "callouts": {
-      "encrypted": {
-        "eyebrow": "수염 보안",
-        "title": "기본으로 사적인 공간",
-        "description": "종단 간 암호화와 지역 저장소로 비밀을 야옹이 발밑에 숨겨 둡니다."
-      },
-      "insights": {
-        "eyebrow": "무드 추적",
-        "title": "분위기를 한눈에",
-        "description": "열 지도와 스트릭, 번역 지표가 언제 다시 놀아줄지 알려줘요."
-      }
-    },
-    "chatLiveRoomLabel": "캣타워",
-    "chatResolutionLabel": "연속 답장 · 52번 낮잠",
-    "chatMessages": {
-      "syncPause": "굿모닝 프라이드! 오늘 루프탑 햇살 자리 어때? 밀크티 내가 살게.",
-      "ledgerUpdate": "좋아!! 진짜 고양이 먼저 밥 주고 합류할게. 링크 DM 줘.",
-      "jobRestarted": "방금 보냈고 집중용 골골 플레이리스트도 같이!",
-      "dashboardUpdated": "21시 KST, 발톱 꽉! 거기서 만나."
-    },
-    "ctaEyebrow": "놀 준비 완료",
-    "ctaTitle": "야옹이가 지켜 주는 다국어 캣챗.",
-    "ctaDescription": "방을 열고 고양이 테마를 고른 뒤 시차를 뛰어넘어 친구를 불러 보세요. 번역, 리액션, 포근한 공기가 기본이에요.",
-    "ctaPrimary": "무료로 합류하기",
-    "ctaSecondary": "방 둘러보기"
-  },
-  "Shell": {
-    "footer": {
-      "copy": "© {year} 야옹이 챗. 밤샘과 낮잠 대화를 위해 만듭니다.",
-      "links": {
-        "privacy": "개인정보",
-        "terms": "이용 약관",
-        "status": "상태",
-        "support": "도움말"
-      }
-    },
-    "dock": {
-      "nav": {
-        "marketing": {
-          "home": "홈",
-          "account": "가입"
-        },
-        "shared": {
-          "display": "디스플레이"
-        },
-        "app": {
-          "overview": "라운지",
-          "chats": "채팅",
-          "contacts": "연락처",
-          "settings": "설정",
-          "profile": "나"
-        },
-        "admin": {
-          "console": "스튜디오",
-          "broadcasts": "공지",
-          "roster": "호스트"
-        }
-      },
-      "panel": {
-        "title": "디스플레이",
-        "close": "디스플레이 설정 닫기"
-      },
-      "preferences": {
-        "magnify": {
-          "label": "도크 확대",
-          "description": "호버하면 아이콘을 크게 보여 줍니다."
-        },
-        "labels": {
-          "label": "레이블 툴팁",
-          "description": "아이콘 위에 이름을 띄워 주세요."
-        },
-        "lightMode": {
-          "label": "라이트 모드",
-          "description": "밝은 배경과 따뜻한 그레이."
-        },
-        "language": {
-          "label": "한국어 UI",
-          "description": "모든 문구를 한국어로 바꿉니다."
-        }
-      },
-      "aria": {
-        "toolbar": "애플리케이션 도크",
-        "localeOverlay": "언어를 전환하는 중입니다"
-      }
-    }
-  },
-  "Auth": {
-    "form": {
-      "headings": {
-        "login": "로그인",
-        "signup": "계정 만들기"
-      },
-      "fields": {
-        "email": {
-          "label": "이메일 주소",
-          "placeholder": "you@email.com"
-        },
-        "password": {
-          "label": "비밀번호",
-          "placeholder": "••••••••"
-        },
-        "firstName": {
-          "placeholder": "Jane",
-          "required": "이름 *",
-          "optional": "이름 (선택)"
-        },
-        "lastName": {
-          "placeholder": "Doe",
-          "required": "성 *",
-          "optional": "성 (선택)"
-        }
-      },
-      "errors": {
-        "emailRequired": "이메일을 입력해 주세요.",
-        "passwordRequired": "비밀번호를 입력해 주세요.",
-        "signInFailed": "해당 정보로 로그인할 수 없어요. 다시 시도해 주세요."
-      },
-      "buttons": {
-        "loading": "로그인 중…"
-      }
-    }
-  },
-  "Login": {
-    "metadata": {
-      "title": "로그인 | 야옹이 챗",
-      "description": "고양이 라운지로 다시 돌아오세요."
-    },
-    "backLink": "← 홈으로 돌아가기",
-    "title": "로그인",
-    "subtitle": "떠났던 대화를 이어가요.",
-    "forgot": "비밀번호를 잊으셨나요? <link>지원팀에 문의하기</link>.",
-    "signupPrompt": "처음 오셨나요? <link>계정 만들기</link>."
-  },
-  "Signup": {
-    "metadata": {
-      "title": "계정 만들기 | 야옹이 챗",
-      "description": "포근한 고양이 테마 수다방을 열어 보세요."
-    },
-    "backLink": "← 홈으로 돌아가기",
-    "title": "야옹이 계정 만들기",
-    "subtitle": "닉네임을 고르고 친구를 초대하면 바로 이야기할 수 있어요.",
-    "terms": "계속하면 <terms>커뮤니티 가이드</terms>와 <privacy>개인정보 처리방침</privacy>에 동의하게 됩니다.",
-    "loginPrompt": "이미 멤버신가요? <link>로그인하기</link>."
-  },
-  "About": {
-    "metadata": {
-      "title": "야옹이 챗 소개",
-      "description": "고양이 감성으로 다국어 대화를 묶는 공간을 만듭니다."
-    },
-    "title": "야옹이 챗 소개",
-    "description": "멀리 있는 사람도 고양이처럼 편안하게 느끼게 만드는 일을 사랑해요.",
-    "paragraphs": {
-      "craft": "야옹이는 서울·도쿄·LA 친구들이 끄적이던 마스코트에서 출발했어요. 그 고양이를 지키고 싶어 벨벳 같은 다크 톤을 입혀 어떤 화면에서도 사진과 수염 스티커가 살아나게 했죠.",
-      "orchestration": "번역 레이어, 공유 플레이리스트, 추억 리일을 엮어 한국어·일본어·영어를 오가도 고양이 리듬이 깨지지 않아요.",
-      "mission": "우리는 작지만 따뜻함을 최우선으로 두는 분산 팀입니다. 목표는 사람들을 가깝게 잇고, 커뮤니티를 다정하게 지키고, 야옹이의 장난기가 새벽 대화를 밝혀 주게 하는 것."
-    }
-  },
-  "Capture": {
-    "metadata": {
-      "title": "백그라운드 캡처 | 야옹이 챗",
-      "description": "모노크롬 화면 녹화를 위한 미니멀한 서리 배경."
-    },
-    "srText": "녹화를 위한 서리 낀 배경 캡처 표면."
-  },
-  "Contact": {
-    "metadata": {
-      "title": "문의하기 | 야옹이 챗",
-      "description": "언제든 인사해 주세요. 야옹이 커뮤니티를 위해 불을 켜 두고 있어요."
-    },
-    "title": "문의하기",
-    "description": "피드백과 아이디어를 위해 열린 편지를 유지하고 있어요.",
-    "intro": "편한 채널을 고르세요. 어느 시간대든 곧 답장이 갈 거예요.",
-    "channels": {
-      "email": {
-        "label": "이메일",
-        "value": "support@yaongi.chat",
-        "description": "몇 시간 안에 답장해 드립니다."
-      },
-      "signal": {
-        "label": "시그널 핫라인",
-        "value": "+1 (415) 555-0195",
-        "description": "긴급 신고나 안전 관련 이슈는 여기에 알려 주세요."
-      },
-      "community": {
-        "label": "커뮤니티",
-        "value": "community.yaongi.chat",
-        "description": "이야기를 나누고 기능을 제안하며 다른 호스트를 만나보세요."
-      }
-    }
-  },
-  "Support": {
-    "metadata": {
-      "title": "지원 | 야옹이 챗",
-      "description": "필요한 만큼 야옹이 팀의 도움을 받아보세요."
-    },
-    "title": "지원 옵션",
-    "description": "가벼운 질문부터 커뮤니티 운영까지 함께 챙겨 드립니다.",
-    "bundles": {
-      "starter": {
-        "title": "스타터",
-        "sla": "8시간 이내 이메일 응답.",
-        "price": "포함"
-      },
-      "growth": {
-        "title": "크리에이터",
-        "sla": "커뮤니티 가이드와 24/7 채팅.",
-        "price": "$29 / 월"
-      },
-      "enterprise": {
-        "title": "커뮤니티",
-        "sla": "공유 채널, 모더레이션 도구, 온콜 에스컬레이션.",
-        "price": "맞춤형"
-      }
-    }
-  },
-  "Terms": {
-    "metadata": {
-      "title": "서비스 약관 | 야옹이 챗",
-      "description": "야옹이를 안전하고 따뜻하게 쓰기 위한 기본 약속을 확인하세요."
-    },
-    "title": "서비스 약관",
-    "description": "가용성, 데이터 소유권, 서로를 존중하는 행동에 대한 명확한 약속.",
-    "body": {
-      "commitment": "야옹이 챗에 올린 사진과 메시지는 언제나 여러분 소유입니다. 99.95% 가용성을 약속하고, 큰 변경 사항은 미리 안내하며, 커뮤니티 가이드를 어기는 콘텐츠는 정중히 내려요.",
-      "customAgreements": "큰 커뮤니티를 위한 별도 약속이 필요하면 아래로 문의해 주세요:"
-    }
-  },
-  "Privacy": {
-    "metadata": {
-      "title": "개인정보 처리방침 | 야옹이 챗",
-      "description": "야옹이 챗이 데이터를 보호하고 처리하는 방식을 알려 드립니다."
-    },
-    "title": "개인정보 처리방침",
-    "description": "우리에게 맡겨진 대화는 최소 수집과 암호화로 지켜집니다.",
-    "body": {
-      "storage": "야옹이 챗은 지역별 클러스터에 메시지를 저장하고 엔벨로프 암호화와 엄격한 접근 제어를 적용합니다. 언제든 내보내기나 삭제를 요청할 수 있으며 72시간 내 처리합니다.",
-      "contact": "문의:"
-    }
-  },
-  "Status": {
-    "metadata": {
-      "title": "상태 | 야옹이 챗",
-      "description": "야옹이 챗 가동 상태와 점검 일정을 실시간으로 확인하세요."
-    },
-    "title": "서비스 상태",
-    "description": "스냅샷은 60초마다 새로고침됩니다. 푸시나 이메일 알림을 구독할 수 있어요.",
-    "services": {
-      "chatApi": {
-        "name": "메시지",
-        "status": "정상",
-        "note": "모든 클러스터가 안정적입니다."
-      },
-      "presence": {
-        "name": "실시간 프레즌스",
-        "status": "지연",
-        "note": "EU West 지역 지연이 증가했습니다."
-      },
-      "automation": {
-        "name": "라이브 번역",
-        "status": "정상",
-        "note": "보고된 이슈 없음."
-      },
-      "exports": {
-        "name": "미디어 업로드",
-        "status": "모니터링",
-        "note": "급증 이후 대기열을 비우는 중."
-      }
-    }
-  },
-  "Integrations": {
-    "metadata": {
-      "title": "통합 | 야옹이 챗",
-      "description": "음악, 게임, 크리에이티브 도구를 연결해 대화를 더 즐겁게 만드세요."
-    },
-    "title": "통합",
-    "description": "야옹이 호스트가 즐겨 쓰는 고양이 인증 애드온 모음.",
-    "items": {
-      "bevy": {
-        "description": "야옹이 안에서 바로 게임이나 왓치파티 스트리밍을 띄우고 저지연 미리보기를 확인하세요."
-      },
-      "motion": {
-        "description": "방이 새로운 스트릭이나 “야옹”을 찍을 때 반응하는 부드러운 앰비언트 애니메이션을 켤 수 있어요."
-      },
-      "faker": {
-        "description": "레이아웃을 시험하거나 온보딩을 돕기 위해 가짜 프로필을 손쉽게 생성하세요."
-      },
-      "iconify": {
-        "description": "수천 개 아이콘으로 채널과 알림에 개성을 더하세요."
-      },
-      "unpic": {
-        "description": "OLED 화면에서도 또렷한 손실 없는 이미지와 스티커를 공유하세요."
-      }
-    }
-  },
-  "AdminHome": {
-    "metadata": {
-      "title": "호스트 콘솔 | 야옹이 챗"
-    },
-    "title": "호스트 콘솔",
-    "description": "패널을 골라 방 상태를 확인하고 공지를 보내거나 새 모더레이터를 초대하세요."
-  },
-  "AdminPush": {
-    "metadata": {
-      "title": "호스트 · 공지 | 야옹이 챗"
-    },
-    "title": "공지 보내기",
-    "description": "모노크롬 토스트나 장문의 업데이트를 예약해 커뮤니티에 전하세요.",
-    "targetHeading": "대상",
-    "composeHeading": "작성",
-    "placeholder": "멤버에게 전할 소식을 적어 주세요…",
-    "audiences": {
-      "all": "내가 운영하는 모든 방",
-      "enterprise": "인증 커뮤니티만",
-      "sandbox": "테스트 공간",
-      "custom": "맞춤 목록 (CSV 업로드)"
-    },
-    "actions": {
-      "sendNow": "지금 보내기",
-      "schedule": "예약"
-    }
-  },
-  "AdminUsers": {
-    "metadata": {
-      "title": "호스트 · 인원 | 야옹이 챗"
-    },
-    "title": "모더레이터 명단",
-    "description": "방을 함께 운영할 사람과 권한을 관리하세요.",
-    "table": {
-      "name": "이름",
-      "role": "역할",
-      "status": "상태"
-    },
-    "roles": {
-      "admin": "관리자",
-      "supervisor": "모더레이터",
-      "agent": "멤버"
-    },
-    "statuses": {
-      "active": "활성",
-      "invited": "초대됨",
-      "suspended": "중지됨"
-    }
-  },
-  "WorkspaceContacts": {
-    "metadata": {
-      "title": "연락처 | 야옹이 챗"
-    },
-    "title": "연락처 허브",
-    "headline": "친구를 모든 대화 옆에 둬요",
-    "description": "프로필은 메시지 옆에 있어 이야기가 채팅을 떠나지 않아요.",
-    "lastSynced": "마지막 동기화 {timestamp}",
-    "toast": {
-      "dismiss": "닫기"
-    },
-    "errors": {
-      "load": "연락처를 새로고침할 수 없었어요. 다시 시도해 주세요.",
-      "request": "요청을 업데이트할 수 없었어요. 다시 시도해 주세요.",
-      "search": "검색에 실패했어요. 잠시 후 다시 시도해 주세요.",
-      "removeFriend": "친구를 삭제하지 못했어요. 다시 시도해 주세요."
-    },
-    "lists": {
-      "friends": {
-        "title": "친구",
-        "empty": "아직 친구가 없어요. 초대장을 보내 보세요.",
-        "count": "친구 {count}명",
-        "syncing": "동기화 중…",
-        "since": "{timestamp}부터"
-      },
-      "incoming": {
-        "title": "받은 요청",
-        "empty": "새로운 요청이 없어요.",
-        "badge": "받음"
-      },
-      "outgoing": {
-        "title": "보낸 요청",
-        "empty": "보낸 요청이 아직 없어요.",
-        "badge": "보냄"
-      },
-      "requests": {
-        "timestamp": "{timestamp}에 요청됨"
-      }
-    },
-    "actions": {
-      "accept": "수락",
-      "decline": "거절",
-      "cancel": "취소",
-      "remove": "삭제",
-      "removing": "삭제 중…"
-    },
-    "search": {
-      "title": "디렉터리 검색",
-      "hint": "새 친구를 찾으려면 최소 {count}자를 입력해 주세요.",
-      "label": "검색",
-      "placeholder": "이름 또는 이메일로 검색",
-      "tooShort": "검색을 시작하려면 조금만 더 입력해 주세요.",
-      "loading": "검색 중…",
-      "empty": "일치하는 사람이 없어요. 다른 철자를 시도해 보세요.",
-      "action": "친구 추가",
-      "pending": "전송 중…",
-      "status": {
-        "friend": "친구",
-        "incoming": "받은 요청",
-        "outgoing": "보낸 요청"
-      }
-    }
-  },
-  "Dashboard": {
-    "metrics": {
-      "title": "커뮤니티 맥박",
-      "description": "15초마다 롤링 업데이트가 새로고침됩니다.",
-      "items": {
-        "openConversations": {
-          "label": "활성 방",
-          "value": "42",
-          "delta": "어제 대비 +8"
-        },
-        "firstResponse": {
-          "label": "평균 답장 속도",
-          "value": "47초",
-          "delta": "목표 대비 +6초"
-        },
-        "resolvedToday": {
-          "label": "오늘 공유한 사진",
-          "value": "318",
-          "delta": "어제 대비 +12%"
-        }
-      }
-    },
-    "spotlight": {
-      "title": "스포트라이트 · 번역 부스트",
-      "body": "오늘 오전 라이브 번역이 63%의 멤버가 모국어가 아닌 방에 참여하도록 도와 280분을 절약했어요."
-    },
-    "queues": {
-      "title": "방 목록",
-      "description": "다음으로 들어가고 싶은 방을 탭하세요.",
-      "items": {
-        "priority": {
-          "name": "야간 공부방",
-          "count": "8",
-          "status": "🟢 포근"
-        },
-        "billing": {
-          "name": "애니 감상회",
-          "count": "14",
-          "status": "🟡 착석 중"
-        },
-        "feedback": {
-          "name": "사진 드롭",
-          "count": "2",
-          "status": "🟢 여유"
-        },
-        "logistics": {
-          "name": "언어 교환",
-          "count": "18",
-          "status": "🟠 북적임"
-        }
-      }
-    }
-  },
-  "Chat": {
-    "roster": {
-      "title": "대화 목록",
-      "new": "새 채팅",
-      "searchPlaceholder": "친구 검색…",
-      "createHint": "친구를 선택해 1:1 채팅을 시작하세요.",
-      "empty": "연락처에서 친구를 추가하면 바로 채팅을 시작할 수 있어요.",
-      "emptyPreview": "아직 메시지가 없어요",
-      "openChat": "채팅 열기",
-      "lastActive": "최근 활동 {time}"
-    },
-    "thread": {
-      "header": "1:1 채팅",
-      "back": "채팅 목록으로 돌아가기",
-      "directWith": "{name}님과의 대화",
-      "me": "나",
-      "loading": "대화를 불러오는 중…",
-      "empty": "첫 메시지를 보내 대화를 시작해 보세요.",
-      "placeholder": {
-        "title": "대화를 선택하세요",
-        "body": "목록에서 친구를 선택하면 메시지가 열려요."
-      },
-      "transport": {
-        "label": "전송 방식",
-        "connect": "연결하기",
-        "mode": {
-          "push": "푸시",
-          "progressive": "Progressive",
-          "udp": "UDP"
-        }
-      },
-      "settings": {
-        "open": "채팅 설정 열기",
-        "close": "채팅 설정 닫기",
-        "panelLabel": "채팅 설정",
-        "unified": {
-          "title": "공유 채팅 설정",
-          "description": "이 대화의 모든 참가자에게 적용돼요.",
-          "transport": {
-            "options": {
-              "push": {
-                "label": "푸시 전송",
-                "description": "웹소켓 없이 채팅을 최신 상태로 유지하는 서버 푸시 스트림입니다."
-              },
-              "progressive": {
-                "label": "Progressive 전송",
-                "description": "혼잡 제어가 포함된 WebRTC/WebTransport 경로예요."
-              },
-              "udp": {
-                "label": "UDP 릴레이",
-                "description": "낮은 지연의 실험적 UDP 경로로, 패킷이 손실될 수 있어요."
-              }
-            }
-          }
-        },
-        "local": {
-          "title": "내 채팅 설정",
-          "description": "내 화면에만 적용돼요.",
-          "options": {
-            "magnify": {
-              "label": "넉넉한 말풍선 크기",
-              "description": "메시지의 여백과 글꼴 크기를 키워요."
-            },
-            "labels": {
-              "label": "메시지 라벨 표시",
-              "description": "각 메시지 위에 보낸 사람과 시간을 보여줘요."
-            },
-            "theme": {
-              "label": "밝은 말풍선 사용",
-              "description": "내가 보내는 메시지를 더 밝은 스타일로 바꿔요."
-            },
-            "syncHistory": {
-              "label": "채팅 기록 동기화",
-              "syncing": "채팅을 동기화하는 중…",
-              "description": "상대방의 최신 기록을 불러와 지운 메시지를 되돌려요.",
-              "error": "채팅을 동기화하지 못했어요. 다시 시도해 주세요."
-            },
-            "clearHistory": {
-              "label": "채팅 기록 지우기",
-              "description": "이 대화의 기록을 내 화면에서만 제거해요.",
-              "confirm": "이 대화의 기록을 지울까요? 이 작업은 내 화면에만 적용돼요."
-            }
-          }
-        }
-      },
-      "composer": {
-        "placeholder": "메시지를 작성해 보세요…",
-        "send": "보내기",
-        "sending": "보내는 중…"
-      },
-    "presence": {
-      "readToast": "{name}님이 최근 메시지를 읽었어요.",
-      "deliveryToast": "{name}님에게 전달됐어요.",
-      "readFallback": "친구",
-      "deliveryFallback": "친구"
-    },
-    "connection": {
-      "degraded": "상대와 연결이 불안정해요. 다시 연결을 시도하는 중입니다…",
-      "recovering": "채널을 다시 준비하는 중이에요…",
-      "reconnecting": "연결이 끊어졌어요. 다시 연결을 시도하는 중입니다…",
-      "restored": "연결이 복구됐어요.",
-      "failed": "피어 연결이 끊어졌어요. 계속 다시 시도할게요.",
-      "status": {
-        "connected": "상대와 연결됨",
-        "connecting": "연결 중…",
-        "reconnecting": "재연결 중…",
-        "error": "연결을 사용할 수 없어요"
-      }
-    }
-  },
-    "alerts": {
-      "history": "대화를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
-      "send": "메시지를 보내지 못했어요. 다시 시도해 주세요.",
-      "settings": "채팅 설정을 업데이트하지 못했어요. 잠시 후 다시 시도해 주세요."
-    }
-  },
-  "Settings": {
-    "appearance": {
-      "title": "모양새",
-      "description": "OLED 라운지의 분위기를 원하는 대로 꾸며 보세요.",
-      "modes": {
-        "dark": "다크 모드",
-        "light": "라이트 모드"
-      }
-    },
-    "messaging": {
-      "title": "메시징 전송 방식",
-      "description": "이제 각 대화의 채팅 설정에서 전송 방식을 관리해요.",
-      "relocated": {
-        "body": "채팅을 열고 톱니바퀴 아이콘에서 UDP 또는 Progressive를 고르면 모든 참가자에게 적용돼요.",
-        "cta": "채팅 열기"
-      }
-    },
-    "motion": {
-      "title": "모션",
-      "description": "어지럽거나 녹화 중일 때 모션을 줄일 수 있어요.",
-      "on": "모션 켜짐",
-      "off": "모션 꺼짐"
-    },
-    "preferences": {
-      "title": "환경설정",
-      "description": "채팅을 부드럽게 이어 주는 도우미를 고르세요.",
-      "items": {
-        "notifications": {
-          "label": "푸시 알림",
-          "description": "멘션, 답장, 이벤트 리마인더를 알려 드립니다."
-        },
-        "aiDrafts": {
-          "label": "AI 초안",
-          "description": "지난 대화를 참고해 재치 있는 답장을 제안합니다."
-        },
-        "presence": {
-          "label": "스마트 프레즌스",
-          "description": "집중하거나 자리를 비우면 상태를 자동으로 바꿔요."
-        }
-      },
-      "state": {
-        "on": "켜짐",
-        "off": "꺼짐"
-      }
-    },
-    "session": {
-      "title": "세션",
-      "description": "라운지를 떠나고 이 기기의 쿠키를 정리해요.",
-      "logout": "로그아웃",
-      "loggingOut": "로그아웃 중…"
-    }
-  },
-  "Profile": {
-    "metadata": {
-      "title": "프로필 | 야옹이 챗",
-      "description": "야옹이 챗 안에서 나를 표현하는 방식을 다듬어 보세요."
-    },
-    "title": "내 프로필",
-    "description": "친구와 팔로워가 나를 어떻게 보는지 직접 정할 수 있어요.",
-    "fields": {
-      "displayName": "표시 이름",
-      "role": "계정 유형",
-      "email": "이메일",
-      "timezone": "시간대",
-      "created": "계정 생성일",
-      "updated": "마지막 동기화"
-    },
-    "values": {
-      "role": "멤버",
-      "timezone": "UTC"
-    }
-  }
+	"Metadata": {
+		"title": "야옹이 챗",
+		"titleTemplate": "%s | 야옹이 챗",
+		"description": "한국어·일본어·영어가 고양이 감성으로 섞이는 아늑한 채팅 놀이터."
+	},
+	"Marketing": {
+		"heroEyebrow": "수염 달린 라운지",
+		"heroTitle": "야옹이 챗",
+		"heroDescription": "야옹이 챗은 한국·일본·세계 곳곳의 친구가 언어를 넘나들며 뒹구는 고양이 테마 수다방입니다. 부드러운 그라데이션, 포근한 발바닥 애니메이션, 즉시 번역이 모든 대화를 하나의 창가처럼 이어 줘요.",
+		"heroPrimaryCta": "앱 열기",
+		"heroSecondaryCta": "작동 방식 보기",
+		"stats": {
+			"activeTeams": {
+				"label": "야옹이 서클",
+				"subtext": "지금도 골골골"
+			},
+			"csat": {
+				"label": "사용 언어",
+				"subtext": "피드마다 KO · JA · EN"
+			},
+			"responseTime": {
+				"label": "연속 기록",
+				"subtext": "매일 이어지는 포근한 스트릭"
+			}
+		},
+		"whyEyebrow": "야옹이를 고르는 이유",
+		"whyTitle": "어떤 화면에도 어울리는 고양이 큐레이션 라운지.",
+		"whyDescription": "OLED 친화적인 어둠과 부드러운 빛, 발바닥 포인트가 사진과 스티커를 살리고 분위기를 포근하게 만들어요.",
+		"features": {
+			"fluid": {
+				"title": "퍼펙트 번역",
+				"description": "야옹이가 한국어·일본어·영어 메시지에 귀 기울여 나란히 번역해 누구나 흐름을 놓치지 않아요."
+			},
+			"signals": {
+				"title": "부드러운 발바닥 관리",
+				"description": "살짝 톡톡 치는 알림, 자동 음소거, 분위기 요약으로 방 온도를 고르게 지켜 줍니다."
+			},
+			"integrations": {
+				"title": "고양이 장난감 애드온",
+				"description": "플레이리스트, 무드 사운드, AR 고양이 귀를 앱 전환 없이 바로 떨어뜨려요."
+			}
+		},
+		"testimonialEyebrow": "즉시 전해지는 편안함",
+		"testimonialQuote": "“야옹이는 졸린 고양이가 우리 사이를 왔다 갔다 하는 느낌이라 모두가 금세 편안해져요.”",
+		"testimonialAttribution": "김하나 · 서울↔오사카 방장",
+		"callouts": {
+			"encrypted": {
+				"eyebrow": "수염 보안",
+				"title": "기본으로 사적인 공간",
+				"description": "종단 간 암호화와 지역 저장소로 비밀을 야옹이 발밑에 숨겨 둡니다."
+			},
+			"insights": {
+				"eyebrow": "무드 추적",
+				"title": "분위기를 한눈에",
+				"description": "열 지도와 스트릭, 번역 지표가 언제 다시 놀아줄지 알려줘요."
+			}
+		},
+		"chatLiveRoomLabel": "캣타워",
+		"chatResolutionLabel": "연속 답장 · 52번 낮잠",
+		"chatMessages": {
+			"syncPause": "굿모닝 프라이드! 오늘 루프탑 햇살 자리 어때? 밀크티 내가 살게.",
+			"ledgerUpdate": "좋아!! 진짜 고양이 먼저 밥 주고 합류할게. 링크 DM 줘.",
+			"jobRestarted": "방금 보냈고 집중용 골골 플레이리스트도 같이!",
+			"dashboardUpdated": "21시 KST, 발톱 꽉! 거기서 만나."
+		},
+		"ctaEyebrow": "놀 준비 완료",
+		"ctaTitle": "야옹이가 지켜 주는 다국어 캣챗.",
+		"ctaDescription": "방을 열고 고양이 테마를 고른 뒤 시차를 뛰어넘어 친구를 불러 보세요. 번역, 리액션, 포근한 공기가 기본이에요.",
+		"ctaPrimary": "무료로 합류하기",
+		"ctaSecondary": "방 둘러보기"
+	},
+	"Shell": {
+		"footer": {
+			"copy": "© {year} 야옹이 챗. 밤샘과 낮잠 대화를 위해 만듭니다.",
+			"links": {
+				"privacy": "개인정보",
+				"terms": "이용 약관",
+				"status": "상태",
+				"support": "도움말"
+			}
+		},
+		"dock": {
+			"nav": {
+				"marketing": {
+					"home": "홈",
+					"account": "가입"
+				},
+				"shared": {
+					"display": "디스플레이"
+				},
+				"app": {
+					"overview": "라운지",
+					"chats": "채팅",
+					"contacts": "연락처",
+					"settings": "설정",
+					"profile": "나"
+				},
+				"admin": {
+					"console": "스튜디오",
+					"broadcasts": "공지",
+					"roster": "호스트"
+				}
+			},
+			"panel": {
+				"title": "디스플레이",
+				"close": "디스플레이 설정 닫기"
+			},
+			"preferences": {
+				"magnify": {
+					"label": "도크 확대",
+					"description": "호버하면 아이콘을 크게 보여 줍니다."
+				},
+				"labels": {
+					"label": "레이블 툴팁",
+					"description": "아이콘 위에 이름을 띄워 주세요."
+				},
+				"lightMode": {
+					"label": "라이트 모드",
+					"description": "밝은 배경과 따뜻한 그레이."
+				},
+				"language": {
+					"label": "한국어 UI",
+					"description": "모든 문구를 한국어로 바꿉니다."
+				}
+			},
+			"aria": {
+				"toolbar": "애플리케이션 도크",
+				"localeOverlay": "언어를 전환하는 중입니다"
+			}
+		}
+	},
+	"Auth": {
+		"form": {
+			"headings": {
+				"login": "로그인",
+				"signup": "계정 만들기"
+			},
+			"fields": {
+				"email": {
+					"label": "이메일 주소",
+					"placeholder": "you@email.com"
+				},
+				"password": {
+					"label": "비밀번호",
+					"placeholder": "••••••••"
+				},
+				"firstName": {
+					"placeholder": "Jane",
+					"required": "이름 *",
+					"optional": "이름 (선택)"
+				},
+				"lastName": {
+					"placeholder": "Doe",
+					"required": "성 *",
+					"optional": "성 (선택)"
+				}
+			},
+			"errors": {
+				"emailRequired": "이메일을 입력해 주세요.",
+				"passwordRequired": "비밀번호를 입력해 주세요.",
+				"signInFailed": "해당 정보로 로그인할 수 없어요. 다시 시도해 주세요."
+			},
+			"buttons": {
+				"loading": "로그인 중…"
+			}
+		}
+	},
+	"Login": {
+		"metadata": {
+			"title": "로그인 | 야옹이 챗",
+			"description": "고양이 라운지로 다시 돌아오세요."
+		},
+		"backLink": "← 홈으로 돌아가기",
+		"title": "로그인",
+		"subtitle": "떠났던 대화를 이어가요.",
+		"forgot": "비밀번호를 잊으셨나요? <link>지원팀에 문의하기</link>.",
+		"signupPrompt": "처음 오셨나요? <link>계정 만들기</link>."
+	},
+	"Signup": {
+		"metadata": {
+			"title": "계정 만들기 | 야옹이 챗",
+			"description": "포근한 고양이 테마 수다방을 열어 보세요."
+		},
+		"backLink": "← 홈으로 돌아가기",
+		"title": "야옹이 계정 만들기",
+		"subtitle": "닉네임을 고르고 친구를 초대하면 바로 이야기할 수 있어요.",
+		"terms": "계속하면 <terms>커뮤니티 가이드</terms>와 <privacy>개인정보 처리방침</privacy>에 동의하게 됩니다.",
+		"loginPrompt": "이미 멤버신가요? <link>로그인하기</link>."
+	},
+	"About": {
+		"metadata": {
+			"title": "야옹이 챗 소개",
+			"description": "고양이 감성으로 다국어 대화를 묶는 공간을 만듭니다."
+		},
+		"title": "야옹이 챗 소개",
+		"description": "멀리 있는 사람도 고양이처럼 편안하게 느끼게 만드는 일을 사랑해요.",
+		"paragraphs": {
+			"craft": "야옹이는 서울·도쿄·LA 친구들이 끄적이던 마스코트에서 출발했어요. 그 고양이를 지키고 싶어 벨벳 같은 다크 톤을 입혀 어떤 화면에서도 사진과 수염 스티커가 살아나게 했죠.",
+			"orchestration": "번역 레이어, 공유 플레이리스트, 추억 리일을 엮어 한국어·일본어·영어를 오가도 고양이 리듬이 깨지지 않아요.",
+			"mission": "우리는 작지만 따뜻함을 최우선으로 두는 분산 팀입니다. 목표는 사람들을 가깝게 잇고, 커뮤니티를 다정하게 지키고, 야옹이의 장난기가 새벽 대화를 밝혀 주게 하는 것."
+		}
+	},
+	"Capture": {
+		"metadata": {
+			"title": "백그라운드 캡처 | 야옹이 챗",
+			"description": "모노크롬 화면 녹화를 위한 미니멀한 서리 배경."
+		},
+		"srText": "녹화를 위한 서리 낀 배경 캡처 표면."
+	},
+	"Contact": {
+		"metadata": {
+			"title": "문의하기 | 야옹이 챗",
+			"description": "언제든 인사해 주세요. 야옹이 커뮤니티를 위해 불을 켜 두고 있어요."
+		},
+		"title": "문의하기",
+		"description": "피드백과 아이디어를 위해 열린 편지를 유지하고 있어요.",
+		"intro": "편한 채널을 고르세요. 어느 시간대든 곧 답장이 갈 거예요.",
+		"channels": {
+			"email": {
+				"label": "이메일",
+				"value": "support@yaongi.chat",
+				"description": "몇 시간 안에 답장해 드립니다."
+			},
+			"signal": {
+				"label": "시그널 핫라인",
+				"value": "+1 (415) 555-0195",
+				"description": "긴급 신고나 안전 관련 이슈는 여기에 알려 주세요."
+			},
+			"community": {
+				"label": "커뮤니티",
+				"value": "community.yaongi.chat",
+				"description": "이야기를 나누고 기능을 제안하며 다른 호스트를 만나보세요."
+			}
+		}
+	},
+	"Support": {
+		"metadata": {
+			"title": "지원 | 야옹이 챗",
+			"description": "필요한 만큼 야옹이 팀의 도움을 받아보세요."
+		},
+		"title": "지원 옵션",
+		"description": "가벼운 질문부터 커뮤니티 운영까지 함께 챙겨 드립니다.",
+		"bundles": {
+			"starter": {
+				"title": "스타터",
+				"sla": "8시간 이내 이메일 응답.",
+				"price": "포함"
+			},
+			"growth": {
+				"title": "크리에이터",
+				"sla": "커뮤니티 가이드와 24/7 채팅.",
+				"price": "$29 / 월"
+			},
+			"enterprise": {
+				"title": "커뮤니티",
+				"sla": "공유 채널, 모더레이션 도구, 온콜 에스컬레이션.",
+				"price": "맞춤형"
+			}
+		}
+	},
+	"Terms": {
+		"metadata": {
+			"title": "서비스 약관 | 야옹이 챗",
+			"description": "야옹이를 안전하고 따뜻하게 쓰기 위한 기본 약속을 확인하세요."
+		},
+		"title": "서비스 약관",
+		"description": "가용성, 데이터 소유권, 서로를 존중하는 행동에 대한 명확한 약속.",
+		"body": {
+			"commitment": "야옹이 챗에 올린 사진과 메시지는 언제나 여러분 소유입니다. 99.95% 가용성을 약속하고, 큰 변경 사항은 미리 안내하며, 커뮤니티 가이드를 어기는 콘텐츠는 정중히 내려요.",
+			"customAgreements": "큰 커뮤니티를 위한 별도 약속이 필요하면 아래로 문의해 주세요:"
+		}
+	},
+	"Privacy": {
+		"metadata": {
+			"title": "개인정보 처리방침 | 야옹이 챗",
+			"description": "야옹이 챗이 데이터를 보호하고 처리하는 방식을 알려 드립니다."
+		},
+		"title": "개인정보 처리방침",
+		"description": "우리에게 맡겨진 대화는 최소 수집과 암호화로 지켜집니다.",
+		"body": {
+			"storage": "야옹이 챗은 지역별 클러스터에 메시지를 저장하고 엔벨로프 암호화와 엄격한 접근 제어를 적용합니다. 언제든 내보내기나 삭제를 요청할 수 있으며 72시간 내 처리합니다.",
+			"contact": "문의:"
+		}
+	},
+	"Status": {
+		"metadata": {
+			"title": "상태 | 야옹이 챗",
+			"description": "야옹이 챗 가동 상태와 점검 일정을 실시간으로 확인하세요."
+		},
+		"title": "서비스 상태",
+		"description": "스냅샷은 60초마다 새로고침됩니다. 푸시나 이메일 알림을 구독할 수 있어요.",
+		"services": {
+			"chatApi": {
+				"name": "메시지",
+				"status": "정상",
+				"note": "모든 클러스터가 안정적입니다."
+			},
+			"presence": {
+				"name": "실시간 프레즌스",
+				"status": "지연",
+				"note": "EU West 지역 지연이 증가했습니다."
+			},
+			"automation": {
+				"name": "라이브 번역",
+				"status": "정상",
+				"note": "보고된 이슈 없음."
+			},
+			"exports": {
+				"name": "미디어 업로드",
+				"status": "모니터링",
+				"note": "급증 이후 대기열을 비우는 중."
+			}
+		}
+	},
+	"Integrations": {
+		"metadata": {
+			"title": "통합 | 야옹이 챗",
+			"description": "음악, 게임, 크리에이티브 도구를 연결해 대화를 더 즐겁게 만드세요."
+		},
+		"title": "통합",
+		"description": "야옹이 호스트가 즐겨 쓰는 고양이 인증 애드온 모음.",
+		"items": {
+			"bevy": {
+				"description": "야옹이 안에서 바로 게임이나 왓치파티 스트리밍을 띄우고 저지연 미리보기를 확인하세요."
+			},
+			"motion": {
+				"description": "방이 새로운 스트릭이나 “야옹”을 찍을 때 반응하는 부드러운 앰비언트 애니메이션을 켤 수 있어요."
+			},
+			"faker": {
+				"description": "레이아웃을 시험하거나 온보딩을 돕기 위해 가짜 프로필을 손쉽게 생성하세요."
+			},
+			"iconify": {
+				"description": "수천 개 아이콘으로 채널과 알림에 개성을 더하세요."
+			},
+			"unpic": {
+				"description": "OLED 화면에서도 또렷한 손실 없는 이미지와 스티커를 공유하세요."
+			}
+		}
+	},
+	"AdminHome": {
+		"metadata": {
+			"title": "호스트 콘솔 | 야옹이 챗"
+		},
+		"title": "호스트 콘솔",
+		"description": "패널을 골라 방 상태를 확인하고 공지를 보내거나 새 모더레이터를 초대하세요."
+	},
+	"AdminPush": {
+		"metadata": {
+			"title": "호스트 · 공지 | 야옹이 챗"
+		},
+		"title": "공지 보내기",
+		"description": "모노크롬 토스트나 장문의 업데이트를 예약해 커뮤니티에 전하세요.",
+		"targetHeading": "대상",
+		"composeHeading": "작성",
+		"placeholder": "멤버에게 전할 소식을 적어 주세요…",
+		"audiences": {
+			"all": "내가 운영하는 모든 방",
+			"enterprise": "인증 커뮤니티만",
+			"sandbox": "테스트 공간",
+			"custom": "맞춤 목록 (CSV 업로드)"
+		},
+		"actions": {
+			"sendNow": "지금 보내기",
+			"schedule": "예약"
+		}
+	},
+	"AdminUsers": {
+		"metadata": {
+			"title": "호스트 · 인원 | 야옹이 챗"
+		},
+		"title": "모더레이터 명단",
+		"description": "방을 함께 운영할 사람과 권한을 관리하세요.",
+		"table": {
+			"name": "이름",
+			"role": "역할",
+			"status": "상태"
+		},
+		"roles": {
+			"admin": "관리자",
+			"supervisor": "모더레이터",
+			"agent": "멤버"
+		},
+		"statuses": {
+			"active": "활성",
+			"invited": "초대됨",
+			"suspended": "중지됨"
+		}
+	},
+	"WorkspaceContacts": {
+		"metadata": {
+			"title": "연락처 | 야옹이 챗"
+		},
+		"title": "연락처 허브",
+		"headline": "친구를 모든 대화 옆에 둬요",
+		"description": "프로필은 메시지 옆에 있어 이야기가 채팅을 떠나지 않아요.",
+		"lastSynced": "마지막 동기화 {timestamp}",
+		"toast": {
+			"dismiss": "닫기"
+		},
+		"errors": {
+			"load": "연락처를 새로고침할 수 없었어요. 다시 시도해 주세요.",
+			"request": "요청을 업데이트할 수 없었어요. 다시 시도해 주세요.",
+			"search": "검색에 실패했어요. 잠시 후 다시 시도해 주세요.",
+			"removeFriend": "친구를 삭제하지 못했어요. 다시 시도해 주세요."
+		},
+		"lists": {
+			"friends": {
+				"title": "친구",
+				"empty": "아직 친구가 없어요. 초대장을 보내 보세요.",
+				"count": "친구 {count}명",
+				"syncing": "동기화 중…",
+				"since": "{timestamp}부터"
+			},
+			"incoming": {
+				"title": "받은 요청",
+				"empty": "새로운 요청이 없어요.",
+				"badge": "받음"
+			},
+			"outgoing": {
+				"title": "보낸 요청",
+				"empty": "보낸 요청이 아직 없어요.",
+				"badge": "보냄"
+			},
+			"requests": {
+				"timestamp": "{timestamp}에 요청됨"
+			}
+		},
+		"actions": {
+			"accept": "수락",
+			"decline": "거절",
+			"cancel": "취소",
+			"remove": "삭제",
+			"removing": "삭제 중…"
+		},
+		"search": {
+			"title": "디렉터리 검색",
+			"hint": "새 친구를 찾으려면 최소 {count}자를 입력해 주세요.",
+			"label": "검색",
+			"placeholder": "이름 또는 이메일로 검색",
+			"tooShort": "검색을 시작하려면 조금만 더 입력해 주세요.",
+			"loading": "검색 중…",
+			"empty": "일치하는 사람이 없어요. 다른 철자를 시도해 보세요.",
+			"action": "친구 추가",
+			"pending": "전송 중…",
+			"status": {
+				"friend": "친구",
+				"incoming": "받은 요청",
+				"outgoing": "보낸 요청"
+			}
+		}
+	},
+	"Dashboard": {
+		"metrics": {
+			"title": "커뮤니티 맥박",
+			"description": "15초마다 롤링 업데이트가 새로고침됩니다.",
+			"items": {
+				"openConversations": {
+					"label": "활성 방",
+					"value": "42",
+					"delta": "어제 대비 +8"
+				},
+				"firstResponse": {
+					"label": "평균 답장 속도",
+					"value": "47초",
+					"delta": "목표 대비 +6초"
+				},
+				"resolvedToday": {
+					"label": "오늘 공유한 사진",
+					"value": "318",
+					"delta": "어제 대비 +12%"
+				}
+			}
+		},
+		"spotlight": {
+			"title": "스포트라이트 · 번역 부스트",
+			"body": "오늘 오전 라이브 번역이 63%의 멤버가 모국어가 아닌 방에 참여하도록 도와 280분을 절약했어요."
+		},
+		"queues": {
+			"title": "방 목록",
+			"description": "다음으로 들어가고 싶은 방을 탭하세요.",
+			"items": {
+				"priority": {
+					"name": "야간 공부방",
+					"count": "8",
+					"status": "🟢 포근"
+				},
+				"billing": {
+					"name": "애니 감상회",
+					"count": "14",
+					"status": "🟡 착석 중"
+				},
+				"feedback": {
+					"name": "사진 드롭",
+					"count": "2",
+					"status": "🟢 여유"
+				},
+				"logistics": {
+					"name": "언어 교환",
+					"count": "18",
+					"status": "🟠 북적임"
+				}
+			}
+		}
+	},
+	"Chat": {
+		"roster": {
+			"title": "대화 목록",
+			"new": "새 채팅",
+			"searchPlaceholder": "친구 검색…",
+			"createHint": "친구를 선택해 1:1 채팅을 시작하세요.",
+			"empty": "연락처에서 친구를 추가하면 바로 채팅을 시작할 수 있어요.",
+			"emptyPreview": "아직 메시지가 없어요",
+			"openChat": "채팅 열기",
+			"lastActive": "최근 활동 {time}"
+		},
+		"thread": {
+			"header": "1:1 채팅",
+			"back": "채팅 목록으로 돌아가기",
+			"directWith": "{name}님과의 대화",
+			"me": "나",
+			"loading": "대화를 불러오는 중…",
+			"empty": "첫 메시지를 보내 대화를 시작해 보세요.",
+			"placeholder": {
+				"title": "대화를 선택하세요",
+				"body": "목록에서 친구를 선택하면 메시지가 열려요."
+			},
+			"transport": {
+				"label": "전송 방식",
+				"connect": "연결하기",
+				"mode": {
+					"push": "푸시",
+					"progressive": "Progressive",
+					"udp": "UDP"
+				}
+			},
+			"settings": {
+				"open": "채팅 설정 열기",
+				"close": "채팅 설정 닫기",
+				"panelLabel": "채팅 설정",
+				"unified": {
+					"title": "공유 채팅 설정",
+					"description": "이 대화의 모든 참가자에게 적용돼요.",
+					"transport": {
+						"options": {
+							"push": {
+								"label": "푸시 전송",
+								"description": "웹소켓 없이 채팅을 최신 상태로 유지하는 서버 푸시 스트림입니다."
+							},
+							"progressive": {
+								"label": "Progressive 전송",
+								"description": "혼잡 제어가 포함된 WebRTC/WebTransport 경로예요."
+							},
+							"udp": {
+								"label": "UDP 릴레이",
+								"description": "낮은 지연의 실험적 UDP 경로로, 패킷이 손실될 수 있어요."
+							}
+						}
+					}
+				},
+				"local": {
+					"title": "내 채팅 설정",
+					"description": "내 화면에만 적용돼요.",
+					"options": {
+						"magnify": {
+							"label": "넉넉한 말풍선 크기",
+							"description": "메시지의 여백과 글꼴 크기를 키워요."
+						},
+						"labels": {
+							"label": "메시지 라벨 표시",
+							"description": "각 메시지 위에 보낸 사람과 시간을 보여줘요."
+						},
+						"theme": {
+							"label": "밝은 말풍선 사용",
+							"description": "내가 보내는 메시지를 더 밝은 스타일로 바꿔요."
+						},
+						"syncHistory": {
+							"label": "채팅 기록 동기화",
+							"syncing": "채팅을 동기화하는 중…",
+							"description": "상대방의 최신 기록을 불러와 지운 메시지를 되돌려요.",
+							"error": "채팅을 동기화하지 못했어요. 다시 시도해 주세요."
+						},
+						"clearHistory": {
+							"label": "채팅 기록 지우기",
+							"description": "이 대화의 기록을 내 화면에서만 제거해요.",
+							"confirm": "이 대화의 기록을 지울까요? 이 작업은 내 화면에만 적용돼요."
+						}
+					}
+				}
+			},
+			"composer": {
+				"placeholder": "메시지를 작성해 보세요…",
+				"send": "보내기",
+				"sending": "보내는 중…"
+			},
+			"presence": {
+				"readToast": "{name}님이 최근 메시지를 읽었어요.",
+				"deliveryToast": "{name}님에게 전달됐어요.",
+				"readFallback": "친구",
+				"deliveryFallback": "친구"
+			},
+			"connection": {
+				"degraded": "상대와 연결이 불안정해요. 다시 연결을 시도하는 중입니다…",
+				"recovering": "채널을 다시 준비하는 중이에요…",
+				"reconnecting": "연결이 끊어졌어요. 다시 연결을 시도하는 중입니다…",
+				"restored": "연결이 복구됐어요.",
+				"failed": "피어 연결이 끊어졌어요. 계속 다시 시도할게요.",
+				"status": {
+					"connected": "상대와 연결됨",
+					"connecting": "연결 중…",
+					"reconnecting": "재연결 중…",
+					"error": "연결을 사용할 수 없어요"
+				}
+			}
+		},
+		"alerts": {
+			"history": "대화를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+			"send": "메시지를 보내지 못했어요. 다시 시도해 주세요.",
+			"settings": "채팅 설정을 업데이트하지 못했어요. 잠시 후 다시 시도해 주세요."
+		}
+	},
+	"Settings": {
+		"appearance": {
+			"title": "모양새",
+			"description": "OLED 라운지의 분위기를 원하는 대로 꾸며 보세요.",
+			"modes": {
+				"dark": "다크 모드",
+				"light": "라이트 모드"
+			}
+		},
+		"messaging": {
+			"title": "메시징 전송 방식",
+			"description": "이제 각 대화의 채팅 설정에서 전송 방식을 관리해요.",
+			"relocated": {
+				"body": "채팅을 열고 톱니바퀴 아이콘에서 UDP 또는 Progressive를 고르면 모든 참가자에게 적용돼요.",
+				"cta": "채팅 열기"
+			}
+		},
+		"motion": {
+			"title": "모션",
+			"description": "어지럽거나 녹화 중일 때 모션을 줄일 수 있어요.",
+			"on": "모션 켜짐",
+			"off": "모션 꺼짐"
+		},
+		"preferences": {
+			"title": "환경설정",
+			"description": "채팅을 부드럽게 이어 주는 도우미를 고르세요.",
+			"items": {
+				"notifications": {
+					"label": "푸시 알림",
+					"description": "멘션, 답장, 이벤트 리마인더를 알려 드립니다."
+				},
+				"aiDrafts": {
+					"label": "AI 초안",
+					"description": "지난 대화를 참고해 재치 있는 답장을 제안합니다."
+				},
+				"presence": {
+					"label": "스마트 프레즌스",
+					"description": "집중하거나 자리를 비우면 상태를 자동으로 바꿔요."
+				}
+			},
+			"state": {
+				"on": "켜짐",
+				"off": "꺼짐"
+			}
+		},
+		"session": {
+			"title": "세션",
+			"description": "라운지를 떠나고 이 기기의 쿠키를 정리해요.",
+			"logout": "로그아웃",
+			"loggingOut": "로그아웃 중…"
+		}
+	},
+	"Profile": {
+		"metadata": {
+			"title": "프로필 | 야옹이 챗",
+			"description": "야옹이 챗 안에서 나를 표현하는 방식을 다듬어 보세요."
+		},
+		"title": "내 프로필",
+		"description": "친구와 팔로워가 나를 어떻게 보는지 직접 정할 수 있어요.",
+		"fields": {
+			"displayName": "표시 이름",
+			"role": "계정 유형",
+			"email": "이메일",
+			"timezone": "시간대",
+			"created": "계정 생성일",
+			"updated": "마지막 동기화"
+		},
+		"values": {
+			"role": "멤버",
+			"timezone": "UTC"
+		}
+	}
 }

@@ -1,9 +1,9 @@
 {
-  "extends": "@goguma/config/tsconfig/base",
-  "files": [],
-  "references": [
-    { "path": "./apps/native" },
-    { "path": "./apps/web" },
-    { "path": "./packages/ui" }
-  ]
+	"extends": "@goguma/config/tsconfig/base",
+	"files": [],
+	"references": [
+		{ "path": "./apps/native" },
+		{ "path": "./apps/web" },
+		{ "path": "./packages/ui" }
+	]
 }
