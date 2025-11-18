@@ -319,36 +319,36 @@ const getPendingUnreadRecords = async () => {
   const db = await getUnreadDatabase();
   if (!db) return [];
 
-  const result = await runStoreRequest(db, "readonly", (store) => {
-    if (!store.indexNames.contains(UNREAD_DELIVERED_INDEX)) {
-      return store.getAll();
-    }
-    const index = store.index(UNREAD_DELIVERED_INDEX);
-    return index.getAll(false);
-  }).catch((error) => {
-    console.warn("[sw] Failed to read unread message records", error);
-    return [];
-  });
+  const result = await runStoreRequest(db, "readonly", (store) => store.getAll()).catch(
+    (error) => {
+      console.warn("[sw] Failed to read unread message records", error);
+      return [];
+    },
+  );
 
-  return Array.isArray(result) ? result : [];
+  if (!Array.isArray(result)) {
+    return [];
+  }
+
+  return result.filter((record) => record && record.delivered !== true);
 };
 
 const countPendingUnread = async () => {
   const db = await getUnreadDatabase();
   if (!db) return 0;
 
-  const result = await runStoreRequest(db, "readonly", (store) => {
-    if (!store.indexNames.contains(UNREAD_DELIVERED_INDEX)) {
-      return store.count();
-    }
-    const index = store.index(UNREAD_DELIVERED_INDEX);
-    return index.count(false);
-  }).catch((error) => {
-    console.warn("[sw] Failed to count unread messages", error);
-    return 0;
-  });
+  const result = await runStoreRequest(db, "readonly", (store) => store.getAll()).catch(
+    (error) => {
+      console.warn("[sw] Failed to count unread messages", error);
+      return [];
+    },
+  );
 
-  return typeof result === "number" ? result : 0;
+  if (!Array.isArray(result)) {
+    return 0;
+  }
+
+  return result.reduce((count, record) => (record && record.delivered !== true ? count + 1 : count), 0);
 };
 
 const broadcastBadgeCount = async (count) => {

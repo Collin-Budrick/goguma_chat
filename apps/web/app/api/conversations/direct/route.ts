@@ -8,20 +8,7 @@ import {
 } from "@/db/conversations";
 import { auth } from "@/lib/auth";
 
-const LEGACY_DIRECT_CONVERSATION_DISABLED =
-  process.env.NODE_ENV === "production";
-
 export async function POST(request: Request) {
-  if (LEGACY_DIRECT_CONVERSATION_DISABLED) {
-    throw new Error(
-      "Legacy /api/conversations/direct route is disabled in production builds.",
-    );
-  }
-
-  return handlePost(request);
-}
-
-async function handlePost(request: Request) {
   const session = await auth();
 
   if (!session?.user?.id) {

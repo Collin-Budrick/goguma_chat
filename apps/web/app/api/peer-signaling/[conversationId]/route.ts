@@ -31,7 +31,7 @@ type TokenSubscriber = {
 
 type TokenStore = {
   tokens: PendingToken[];
-  subscribers: Set<TokenSubscriber>;
+  subscribers: Map<string, TokenSubscriber>;
 };
 
 const stores = new Map<string, TokenStore>();
@@ -43,7 +43,7 @@ const logPeerSignalingServer = (message: string, meta?: Record<string, unknown>)
 
 const getStore = (conversationId: string): TokenStore => {
   if (!stores.has(conversationId)) {
-    stores.set(conversationId, { tokens: [], subscribers: new Set() });
+    stores.set(conversationId, { tokens: [], subscribers: new Map() });
   }
   return stores.get(conversationId)!;
 };
@@ -92,7 +92,7 @@ const deliverPendingTokens = (conversationId: string, role: PeerSignalingRole) =
   if (!pending.length) return;
 
   for (const token of pending) {
-    for (const subscriber of store.subscribers) {
+    for (const subscriber of store.subscribers.values()) {
       if (subscriber.role !== role) continue;
       logPeerSignalingServer("delivering token to subscriber", {
         conversationId,
@@ -107,10 +107,20 @@ const deliverPendingTokens = (conversationId: string, role: PeerSignalingRole) =
 
 const subscribeToTokens = (
   conversationId: string,
+  subscriptionKey: string,
   subscriber: TokenSubscriber,
 ): (() => void) => {
   const store = getStore(conversationId);
-  store.subscribers.add(subscriber);
+  const existing = store.subscribers.get(subscriptionKey);
+  if (existing) {
+    store.subscribers.delete(subscriptionKey);
+    logPeerSignalingServer("existing subscriber replaced", {
+      conversationId,
+      role: existing.role,
+      subscriberCount: store.subscribers.size,
+    });
+  }
+  store.subscribers.set(subscriptionKey, subscriber);
   logPeerSignalingServer("subscriber added", {
     conversationId,
     role: subscriber.role,
@@ -118,7 +128,10 @@ const subscribeToTokens = (
   });
   return () => {
     const nextStore = stores.get(conversationId);
-    nextStore?.subscribers.delete(subscriber);
+    const current = nextStore?.subscribers.get(subscriptionKey);
+    if (current === subscriber) {
+      nextStore?.subscribers.delete(subscriptionKey);
+    }
     logPeerSignalingServer("subscriber removed", {
       conversationId,
       role: subscriber.role,
@@ -270,7 +283,8 @@ export async function GET(
     },
   };
 
-  const unsubscribe = subscribeToTokens(conversationId, subscriber);
+  const subscriptionKey = `${viewerId}:${role}`;
+  const unsubscribe = subscribeToTokens(conversationId, subscriptionKey, subscriber);
   deliverPendingTokens(conversationId, role);
   writeEvent(writer, "event: ready\ndata: {}\n\n");
 

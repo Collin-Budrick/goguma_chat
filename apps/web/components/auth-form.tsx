@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useId, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -32,12 +32,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const isLogin = mode === "login";
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formInstanceId = useId();
   const baseFieldId = useMemo(() => {
     const sanitized =
       pathname?.replace(/[^a-z0-9]/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") ??
       "auth";
-    return `${sanitized || "auth"}-${mode}`;
-  }, [pathname, mode]);
+    return `${sanitized || "auth"}-${mode}-${formInstanceId}`;
+  }, [pathname, mode, formInstanceId]);
   const emailId = `${baseFieldId}-email`;
   const passwordId = `${baseFieldId}-password`;
   const firstNameId = `${baseFieldId}-first-name`;
