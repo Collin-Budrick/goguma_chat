@@ -11,6 +11,11 @@ export type ChatHistory = {
 	messages: ChatMessage[];
 };
 
+export type SendMessageRequest = {
+	friendId: string;
+	content: string;
+};
+
 export type SendMessageResponse = {
 	conversationId: string;
 	message: ChatMessage;
