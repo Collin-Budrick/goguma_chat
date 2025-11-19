@@ -90,8 +90,8 @@ async function LocaleLayoutContent({
 			<HtmlLangSetter locale={locale} />
 			<TransitionProvider>
 				<div className="app-shell flex min-h-screen flex-col">
-					<TransitionViewport>
-						<div className="app-gradient min-h-full flex flex-col gap-10 bg-gradient-to-br from-black via-black to-neutral-950 pb-28 lg:pb-36">
+						<TransitionViewport>
+							<div className="app-gradient min-h-full flex flex-col gap-10 bg-gradient-to-br from-black via-black to-neutral-950">
 							{children}
 						</div>
 					</TransitionViewport>

@@ -1293,7 +1293,7 @@ export default function ChatThread({
 					</header>
 					<div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 						<div
-							className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4"
+							className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4 max-h-[60vh]"
 							ref={messageContainerRef}
 						>
 							{threadError ? (
