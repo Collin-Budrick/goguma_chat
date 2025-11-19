@@ -34,24 +34,26 @@ export async function POST(request: NextRequest) {
 
         const parsed = bodySchema.safeParse(json);
         if (!parsed.success) {
-                const message = parsed.error.issues[0]?.message ?? "Invalid request";
-                return NextResponse.json({ error: message }, { status: 400 });
+                return NextResponse.json(
+                        { error: "Invalid request", details: parsed.error.flatten() },
+                        { status: 400 },
+                );
         }
 
         const { friendId, content } = parsed.data;
-        const state = await getFriendState(session.user.id);
-        const friend = state.friends.find((entry) => entry.friendId === friendId);
+	const state = await getFriendState(session.user.id);
+	const friend = state.friends.find((entry) => entry.friendId === friendId);
 
         if (!friend) {
                 return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        const conversationId = buildConversationId(session.user.id, friendId);
-        const sentAt = new Date();
-        const viewerMessage: ChatMessage = {
-                id: `${conversationId}:${randomUUID()}`,
-                authorId: session.user.id,
-                body: content.trim(),
+	const conversationId = buildConversationId(session.user.id, friendId);
+	const sentAt = new Date();
+	const viewerMessage: ChatMessage = {
+		id: `${conversationId}:${randomUUID()}`,
+		authorId: session.user.id,
+                body: content,
                 sentAt: sentAt.toISOString(),
         };
 
