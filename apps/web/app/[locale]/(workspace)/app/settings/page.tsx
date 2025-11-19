@@ -54,15 +54,15 @@ export default function SettingsPage() {
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
-		const handler = (event: Event) => {
-			const detail = (event as CustomEvent<DisplaySettings>).detail;
-			setDisplaySettings((prev) =>
-				prev.magnify === detail.magnify &&
-				prev.showLabels === detail.showLabels &&
-				prev.theme === detail.theme
-					? prev
-					: detail,
-			);
+                const handler = (event: Event) => {
+                        const detail = (event as CustomEvent<DisplaySettings>).detail;
+                        setDisplaySettings((prev) =>
+                                prev.magnify === detail.magnify &&
+                                prev.showLabels === detail.showLabels &&
+                                prev.theme === detail.theme
+                                        ? prev
+                                        : detail,
+                        );
 		};
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
 		return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);

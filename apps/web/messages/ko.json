@@ -566,14 +566,18 @@
 							"label": "넉넉한 말풍선 크기",
 							"description": "메시지의 여백과 글꼴 크기를 키워요."
 						},
-						"labels": {
-							"label": "메시지 라벨 표시",
-							"description": "각 메시지 위에 보낸 사람과 시간을 보여줘요."
-						},
-						"theme": {
-							"label": "밝은 말풍선 사용",
-							"description": "내가 보내는 메시지를 더 밝은 스타일로 바꿔요."
-						},
+                                                "labels": {
+                                                        "label": "메시지 라벨 표시",
+                                                        "description": "각 메시지 위에 보낸 사람과 시간을 보여줘요."
+                                                },
+                                                "typingIndicators": {
+                                                        "label": "입력 상태 공유",
+                                                        "description": "이 대화에서 내가 입력 중일 때 다른 사람이 볼 수 있게 해요."
+                                                },
+                                                "theme": {
+                                                        "label": "밝은 말풍선 사용",
+                                                        "description": "내가 보내는 메시지를 더 밝은 스타일로 바꿔요."
+                                                },
 						"syncHistory": {
 							"label": "채팅 기록 동기화",
 							"syncing": "채팅을 동기화하는 중…",

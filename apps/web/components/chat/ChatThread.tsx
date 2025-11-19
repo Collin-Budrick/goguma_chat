@@ -20,17 +20,23 @@ import {
 import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { cn } from "@/lib/utils";
 import {
-	type DisplaySettings,
-	DEFAULT_DISPLAY_SETTINGS,
-	DISPLAY_SETTINGS_EVENT,
-	loadDisplaySettings,
-	persistDisplaySettings,
+        type DisplaySettings,
+        DEFAULT_DISPLAY_SETTINGS,
+        DISPLAY_SETTINGS_EVENT,
+        loadDisplaySettings,
+        persistDisplaySettings,
 } from "@/lib/display-settings";
 import {
-	type ChatHistoryEventDetail,
-	CHAT_HISTORY_EVENT,
-	getConversationClearedAt,
-	persistConversationClearedAt,
+        DEFAULT_CHAT_LOCAL_SETTINGS,
+        loadChatLocalSettings,
+        persistChatLocalSettings,
+        type ChatLocalSettings,
+} from "@/lib/chat-local-settings";
+import {
+        type ChatHistoryEventDetail,
+        CHAT_HISTORY_EVENT,
+        getConversationClearedAt,
+        persistConversationClearedAt,
 	removeConversationClear,
 } from "@/lib/chat-history";
 import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
@@ -191,22 +197,24 @@ export default function ChatThread({
 	const [sendError, setSendError] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
 	const [isSending, setIsSending] = useState(false);
-	const [isFetchingMore, setIsFetchingMore] = useState(false);
-	const [typingState, setTypingState] = useState<Record<string, number>>({});
-	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-	const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
-		() => DEFAULT_DISPLAY_SETTINGS,
-	);
-	const [isTransportEnabled, setIsTransportEnabled] = useState(false);
-	const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
-	const [isSyncingHistory, setIsSyncingHistory] = useState(false);
-	const [presenceToast, setPresenceToast] = useState<string | null>(null);
+        const [isFetchingMore, setIsFetchingMore] = useState(false);
+        const [typingState, setTypingState] = useState<Record<string, number>>({});
+        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+        const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
+                () => DEFAULT_DISPLAY_SETTINGS,
+        );
+        const [chatLocalSettings, setChatLocalSettings] =
+                useState<ChatLocalSettings>(() => DEFAULT_CHAT_LOCAL_SETTINGS);
+        const [isTransportEnabled, setIsTransportEnabled] = useState(false);
+        const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
+        const [isSyncingHistory, setIsSyncingHistory] = useState(false);
+        const [presenceToast, setPresenceToast] = useState<string | null>(null);
 
-	const conversationId = conversation?.id ?? null;
-	const { transport } = useMessagingTransportHandle({
-		conversationId,
-		viewerId,
-		enabled: isTransportEnabled,
+        const conversationId = conversation?.id ?? null;
+        const { transport } = useMessagingTransportHandle({
+                conversationId,
+                viewerId,
+                enabled: isTransportEnabled,
 		peerId: friendId,
 	});
 
@@ -275,31 +283,50 @@ export default function ChatThread({
 		}
 	}, []);
 
-	const updateDisplaySettings = useCallback(
-		(updater: (prev: DisplaySettings) => DisplaySettings) => {
-			setDisplaySettings((prev) => {
-				const next = updater(prev);
+        const updateDisplaySettings = useCallback(
+                (updater: (prev: DisplaySettings) => DisplaySettings) => {
+                        setDisplaySettings((prev) => {
+                                const next = updater(prev);
 
-				if (
-					next.magnify === prev.magnify &&
-					next.showLabels === prev.showLabels &&
-					next.theme === prev.theme
-				) {
-					return prev;
-				}
+                                if (
+                                        next.magnify === prev.magnify &&
+                                        next.showLabels === prev.showLabels &&
+                                        next.theme === prev.theme
+                                ) {
+                                        return prev;
+                                }
 
-				persistDisplaySettings(next);
-				return next;
-			});
-		},
-		[],
-	);
+                                persistDisplaySettings(next);
+                                return next;
+                        });
+                },
+                [],
+        );
 
-	useEffect(() => {
-		return () => {
-			pendingThreadControllerRef.current?.abort();
-		};
-	}, []);
+        const updateChatLocalSettings = useCallback(
+                (updater: (prev: ChatLocalSettings) => ChatLocalSettings) => {
+                        setChatLocalSettings((prev) => {
+                                const next = updater(prev);
+
+                                if (next.showTypingIndicators === prev.showTypingIndicators) {
+                                        return prev;
+                                }
+
+                                if (conversationId) {
+                                        persistChatLocalSettings(conversationId, next);
+                                }
+
+                                return next;
+                        });
+                },
+                [conversationId],
+        );
+
+        useEffect(() => {
+                return () => {
+                        pendingThreadControllerRef.current?.abort();
+                };
+        }, []);
 
 	const bootstrapKey = shouldUseInitialData
 		? `${initialFriendId ?? ""}:${initialConversation?.id ?? ""}`
@@ -318,36 +345,45 @@ export default function ChatThread({
 		}
 	}, [conversation?.id]);
 
-	useEffect(() => {
-		if (typeof window === "undefined") {
-			return;
-		}
+        useEffect(() => {
+                if (typeof window === "undefined") {
+                        return;
+                }
 
-		window.dispatchEvent(
-			new CustomEvent("dock:active-conversation", {
-				detail: { conversationId: conversation?.id ?? null },
-			}),
-		);
-	}, [conversation?.id]);
+                window.dispatchEvent(
+                        new CustomEvent("dock:active-conversation", {
+                                detail: { conversationId: conversation?.id ?? null },
+                        }),
+                );
+        }, [conversation?.id]);
 
-	useEffect(() => {
-		if (typeof window === "undefined") {
-			return;
-		}
+        useEffect(() => {
+                if (!conversation?.id) {
+                        setChatLocalSettings(DEFAULT_CHAT_LOCAL_SETTINGS);
+                        return;
+                }
 
-		const stored = loadDisplaySettings();
-		setDisplaySettings(stored);
+                setChatLocalSettings(loadChatLocalSettings(conversation.id));
+        }, [conversation?.id]);
 
-		const handler = (event: Event) => {
-			const detail = (event as CustomEvent<DisplaySettings>).detail;
-			setDisplaySettings((prev) =>
-				prev.magnify === detail.magnify &&
-				prev.showLabels === detail.showLabels &&
-				prev.theme === detail.theme
-					? prev
-					: detail,
-			);
-		};
+        useEffect(() => {
+                if (typeof window === "undefined") {
+                        return;
+                }
+
+                const stored = loadDisplaySettings();
+                setDisplaySettings(stored);
+
+                const handler = (event: Event) => {
+                        const detail = (event as CustomEvent<DisplaySettings>).detail;
+                        setDisplaySettings((prev) =>
+                                prev.magnify === detail.magnify &&
+                                prev.showLabels === detail.showLabels &&
+                                prev.theme === detail.theme
+                                        ? prev
+                                        : detail,
+                        );
+                };
 
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler as EventListener);
 
@@ -811,32 +847,32 @@ export default function ChatThread({
 		[conversation, viewerId, viewerProfile],
 	);
 
-	const typingProfiles = useMemo(() => {
-		if (!conversation) return [];
-		const now = Date.now();
-		return conversation.participants
-			.map((participant) => participant.user)
-			.filter(
-				(profile) =>
-					profile.id !== viewerId &&
-					typingState[profile.id] &&
-					typingState[profile.id] > now,
-			);
-	}, [conversation, typingState, viewerId]);
+        const typingProfiles = useMemo(() => {
+                if (!conversation) return [];
+                const now = Date.now();
+                return conversation.participants
+                        .map((participant) => participant.user)
+                        .filter(
+                                (profile) =>
+                                        profile.id !== viewerId &&
+                                        typingState[profile.id] &&
+                                        typingState[profile.id] > now,
+                        );
+        }, [conversation, typingState, viewerId]);
 
-	const typingText = useMemo(() => {
-		if (!typingProfiles.length) {
-			return null;
-		}
-		const names = typingProfiles.map((profile) => getContactName(profile));
-		if (names.length === 1) {
-			return `${names[0]} is typing...`;
-		}
-		if (names.length === 2) {
-			return `${names[0]} and ${names[1]} are typing...`;
-		}
-		return `${names[0]} and others are typing...`;
-	}, [typingProfiles]);
+        const typingText = useMemo(() => {
+                if (!typingProfiles.length) {
+                        return null;
+                }
+                const names = typingProfiles.map((profile) => getContactName(profile));
+                if (names.length === 1) {
+                        return `${names[0]} is typing...`;
+                }
+                if (names.length === 2) {
+                        return `${names[0]} and ${names[1]} are typing...`;
+                }
+                return `${names[0]} and others are typing...`;
+        }, [typingProfiles]);
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -874,23 +910,46 @@ export default function ChatThread({
 		);
 	}, [clearedHistoryCutoff, conversationId, messages, viewerId]);
 
-	const sendTyping = useCallback(
-		(isTyping: boolean) => {
-			if (!conversationId) {
-				return;
-			}
-			const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
-			void presence.sendTyping({
-				conversationId,
-				typing: {
-					userId: viewerId,
-					isTyping,
-					expiresAt,
-				},
-			});
-		},
-		[conversationId, presence, viewerId],
-	);
+        const sendTyping = useCallback(
+                (isTyping: boolean) => {
+                        if (!conversationId) {
+                                return;
+                        }
+
+                        if (isTyping && !chatLocalSettings.showTypingIndicators) {
+                                return;
+                        }
+
+                        const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
+                        void presence.sendTyping({
+                                conversationId,
+                                typing: {
+                                        userId: viewerId,
+                                        isTyping,
+                                        expiresAt,
+                                },
+                        });
+                },
+                [chatLocalSettings.showTypingIndicators, conversationId, presence, viewerId],
+        );
+
+        useEffect(() => {
+                if (chatLocalSettings.showTypingIndicators) {
+                        return;
+                }
+
+                if (!typingActiveRef.current && !typingTimeoutRef.current) {
+                        return;
+                }
+
+                typingActiveRef.current = false;
+                if (typingTimeoutRef.current) {
+                        window.clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = null;
+                }
+
+                sendTyping(false);
+        }, [chatLocalSettings.showTypingIndicators, sendTyping]);
 
 	const handleDraftChange = useCallback(
 		(value: string) => {
@@ -1192,41 +1251,58 @@ export default function ChatThread({
 													{t("thread.settings.local.description")}
 												</p>
 												<div className="mt-3 flex flex-col gap-2">
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.magnify.label",
-														)}
-														description={t(
-															"thread.settings.local.options.magnify.description",
-														)}
-														value={displaySettings.magnify}
-														theme={toggleTheme}
-														onChange={() =>
-															updateDisplaySettings((prev) => ({
-																...prev,
-																magnify: !prev.magnify,
-															}))
-														}
-													/>
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.labels.label",
-														)}
-														description={t(
-															"thread.settings.local.options.labels.description",
-														)}
-														value={displaySettings.showLabels}
-														theme={toggleTheme}
-														onChange={() =>
-															updateDisplaySettings((prev) => ({
-																...prev,
-																showLabels: !prev.showLabels,
-															}))
-														}
-													/>
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.theme.label",
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.magnify.label",
+                                                                                                                )}
+                                                                                                                description={t(
+                                                                                                                        "thread.settings.local.options.magnify.description",
+                                                                                                                )}
+                                                                                                                value={displaySettings.magnify}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                magnify: !prev.magnify,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.labels.label",
+                                                                                                                )}
+                                                                                                                description={t(
+                                                                                                                        "thread.settings.local.options.labels.description",
+                                                                                                                )}
+                                                                                                                value={displaySettings.showLabels}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                showLabels: !prev.showLabels,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+"thread.settings.local.options.typingIndicators.label",
+                                                                                                                )}
+                                                                                                                description={t(
+"thread.settings.local.options.typingIndicators.description",
+                                                                                                                )}
+                                                                                                                value={chatLocalSettings.showTypingIndicators}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateChatLocalSettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                showTypingIndicators:
+                                                                                                                                        !prev.showTypingIndicators,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.theme.label",
 														)}
 														description={t(
 															"thread.settings.local.options.theme.description",
