@@ -3,65 +3,13 @@ import { z } from "zod";
 
 import { getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
-import type { ChatHistory, ChatMessage } from "@/lib/chat/types";
+import type { ChatHistory } from "@/lib/chat/types";
 import { buildConversationId, resolveProfileName } from "../helpers";
+import { createMockHistory, validateDate } from "./utils";
 
 const querySchema = z.object({
-	friendId: z.string().min(1),
+        friendId: z.string().min(1),
 });
-
-type HistoryOptions = {
-	conversationId: string;
-	friendId: string;
-	viewerId: string;
-	friendName: string;
-	viewerName: string;
-	startedAt?: Date | null;
-};
-
-function createMockHistory({
-	conversationId,
-	friendId,
-	viewerId,
-	friendName,
-	viewerName,
-	startedAt,
-}: HistoryOptions): ChatMessage[] {
-	const base = startedAt ? new Date(startedAt) : new Date();
-	const timeline = [
-		new Date(base.getTime() - 1000 * 60 * 42),
-		new Date(base.getTime() - 1000 * 60 * 39),
-		new Date(base.getTime() - 1000 * 60 * 35),
-		new Date(base.getTime() - 1000 * 60 * 31),
-	];
-
-	return [
-		{
-			id: `${conversationId}:intro`,
-			authorId: friendId,
-			body: `Hey ${viewerName || "there"}! I just found a new spot for tonight's hangout. Want to check it out?`,
-			sentAt: timeline[0].toISOString(),
-		},
-		{
-			id: `${conversationId}:reply`,
-			authorId: viewerId,
-			body: `That sounds perfect, ${friendName}! I'm free after 7 — should I bring anything?`,
-			sentAt: timeline[1].toISOString(),
-		},
-		{
-			id: `${conversationId}:details`,
-			authorId: friendId,
-			body: `Maybe just your favorite playlist. I'll grab us a table and text the invite to everyone else.`,
-			sentAt: timeline[2].toISOString(),
-		},
-		{
-			id: `${conversationId}:wrap`,
-			authorId: viewerId,
-			body: `Deal. I'll queue up something cozy and head over a little early.`,
-			sentAt: timeline[3].toISOString(),
-		},
-	];
-}
 
 export async function GET(request: NextRequest) {
 	const session = await auth();
@@ -100,17 +48,27 @@ export async function GET(request: NextRequest) {
 		fallback: "you",
 	});
 
-	const messages = createMockHistory({
-		conversationId,
-		friendId,
-		viewerId: session.user.id,
-		friendName,
-		viewerName,
-		startedAt:
-			friend.createdAt instanceof Date
-				? friend.createdAt
-				: new Date(friend.createdAt),
-	});
+        const startedAt = validateDate(
+                friend.createdAt instanceof Date
+                        ? friend.createdAt
+                        : new Date(friend.createdAt),
+        );
+
+        if (!startedAt && friend.createdAt) {
+                return NextResponse.json(
+                        { error: "Invalid friend creation timestamp" },
+                        { status: 500 },
+                );
+        }
+
+        const messages = createMockHistory({
+                conversationId,
+                friendId,
+                viewerId: session.user.id,
+                friendName,
+                viewerName,
+                startedAt,
+        });
 
 	const payload: ChatHistory = {
 		conversationId,
