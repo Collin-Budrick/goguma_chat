@@ -60,7 +60,7 @@ export default function TransitionViewport({ children }: PropsWithChildren) {
 	);
 
 	return (
-		<div className="relative flex-1 overflow-hidden">
+		<div className="relative flex flex-1 flex-col min-h-0 overflow-y-auto overflow-x-hidden">
 			<AnimatePresence custom={transitionContext} mode="sync" initial={false}>
 				<motion.div
 					key={pathname}
@@ -74,7 +74,7 @@ export default function TransitionViewport({ children }: PropsWithChildren) {
 						stiffness: 220,
 						damping: 26,
 					}}
-					className="w-full"
+					className="flex flex-1 min-h-full w-full flex-col"
 				>
 					{children}
 				</motion.div>
