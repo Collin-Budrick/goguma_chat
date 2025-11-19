@@ -1182,20 +1182,39 @@ export default function ChatThread({
 		}
 	}, [conversationId, t]);
 
-	const bubblePaddingClasses = displaySettings.magnify
-		? "px-5 py-4"
-		: "px-4 py-3";
-	const bubbleTextClasses = displaySettings.magnify
-		? "text-base leading-7"
-		: "text-sm leading-6";
-	const viewerBubbleClasses =
-		displaySettings.theme === "light"
-			? "ml-auto border-white/40 bg-white text-black"
-			: "ml-auto border-white/20 bg-black/80 text-white";
-	const viewerMetaClasses =
-		displaySettings.theme === "light" ? "text-black/50" : "text-white/50";
-	const toggleTheme: "dark" | "light" =
-		displaySettings.theme === "light" ? "light" : "dark";
+        const bubblePaddingClasses = displaySettings.magnify
+                ? "px-5 py-4"
+                : "px-4 py-3";
+        const bubbleTextClasses = displaySettings.magnify
+                ? "text-base leading-7"
+                : "text-sm leading-6";
+        const bubbleBaseClasses =
+                "relative w-fit max-w-3xl rounded-full border shadow-sm backdrop-blur transition";
+        const viewerBubbleClasses =
+                displaySettings.theme === "light"
+                        ? "ml-auto self-end border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-200/90 text-emerald-950 shadow-[0_18px_50px_-28px_rgba(16,185,129,0.85)]"
+                        : "ml-auto self-end border-emerald-300/35 bg-gradient-to-br from-emerald-400/18 via-emerald-300/12 to-emerald-200/10 text-emerald-50 shadow-[0_18px_48px_-26px_rgba(16,185,129,0.7)]";
+        const peerBubbleClasses =
+                displaySettings.theme === "light"
+                        ? "self-start border-slate-200/70 bg-gradient-to-br from-white to-slate-50 text-slate-900 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)]"
+                        : "self-start border-white/12 bg-gradient-to-br from-white/12 via-white/8 to-white/5 text-white shadow-[0_18px_50px_-30px_rgba(0,0,0,0.8)]";
+        const viewerMetaClasses =
+                displaySettings.theme === "light" ? "text-emerald-900/70" : "text-emerald-100/70";
+        const peerMetaClasses = displaySettings.theme === "light" ? "text-slate-500" : "text-white/60";
+        const composerContainerClasses = cn(
+                "flex items-end gap-3 rounded-3xl border px-4 py-3 shadow-inner transition focus-within:ring-2",
+                displaySettings.theme === "light"
+                        ? "border-slate-200/80 bg-white/95 text-slate-900 focus-within:border-slate-300 focus-within:ring-slate-200/70"
+                        : "border-white/12 bg-white/5 text-white focus-within:border-white/30 focus-within:ring-white/20",
+        );
+        const composerInputClasses = displaySettings.theme === "light"
+                ? "text-slate-900 placeholder:text-slate-500"
+                : "text-white placeholder:text-white/60";
+        const sendButtonClasses = displaySettings.theme === "light"
+                ? "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-500"
+                : "bg-white text-black hover:bg-white/90 focus-visible:ring-white/60";
+        const toggleTheme: "dark" | "light" =
+                displaySettings.theme === "light" ? "light" : "dark";
 	const isClearHistoryDisabled = !conversationId || isSyncingHistory;
 	const isSyncHistoryDisabled =
 		!friendId || isThreadLoading || isSyncingHistory;
@@ -1453,74 +1472,79 @@ export default function ChatThread({
 										</button>
 									) : null}
                                                                         {visibleMessages.length > 0 ? (
-                                                                                <motion.ul layout="position" className="space-y-4">
-                                                                                        <AnimatePresence initial={!prefersReducedMotion}>
-                                                                                                {visibleMessages.map((message) => {
-                                                                                                        const isViewer = message.senderId === viewerId;
-                                                                                                        const timestamp = formatMessageTime(
-                                                                                                                message.createdAt,
-                                                                                                                locale,
-                                                                                                        );
-                                                                                                        return (
-                                                                                                                <motion.li
-                                                                                                                        layout="position"
-                                                                                                                        variants={messageVariants}
-                                                                                                                        initial={prefersReducedMotion ? false : "hidden"}
-                                                                                                                        animate="visible"
-                                                                                                                        exit="exit"
-                                                                                                                        transition={
-                                                                                                                                prefersReducedMotion
-                                                                                                                                        ? undefined
-                                                                                                                                        : {
-                                                                                                                                                  duration: 0.18,
-                                                                                                                                                  ease: "easeOut",
-                                                                                                                                                  layout: { duration: 0.2, ease: "easeOut" },
-                                                                                                                                          }
-                                                                                                                        }
-                                                                                                                        key={message.id}
-                                                                                                                        className={cn(
-                                                                                                                                "max-w-xl rounded-2xl border",
-                                                                                                                                bubblePaddingClasses,
-                                                                                                                                bubbleTextClasses,
-                                                                                                                                isViewer
-                                                                                                                                        ? viewerBubbleClasses
-                                                                                                                                        : "border-white/10 bg-black/50 text-white",
-                                                                                                                        )}
-                                                                                                                >
-                                                                                                                        {displaySettings.showLabels ? (
-                                                                                                                                <div
-                                                                                                                                        className={cn(
-                                                                                                                                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
-                                                                                                                                                isViewer
-                                                                                                                                                        ? viewerMetaClasses
-                                                                                                                                                        : "text-white/50",
-                                                                                                                                        )}
-                                                                                                                                >
-                                                                                                                                        <span>
-                                                                                                                                                {isViewer
-                                                                                                                                                        ? t("thread.me")
-                                                                                                                                                        : getContactName(message.sender)}
-                                                                                                                                        </span>
-                                                                                                                                        <span>{timestamp}</span>
-                                                                                                                                </div>
-                                                                                                                        ) : (
-                                                                                                                                <p className="sr-only">
-                                                                                                                                        {isViewer
-                                                                                                                                                ? t("thread.me")
-                                                                                                                                                : getContactName(message.sender)}{" "}
-                                                                                                                                        {timestamp}
-                                                                                                                                </p>
-                                                                                                                        )}
-                                                                                                                        <p>{message.body}</p>
-                                                                                                                </motion.li>
-                                                                                                        );
-                                                                                                })}
-                                                                                        </AnimatePresence>
-                                                                                </motion.ul>
-                                                                        ) : (
-                                                                                <p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
-                                                                                        {t("thread.empty")}
-                                                                                </p>
+        <motion.ul layout="position" className="space-y-4">
+                <AnimatePresence initial={!prefersReducedMotion}>
+                        {visibleMessages.map((message) => {
+                                const isViewer = message.senderId === viewerId;
+                                const timestamp = formatMessageTime(
+                                        message.createdAt,
+                                        locale,
+                                );
+                                return (
+                                        <motion.li
+                                                layout="position"
+                                                variants={messageVariants}
+                                                initial={prefersReducedMotion ? false : "hidden"}
+                                                animate="visible"
+                                                exit="exit"
+                                                transition={{
+                                                        prefersReducedMotion
+                                                                ? undefined
+                                                                : {
+                                                                          duration: 0.18,
+                                                                          ease: "easeOut",
+                                                                          layout: { duration: 0.2, ease: "easeOut" },
+                                                                  },
+                                                }}
+                                                key={message.id}
+                                                className={cn(
+                                                        "flex",
+                                                        isViewer ? "justify-end" : "justify-start",
+                                                )}
+                                        >
+                                                <div
+                                                        className={cn(
+                                                                bubbleBaseClasses,
+                                                                bubblePaddingClasses,
+                                                                bubbleTextClasses,
+                                                                isViewer
+                                                                        ? viewerBubbleClasses
+                                                                        : peerBubbleClasses,
+                                                        )}
+                                                >
+                                                        {displaySettings.showLabels ? (
+                                                                <div
+                                                                        className={cn(
+                                                                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
+                                                                                isViewer ? viewerMetaClasses : peerMetaClasses,
+                                                                        )}
+                                                                >
+                                                                        <span>
+                                                                                {isViewer
+                                                                                        ? t("thread.me")
+                                                                                        : getContactName(message.sender)}
+                                                                        </span>
+                                                                        <span>{timestamp}</span>
+                                                                </div>
+                                                        ) : (
+                                                                <p className="sr-only">
+                                                                        {isViewer
+                                                                                ? t("thread.me")
+                                                                                : getContactName(message.sender)}{" "}
+                                                                        {timestamp}
+                                                                </p>
+                                                        )}
+                                                        <p>{message.body}</p>
+                                                </div>
+                                        </motion.li>
+                                );
+                        })}
+                </AnimatePresence>
+        </motion.ul>
+) : (
+        <p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
+                {t("thread.empty")}
+        </p>
                                                                         )}
                                                                         <AnimatePresence>
                                                                                 {typingText ? (
@@ -1534,35 +1558,61 @@ export default function ChatThread({
                                                         ) : null}
                                                 </div>
                                         </div>
-					<footer className="border-t border-white/10 px-6 py-4">
-						<form
-							className="flex flex-col gap-3"
-							onSubmit={handleComposerSubmit}
-						>
-							{sendError ? (
-								<p className="text-xs text-red-300">{sendError}</p>
-							) : null}
-							<textarea
-								value={draft}
-								onChange={(event) => handleDraftChange(event.target.value)}
-								placeholder={t("thread.composer.placeholder")}
-								rows={3}
-								disabled={!conversation || isSending}
-								className="flex-1 resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white shadow-inner focus:border-white/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-							/>
-							<div className="flex items-center justify-end">
-								<button
-									type="submit"
-									disabled={!conversation || isSending || !draft.trim()}
-									className="rounded-full bg-white px-6 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
-								>
-									{isSending
-										? t("thread.composer.sending")
-										: t("thread.composer.send")}
-								</button>
-							</div>
-						</form>
-					</footer>
+                                        <footer className="border-t border-white/10 px-6 py-4">
+                                                <form
+                                                        className="flex flex-col gap-3"
+                                                        onSubmit={handleComposerSubmit}
+                                                >
+                                                        {sendError ? (
+                                                                <p className="text-xs text-red-300">{sendError}</p>
+                                                        ) : null}
+                                                        <div className={composerContainerClasses}>
+                                                                <textarea
+                                                                        value={draft}
+                                                                        onChange={(event) => handleDraftChange(event.target.value)}
+                                                                        placeholder={t("thread.composer.placeholder")}
+                                                                        rows={3}
+                                                                        disabled={!conversation || isSending}
+                                                                        className={cn(
+                                                                                "peer w-full min-h-[86px] resize-none border-none bg-transparent px-1 text-sm leading-6 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+                                                                                composerInputClasses,
+                                                                        )}
+                                                                />
+                                                                <button
+                                                                        type="submit"
+                                                                        disabled={!conversation || isSending || !draft.trim()}
+                                                                        className={cn(
+                                                                                "ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60",
+                                                                                sendButtonClasses,
+                                                                        )}
+                                                                        aria-label={
+                                                                                isSending
+                                                                                        ? t("thread.composer.sending")
+                                                                                        : t("thread.composer.send")
+                                                                        }
+                                                                >
+                                                                        <span className="sr-only">
+                                                                                {isSending
+                                                                                        ? t("thread.composer.sending")
+                                                                                        : t("thread.composer.send")}
+                                                                        </span>
+                                                                        <svg
+                                                                                aria-hidden
+                                                                                viewBox="0 0 24 24"
+                                                                                className="h-4 w-4"
+                                                                                fill="currentColor"
+                                                                        >
+                                                                                <path d="M3.4 11.2 19.5 4.1c1.2-.5 2.3.6 1.8 1.8l-7.1 16.1c-.6 1.3-2.5 1.1-2.8-.3l-1.1-4.7-4.7-1.1c-1.4-.3-1.6-2.2-.3-2.8Z" />
+                                                                                <path
+                                                                                        d="m10.6 14 5.6-5.6-7.4 4.1z"
+                                                                                        fill="currentColor"
+                                                                                        opacity=".8"
+                                                                                />
+                                                                        </svg>
+                                                                </button>
+                                                        </div>
+                                                </form>
+                                        </footer>
 				</>
 			) : (
 				<div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center text-white/70">
