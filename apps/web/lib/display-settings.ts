@@ -3,18 +3,18 @@
 export type DisplayTheme = "dark" | "light";
 
 export type DisplaySettings = {
-	magnify: boolean;
-	showLabels: boolean;
-	theme: DisplayTheme;
+        magnify: boolean;
+        showLabels: boolean;
+        theme: DisplayTheme;
 };
 
 const STORAGE_KEY = "site-dock-display";
 export const DISPLAY_SETTINGS_EVENT = "site-dock-display-change";
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
-	magnify: true,
-	showLabels: true,
-	theme: "dark",
+        magnify: true,
+        showLabels: true,
+        theme: "dark",
 };
 
 const isLightTheme = (value: unknown): value is DisplayTheme =>
@@ -28,10 +28,10 @@ export function loadDisplaySettings(): DisplaySettings {
 	try {
 		const raw = window.localStorage.getItem(STORAGE_KEY);
 		if (!raw) return DEFAULT_DISPLAY_SETTINGS;
-		const parsed = JSON.parse(raw) as Partial<DisplaySettings>;
-		return {
-			...DEFAULT_DISPLAY_SETTINGS,
-			...parsed,
+                const parsed = JSON.parse(raw) as Partial<DisplaySettings>;
+                return {
+                        ...DEFAULT_DISPLAY_SETTINGS,
+                        ...parsed,
 			theme: isLightTheme(parsed.theme)
 				? parsed.theme
 				: DEFAULT_DISPLAY_SETTINGS.theme,
