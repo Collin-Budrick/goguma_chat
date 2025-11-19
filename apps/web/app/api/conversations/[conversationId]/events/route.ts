@@ -35,7 +35,7 @@ export async function GET(
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const { conversationId } = await params;
+        const { conversationId } = await params;
 
 	try {
 		await ensureConversationParticipant(conversationId, session.user.id);
@@ -44,34 +44,63 @@ export async function GET(
 		return NextResponse.json({ error: message }, { status: 403 });
 	}
 
-	const stream = new TransformStream();
-	const writer = stream.writable.getWriter();
+        const stream = new TransformStream();
+        const writer = stream.writable.getWriter();
 
-	const keepAlive = setInterval(() => {
-		writer.write(encoder.encode("event: ping\ndata: {}\n\n")).catch(() => {
-			clearInterval(keepAlive);
-		});
-	}, HEARTBEAT_INTERVAL);
+        let keepAlive: ReturnType<typeof setInterval>;
+        let cleanupCalled = false;
+        let unsubscribe: () => void = () => {};
 
-	const unsubscribe = subscribeToConversationEvents(conversationId, (event) => {
-		const payload = formatEvent(event);
-		if (!payload) return;
-		writer.write(encoder.encode(payload)).catch(() => {
-			unsubscribe();
-			clearInterval(keepAlive);
-		});
-	});
+        const ignoreAbortError = (error: unknown) => {
+                if (error instanceof Error && error.name === "AbortError") {
+                        return;
+                }
 
-	request.signal.addEventListener("abort", () => {
-		unsubscribe();
-		clearInterval(keepAlive);
-		writer.close().catch(() => {});
-	});
+                console.error(error);
+        };
 
-	writer.write(encoder.encode("event: ready\ndata: {}\n\n")).catch(() => {
-		unsubscribe();
-		clearInterval(keepAlive);
-	});
+        const cleanup = () => {
+                if (cleanupCalled) return;
+                cleanupCalled = true;
+
+                clearInterval(keepAlive);
+                unsubscribe();
+
+                writer.close().catch(ignoreAbortError);
+                writer.abort?.().catch(ignoreAbortError);
+        };
+
+        keepAlive = setInterval(() => {
+                if (request.signal.aborted) {
+                        cleanup();
+                        return;
+                }
+
+                writer.write(encoder.encode("event: ping\ndata: {}\n\n")).catch(() => {
+                        cleanup();
+                });
+        }, HEARTBEAT_INTERVAL);
+
+        unsubscribe = subscribeToConversationEvents(conversationId, (event) => {
+                if (request.signal.aborted) {
+                        cleanup();
+                        return;
+                }
+
+                const payload = formatEvent(event);
+                if (!payload) return;
+                writer.write(encoder.encode(payload)).catch(() => {
+                        cleanup();
+                });
+        });
+
+        request.signal.addEventListener("abort", cleanup);
+
+        if (!request.signal.aborted) {
+                writer.write(encoder.encode("event: ready\ndata: {}\n\n")).catch(() => {
+                        cleanup();
+                });
+        }
 
 	return new Response(stream.readable, {
 		headers: {
