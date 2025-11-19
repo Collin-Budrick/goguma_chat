@@ -1601,29 +1601,57 @@ export function usePeerConversationChannel(options: {
 		}
 	}, []);
 
-	const sendPresenceTyping = useCallback(
-		async ({ conversationId, typing }: SendTypingPresenceOptions) => {
-			if (!conversationId) {
-				return;
-			}
+        const sendPresenceTyping = useCallback(
+                async ({ conversationId, typing }: SendTypingPresenceOptions) => {
+                        if (!conversationId) {
+                                return;
+                        }
 
-			const payload: PeerPresenceUpdate = {
-				kind: "typing",
-				conversationId,
-				typing,
-			};
+                        const transport = transportRef.current;
+                        const shouldFallback = !transport || transport.state !== "connected";
 
-			try {
-				await sendPresence(payload);
-			} catch (error) {
-				if (isTransportDisconnectedError(error)) {
-					return;
-				}
-				console.error("Failed to publish typing presence", error);
-			}
-		},
-		[sendPresence],
-	);
+                        if (shouldFallback) {
+                                try {
+                                        const response = await fetch("/api/messages/typing", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({
+                                                        conversationId,
+                                                        isTyping: Boolean(typing?.isTyping),
+                                                }),
+                                        });
+
+                                        if (!response.ok) {
+                                                throw new Error(
+                                                        `HTTP typing presence failed with status ${response.status}`,
+                                                );
+                                        }
+                                } catch (error) {
+                                        console.error(
+                                                "Failed to publish typing presence via HTTP fallback",
+                                                error,
+                                        );
+                                }
+                                return;
+                        }
+
+                        const payload: PeerPresenceUpdate = {
+                                kind: "typing",
+                                conversationId,
+                                typing,
+                        };
+
+                        try {
+                                await sendPresence(payload);
+                        } catch (error) {
+                                if (isTransportDisconnectedError(error)) {
+                                        return;
+                                }
+                                console.error("Failed to publish typing presence", error);
+                        }
+                },
+                [sendPresence],
+        );
 
 	const sendPresenceReadReceipt = useCallback(
 		async ({
