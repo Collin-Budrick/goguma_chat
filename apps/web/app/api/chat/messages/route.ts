@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -20,6 +20,7 @@ const bodySchema = z
         .strict();
 
 const nonceBodyRegistry = new Map<string, string>();
+const conversationReplySchedule = new Map<string, number>();
 
 const normalizeBody = (body: string) => body.trim();
 
@@ -97,11 +98,12 @@ export async function POST(request: NextRequest) {
                 fallback: "friend",
         });
 
+        const jitteredDelayMs = calculateReplyDelay(conversationId);
         const reply: ChatMessage = {
                 id: `${idBase}:reply`,
                 authorId: friendId,
                 body: createAutoReply(viewerName, friendName, content),
-                sentAt: new Date(sentAt.getTime() + 1000 * 5).toISOString(),
+                sentAt: new Date(sentAt.getTime() + jitteredDelayMs).toISOString(),
         };
 
         const payload: SendMessageResponse = {
@@ -111,4 +113,22 @@ export async function POST(request: NextRequest) {
         };
 
         return NextResponse.json(payload);
+}
+
+function calculateReplyDelay(conversationId: string) {
+        const baseDelayMs = 1000 * 5;
+        const jitterMs = Math.floor(Math.random() * 2000) - 1000; // -1s to +1s
+        const minimumDelayMs = 1000 * 3.5;
+
+        const lastScheduled = conversationReplySchedule.get(conversationId) ?? 0;
+        const now = Date.now();
+
+        let delay = Math.max(minimumDelayMs, baseDelayMs + jitterMs);
+        const earliestAllowed = lastScheduled + minimumDelayMs;
+        if (now + delay < earliestAllowed) {
+                delay = earliestAllowed - now;
+        }
+
+        conversationReplySchedule.set(conversationId, now + delay);
+        return delay;
 }
