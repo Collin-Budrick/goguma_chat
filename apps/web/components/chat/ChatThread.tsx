@@ -52,7 +52,7 @@ type ChatThreadProps = {
 
 const MESSAGE_LIMIT = 30;
 const TYPING_DEBOUNCE_MS = 2_000;
-const CONFIRM_DUPLICATE_WINDOW_MS = 5_000;
+const CONFIRM_DUPLICATE_WINDOW_MS = 60_000;
 
 function generateClientMessageId() {
 	if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -77,15 +77,15 @@ function isOptimisticMessage(message: ChatMessage) {
 }
 
 function isConfirmedMatch(optimistic: ChatMessage, confirmed: ChatMessage) {
-	const delta = Math.abs(
-		toDate(optimistic.createdAt).getTime() -
-			toDate(confirmed.createdAt).getTime(),
-	);
-	return (
-		optimistic.senderId === confirmed.senderId &&
-		optimistic.body === confirmed.body &&
-		delta < CONFIRM_DUPLICATE_WINDOW_MS
-	);
+        const optimisticTime = toDate(optimistic.createdAt).getTime();
+        const confirmedTime = toDate(confirmed.createdAt).getTime();
+        const delta = Math.abs(optimisticTime - confirmedTime);
+        return (
+                optimistic.senderId === confirmed.senderId &&
+                optimistic.body === confirmed.body &&
+                delta < CONFIRM_DUPLICATE_WINDOW_MS &&
+                optimisticTime <= confirmedTime + CONFIRM_DUPLICATE_WINDOW_MS
+        );
 }
 
 function getMessageKey(message: ChatMessage) {
@@ -637,19 +637,15 @@ export default function ChatThread({
 			if (event.type === "message") {
 				const { message, clientMessageId } = event;
 				setMessages((prev) => {
-					const withoutClient = clientMessageId
-						? prev.filter((item) => item.id !== clientMessageId)
-						: prev.filter((item) => {
-								const isSameSender = item.senderId === message.senderId;
-								const isSameBody = item.body === message.body;
-								const createdAtDelta = Math.abs(
-									toDate(item.createdAt).getTime() -
-										toDate(message.createdAt).getTime(),
-								);
-								const isNearSameTimestamp = createdAtDelta < 5_000;
+                                const withoutClient = clientMessageId
+                                        ? prev.filter((item) => item.id !== clientMessageId)
+                                        : prev.filter((item) => {
+                                                        if (!isOptimisticMessage(item)) {
+                                                                return true;
+                                                        }
 
-								return !(isSameSender && isSameBody && isNearSameTimestamp);
-							});
+                                                        return !isConfirmedMatch(item, message);
+                                                });
 					return mergeMessages(withoutClient, [message]);
 				});
 				setConversation((prev) =>
