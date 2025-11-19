@@ -1,15 +1,16 @@
 "use client";
 
 import {
-	type FormEvent,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
+        type FormEvent,
+        useCallback,
+        useEffect,
+        useMemo,
+        useRef,
+        useState,
 } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import type { FriendSummary } from "@/components/contacts/types";
 import {
@@ -145,10 +146,10 @@ function createOptimisticMessage(
 }
 
 function getParticipantProfile(
-	conversation: ChatConversation | null,
-	userId: string,
+        conversation: ChatConversation | null,
+        userId: string,
 ): ChatUserProfile | null {
-	if (!conversation) return null;
+        if (!conversation) return null;
 	return (
 		conversation.participants.find(
 			(participant) => participant.userId === userId,
@@ -156,17 +157,61 @@ function getParticipantProfile(
 	);
 }
 
+type TypingIndicatorProps = {
+        text: string;
+        prefersReducedMotion: boolean;
+};
+
+function TypingIndicator({ text, prefersReducedMotion }: TypingIndicatorProps) {
+        return (
+                <motion.div
+                        initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="mt-4 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-xs text-white/80"
+                >
+                        <span>{text}</span>
+                        <span className="flex gap-1" aria-hidden>
+                                {[0, 1, 2].map((index) => (
+                                        <motion.span
+                                                key={index}
+                                                className="h-2 w-2 rounded-full bg-white/80"
+                                                animate=
+                                                        prefersReducedMotion
+                                                                ? { opacity: 0.8 }
+                                                                : {
+                                                                          opacity: [0.4, 1, 0.4],
+                                                                          scale: [0.9, 1.05, 0.9],
+                                                                  }
+                                                transition=
+                                                        prefersReducedMotion
+                                                                ? undefined
+                                                                : {
+                                                                          duration: 1.1,
+                                                                          repeat: Infinity,
+                                                                          ease: "easeInOut",
+                                                                          delay: index * 0.2,
+                                                                  }
+                                        />
+                                ))}
+                        </span>
+                </motion.div>
+        );
+}
+
 export default function ChatThread({
-	viewerId,
-	viewerProfile,
-	friend,
+        viewerId,
+        viewerProfile,
+        friend,
 	initialFriendId,
 	initialConversation,
 	initialMessages,
 	initialCursor,
 }: ChatThreadProps) {
-	const t = useTranslations("Chat");
-	const locale = useLocale();
+        const t = useTranslations("Chat");
+        const locale = useLocale();
+        const prefersReducedMotion = useReducedMotion();
 
 	const friendId = friend?.friendId ?? null;
 	const friendContact = useMemo(
@@ -848,7 +893,7 @@ export default function ChatThread({
 	);
 
         const typingProfiles = useMemo(() => {
-                if (!conversation) return [];
+                if (!conversation || !chatLocalSettings.showTypingIndicators) return [];
                 const now = Date.now();
                 return conversation.participants
                         .map((participant) => participant.user)
@@ -858,10 +903,10 @@ export default function ChatThread({
                                         typingState[profile.id] &&
                                         typingState[profile.id] > now,
                         );
-        }, [conversation, typingState, viewerId]);
+        }, [conversation, typingState, viewerId, chatLocalSettings.showTypingIndicators]);
 
         const typingText = useMemo(() => {
-                if (!typingProfiles.length) {
+                if (!typingProfiles.length || !chatLocalSettings.showTypingIndicators) {
                         return null;
                 }
                 const names = typingProfiles.map((profile) => getContactName(profile));
@@ -872,7 +917,24 @@ export default function ChatThread({
                         return `${names[0]} and ${names[1]} are typing...`;
                 }
                 return `${names[0]} and others are typing...`;
-        }, [typingProfiles]);
+        }, [typingProfiles, chatLocalSettings.showTypingIndicators]);
+
+        const messageVariants = useMemo(
+                () => ({
+                        hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 8 },
+                        visible: {
+                                opacity: 1,
+                                y: 0,
+                                transition: { duration: 0.18, ease: "easeOut" },
+                        },
+                        exit: {
+                                opacity: 0,
+                                y: prefersReducedMotion ? 0 : -6,
+                                transition: { duration: 0.12, ease: "easeIn" },
+                        },
+                }),
+                [prefersReducedMotion],
+        );
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -1390,67 +1452,88 @@ export default function ChatThread({
 											{isFetchingMore ? "Loading..." : "Load older messages"}
 										</button>
 									) : null}
-									{visibleMessages.length > 0 ? (
-										<ul className="space-y-4">
-											{visibleMessages.map((message) => {
-												const isViewer = message.senderId === viewerId;
-												const timestamp = formatMessageTime(
-													message.createdAt,
-													locale,
-												);
-												return (
-													<li
-														key={message.id}
-														className={cn(
-															"max-w-xl rounded-2xl border",
-															bubblePaddingClasses,
-															bubbleTextClasses,
-															isViewer
-																? viewerBubbleClasses
-																: "border-white/10 bg-black/50 text-white",
-														)}
-													>
-														{displaySettings.showLabels ? (
-															<div
-																className={cn(
-																	"mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
-																	isViewer
-																		? viewerMetaClasses
-																		: "text-white/50",
-																)}
-															>
-																<span>
-																	{isViewer
-																		? t("thread.me")
-																		: getContactName(message.sender)}
-																</span>
-																<span>{timestamp}</span>
-															</div>
-														) : (
-															<p className="sr-only">
-																{isViewer
-																	? t("thread.me")
-																	: getContactName(message.sender)}{" "}
-																{timestamp}
-															</p>
-														)}
-														<p>{message.body}</p>
-													</li>
-												);
-											})}
-										</ul>
-									) : (
-										<p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
-											{t("thread.empty")}
-										</p>
-									)}
-									{typingText ? (
-										<p className="mt-4 text-xs text-white/70">{typingText}</p>
-									) : null}
-								</>
-							) : null}
-						</div>
-					</div>
+                                                                        {visibleMessages.length > 0 ? (
+                                                                                <motion.ul layout="position" className="space-y-4">
+                                                                                        <AnimatePresence initial={!prefersReducedMotion}>
+                                                                                                {visibleMessages.map((message) => {
+                                                                                                        const isViewer = message.senderId === viewerId;
+                                                                                                        const timestamp = formatMessageTime(
+                                                                                                                message.createdAt,
+                                                                                                                locale,
+                                                                                                        );
+                                                                                                        return (
+                                                                                                                <motion.li
+                                                                                                                        layout="position"
+                                                                                                                        variants={messageVariants}
+                                                                                                                        initial={prefersReducedMotion ? false : "hidden"}
+                                                                                                                        animate="visible"
+                                                                                                                        exit="exit"
+                                                                                                                        transition={
+                                                                                                                                prefersReducedMotion
+                                                                                                                                        ? undefined
+                                                                                                                                        : {
+                                                                                                                                                  duration: 0.18,
+                                                                                                                                                  ease: "easeOut",
+                                                                                                                                                  layout: { duration: 0.2, ease: "easeOut" },
+                                                                                                                                          }
+                                                                                                                        }
+                                                                                                                        key={message.id}
+                                                                                                                        className={cn(
+                                                                                                                                "max-w-xl rounded-2xl border",
+                                                                                                                                bubblePaddingClasses,
+                                                                                                                                bubbleTextClasses,
+                                                                                                                                isViewer
+                                                                                                                                        ? viewerBubbleClasses
+                                                                                                                                        : "border-white/10 bg-black/50 text-white",
+                                                                                                                        )}
+                                                                                                                >
+                                                                                                                        {displaySettings.showLabels ? (
+                                                                                                                                <div
+                                                                                                                                        className={cn(
+                                                                                                                                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
+                                                                                                                                                isViewer
+                                                                                                                                                        ? viewerMetaClasses
+                                                                                                                                                        : "text-white/50",
+                                                                                                                                        )}
+                                                                                                                                >
+                                                                                                                                        <span>
+                                                                                                                                                {isViewer
+                                                                                                                                                        ? t("thread.me")
+                                                                                                                                                        : getContactName(message.sender)}
+                                                                                                                                        </span>
+                                                                                                                                        <span>{timestamp}</span>
+                                                                                                                                </div>
+                                                                                                                        ) : (
+                                                                                                                                <p className="sr-only">
+                                                                                                                                        {isViewer
+                                                                                                                                                ? t("thread.me")
+                                                                                                                                                : getContactName(message.sender)}{" "}
+                                                                                                                                        {timestamp}
+                                                                                                                                </p>
+                                                                                                                        )}
+                                                                                                                        <p>{message.body}</p>
+                                                                                                                </motion.li>
+                                                                                                        );
+                                                                                                })}
+                                                                                        </AnimatePresence>
+                                                                                </motion.ul>
+                                                                        ) : (
+                                                                                <p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
+                                                                                        {t("thread.empty")}
+                                                                                </p>
+                                                                        )}
+                                                                        <AnimatePresence>
+                                                                                {typingText ? (
+                                                                                        <TypingIndicator
+                                                                                                prefersReducedMotion={prefersReducedMotion}
+                                                                                                text={typingText}
+                                                                                        />
+                                                                                ) : null}
+                                                                        </AnimatePresence>
+                                                                </>
+                                                        ) : null}
+                                                </div>
+                                        </div>
 					<footer className="border-t border-white/10 px-6 py-4">
 						<form
 							className="flex flex-col gap-3"
