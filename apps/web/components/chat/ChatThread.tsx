@@ -367,20 +367,6 @@ export default function ChatThread({
         }, [conversation?.id]);
 
         useEffect(() => {
-                if (chatLocalSettings.showTypingIndicators) {
-                        return;
-                }
-
-                typingActiveRef.current = false;
-                if (typingTimeoutRef.current) {
-                        window.clearTimeout(typingTimeoutRef.current);
-                        typingTimeoutRef.current = null;
-                }
-
-                sendTyping(false);
-        }, [chatLocalSettings.showTypingIndicators, sendTyping]);
-
-        useEffect(() => {
                 if (typeof window === "undefined") {
                         return;
                 }
@@ -944,6 +930,20 @@ export default function ChatThread({
                 },
                 [chatLocalSettings.showTypingIndicators, conversationId, presence, viewerId],
         );
+
+        useEffect(() => {
+                if (chatLocalSettings.showTypingIndicators) {
+                        return;
+                }
+
+                typingActiveRef.current = false;
+                if (typingTimeoutRef.current) {
+                        window.clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = null;
+                }
+
+                sendTyping(false);
+        }, [chatLocalSettings.showTypingIndicators, sendTyping]);
 
 	const handleDraftChange = useCallback(
 		(value: string) => {
