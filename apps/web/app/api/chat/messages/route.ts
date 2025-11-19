@@ -12,9 +12,9 @@ import {
 } from "../helpers";
 
 const bodySchema = z.object({
-	friendId: z.string().min(1),
-	content: z.string().min(1),
-	mode: z.string().optional(),
+        friendId: z.string().trim().min(1).max(128),
+        content: z.string().trim().min(1).max(2048),
+        mode: z.string().trim().min(1).max(32).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -31,12 +31,15 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 	}
 
-	const parsed = bodySchema.safeParse(json);
-	if (!parsed.success) {
-		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-	}
+        const parsed = bodySchema.safeParse(json);
+        if (!parsed.success) {
+                return NextResponse.json(
+                        { error: "Invalid request", details: parsed.error.flatten() },
+                        { status: 400 },
+                );
+        }
 
-	const { friendId, content } = parsed.data;
+        const { friendId, content } = parsed.data;
 	const state = await getFriendState(session.user.id);
 	const friend = state.friends.find((entry) => entry.friendId === friendId);
 
@@ -49,9 +52,9 @@ export async function POST(request: NextRequest) {
 	const viewerMessage: ChatMessage = {
 		id: `${conversationId}:${randomUUID()}`,
 		authorId: session.user.id,
-		body: content.trim(),
-		sentAt: sentAt.toISOString(),
-	};
+                body: content,
+                sentAt: sentAt.toISOString(),
+        };
 
 	const friendName = resolveProfileName({
 		firstName: friend.firstName,
