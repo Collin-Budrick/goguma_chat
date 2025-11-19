@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -15,8 +15,17 @@ const bodySchema = z
         .object({
                 friendId: z.string().min(1),
                 content: z.string().min(1),
+                nonce: z.string().min(1).max(128).optional(),
         })
         .strict();
+
+const nonceBodyRegistry = new Map<string, string>();
+
+const normalizeBody = (body: string) => body.trim();
+
+function hashBody(body: string) {
+        return createHash("sha256").update(body).digest("hex");
+}
 
 export async function POST(request: NextRequest) {
         const session = await auth();
@@ -40,19 +49,37 @@ export async function POST(request: NextRequest) {
                 );
         }
 
-        const { friendId, content } = parsed.data;
-	const state = await getFriendState(session.user.id);
-	const friend = state.friends.find((entry) => entry.friendId === friendId);
+        const { friendId, content, nonce } = parsed.data;
+        const normalizedBody = normalizeBody(content);
+        const bodyHash = hashBody(normalizedBody);
+        const state = await getFriendState(session.user.id);
+        const friend = state.friends.find((entry) => entry.friendId === friendId);
 
         if (!friend) {
                 return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-	const conversationId = buildConversationId(session.user.id, friendId);
-	const sentAt = new Date();
-	const viewerMessage: ChatMessage = {
-		id: `${conversationId}:${randomUUID()}`,
-		authorId: session.user.id,
+        const conversationId = buildConversationId(session.user.id, friendId);
+        if (nonce) {
+                const nonceKey = `${conversationId}:${nonce}`;
+                const previousHash = nonceBodyRegistry.get(nonceKey);
+
+                if (previousHash && previousHash !== bodyHash) {
+                        return NextResponse.json(
+                                { error: "Nonce already used with different body" },
+                                { status: 409 },
+                        );
+                }
+
+                nonceBodyRegistry.set(nonceKey, bodyHash);
+        }
+
+        const deterministicSeed = nonce ?? bodyHash;
+        const idBase = `${conversationId}:${deterministicSeed}`;
+        const sentAt = new Date();
+        const viewerMessage: ChatMessage = {
+                id: idBase,
+                authorId: session.user.id,
                 body: content,
                 sentAt: sentAt.toISOString(),
         };
@@ -71,7 +98,7 @@ export async function POST(request: NextRequest) {
         });
 
         const reply: ChatMessage = {
-                id: `${conversationId}:${randomUUID()}`,
+                id: `${idBase}:reply`,
                 authorId: friendId,
                 body: createAutoReply(viewerName, friendName, content),
                 sentAt: new Date(sentAt.getTime() + 1000 * 5).toISOString(),
