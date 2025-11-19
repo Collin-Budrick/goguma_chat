@@ -25,6 +25,7 @@ const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 const HEARTBEAT_TIMEOUT_MS = 15_000;
+const TIMEOUT_ERROR_MESSAGE = "Timed out waiting for peer response";
 
 type ChannelHistoryMode = "replace" | "prepend";
 
@@ -632,10 +633,10 @@ export function usePeerConversationChannel(options: {
 
 			map.set(key, entry);
 
-			if (typeof window !== "undefined" && timeoutMs > 0) {
-				timer = window.setTimeout(() => {
-					entry.reject(new Error("Timed out waiting for peer response"));
-				}, timeoutMs);
+                        if (typeof window !== "undefined" && timeoutMs > 0) {
+                                timer = window.setTimeout(() => {
+                                        entry.reject(new Error(TIMEOUT_ERROR_MESSAGE));
+                                }, timeoutMs);
 			}
 
 			return () => {
@@ -1347,22 +1348,22 @@ export function usePeerConversationChannel(options: {
 		[readStored, refreshHttpFallbacks, stopHttpFallback],
 	);
 
-	const sendViaHttp = useCallback(
-		async ({
-			conversationId,
-			body,
-			clientMessageId,
-		}: {
-			conversationId: string;
-			body: string;
-			clientMessageId: string;
-		}) => {
-			const transport = transportRef.current;
-			if (directOnly && transport?.state === "connected") {
-				return false;
-			}
-			try {
-				const response = await fetch(
+        const sendViaHttp = useCallback(
+                async ({
+                        conversationId,
+                        body,
+                        clientMessageId,
+                }: {
+                        conversationId: string;
+                        body: string;
+                        clientMessageId: string;
+                }): Promise<ChatMessage | null> => {
+                        const transport = transportRef.current;
+                        if (directOnly && transport?.state === "connected") {
+                                return null;
+                        }
+                        try {
+                                const response = await fetch(
 					`/api/conversations/${encodeURIComponent(conversationId)}/messages`,
 					{
 						method: "POST",
@@ -1378,19 +1379,19 @@ export function usePeerConversationChannel(options: {
 				const json = (await response.json()) as {
 					message?: ChatMessage | null;
 				};
-				handleFrame({
-					type: "message:ack",
-					conversationId,
-					clientMessageId,
-					message: json.message ?? undefined,
-				});
-				return true;
-			} catch {
-				return false;
-			}
-		},
-		[directOnly, handleFrame, transportRef],
-	);
+                                handleFrame({
+                                        type: "message:ack",
+                                        conversationId,
+                                        clientMessageId,
+                                        message: json.message ?? undefined,
+                                });
+                                return json.message ?? null;
+                        } catch {
+                                return null;
+                        }
+                },
+                [directOnly, handleFrame, transportRef],
+        );
 
 	const syncViaHttp = useCallback(
 		async ({ friendId, limit, signal }: SyncHistoryOptions) => {
@@ -1457,28 +1458,29 @@ export function usePeerConversationChannel(options: {
 			return;
 		}
 
-		const entries = outboundQueueRef.current.splice(0);
-		for (const entry of entries) {
-			let delivered = false;
-			const transport = transportRef.current;
+                const entries = outboundQueueRef.current.splice(0);
+                for (const entry of entries) {
+                        let delivered = false;
+                        const transport = transportRef.current;
 
-			if (transport) {
-				await transport.ready.catch(() => undefined);
-				try {
-					await transport.send(JSON.stringify(entry.payload));
-					delivered = true;
-				} catch {}
-			}
+                        if (transport) {
+                                await transport.ready.catch(() => undefined);
+                                try {
+                                        await transport.send(JSON.stringify(entry.payload));
+                                        delivered = true;
+                                } catch {}
+                        }
 
-			if (!delivered) {
-				delivered = await sendViaHttp(entry.payload);
-			}
+                        if (!delivered) {
+                                const message = await sendViaHttp(entry.payload);
+                                delivered = Boolean(message);
+                        }
 
-			if (!delivered) {
-				outboundQueueRef.current.push(entry);
-			}
-		}
-	}, [sendViaHttp]);
+                        if (!delivered) {
+                                outboundQueueRef.current.push(entry);
+                        }
+                }
+        }, [sendViaHttp]);
 
 	useEffect(() => {
 		void flushOutboundQueue();
@@ -1512,14 +1514,28 @@ export function usePeerConversationChannel(options: {
 				clientMessageId,
 			};
 
-			return new Promise<SendMessageResult>((resolve, reject) => {
-				registerPending(
-					pendingAcksRef.current,
-					clientMessageId,
-					(message) => resolve({ message }),
-					(error) => reject(error),
-					ACK_TIMEOUT_MS,
-				);
+                        return new Promise<SendMessageResult>((resolve, reject) => {
+                                registerPending(
+                                        pendingAcksRef.current,
+                                        clientMessageId,
+                                        (message) => resolve({ message }),
+                                        (error) => {
+                                                if (error.message === TIMEOUT_ERROR_MESSAGE) {
+                                                        sendViaHttp(payload)
+                                                                .then((message) => {
+                                                                        if (message) {
+                                                                                resolve({ message });
+                                                                                return;
+                                                                        }
+                                                                        reject(error);
+                                                                })
+                                                                .catch(reject);
+                                                        return;
+                                                }
+                                                reject(error);
+                                        },
+                                        ACK_TIMEOUT_MS,
+                                );
 
 				const attemptSend = async () => {
 					const handle = transportRef.current;
@@ -1538,11 +1554,11 @@ export function usePeerConversationChannel(options: {
 						}
 					}
 
-					const delivered = await sendViaHttp(payload);
-					if (!delivered) {
-						outboundQueueRef.current.push({ payload });
-					}
-				};
+                                        const deliveredMessage = await sendViaHttp(payload);
+                                        if (!deliveredMessage) {
+                                                outboundQueueRef.current.push({ payload });
+                                        }
+                                };
 
 				void attemptSend().catch((error) =>
 					rejectPending(
