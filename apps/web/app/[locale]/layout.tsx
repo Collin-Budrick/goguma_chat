@@ -1,16 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import type { PropsWithChildren } from "react";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
-
+import type { PropsWithChildren } from "react";
+import { Suspense } from "react";
+import HtmlLangSetter from "@/components/html-lang-setter";
 import SiteDock from "@/components/site-dock";
 import SiteFooter from "@/components/site-footer";
-import TransitionViewport from "@/components/transition-viewport";
 import { TransitionProvider } from "@/components/transition-context";
-import HtmlLangSetter from "@/components/html-lang-setter";
-import { routing, type Locale } from "@/i18n/routing";
+import TransitionViewport from "@/components/transition-viewport";
+import { type Locale, routing } from "@/i18n/routing";
 
 export async function generateMetadata({
 	params,
@@ -90,8 +89,8 @@ async function LocaleLayoutContent({
 			<HtmlLangSetter locale={locale} />
 			<TransitionProvider>
 				<div className="app-shell flex min-h-screen flex-col">
-						<TransitionViewport>
-							<div className="app-gradient min-h-full flex flex-col gap-10 bg-gradient-to-br from-black via-black to-neutral-950">
+					<TransitionViewport>
+						<div className="app-gradient min-h-full flex flex-col gap-10 bg-gradient-to-br from-black via-black to-neutral-950">
 							{children}
 						</div>
 					</TransitionViewport>

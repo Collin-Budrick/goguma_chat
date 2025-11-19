@@ -1,15 +1,16 @@
-import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "./index";
 import {
 	conversationParticipants,
 	conversationReads,
 	conversations,
-	conversationTypeEnum,
+	type conversationTypeEnum,
 	friendships,
 	messages,
 	users,
 } from "./schema";
+
 const DIRECT_CONVERSATION =
 	"direct" satisfies (typeof conversationTypeEnum.enumValues)[number];
 

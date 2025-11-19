@@ -1,9 +1,9 @@
-import type { FriendSummary } from "@/components/contacts/types";
 import type {
 	ChatConversation,
 	ChatMessage,
 	ChatUserProfile,
 } from "@/components/chat/types";
+import type { FriendSummary } from "@/components/contacts/types";
 import {
 	getDirectConversation,
 	listConversationMessages,

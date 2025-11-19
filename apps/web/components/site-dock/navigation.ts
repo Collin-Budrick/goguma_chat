@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import {
 	CircleUserRound,
 	Home,
@@ -9,6 +8,7 @@ import {
 	Settings2,
 	Users,
 } from "lucide-react";
+import type { ComponentType } from "react";
 
 export type DockLinkItem = {
 	type: "link";

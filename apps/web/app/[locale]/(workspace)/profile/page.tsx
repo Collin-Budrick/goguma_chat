@@ -1,14 +1,13 @@
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-
+import { Suspense } from "react";
+import SimplePage from "@/components/simple-page";
+import WorkspacePageShell from "@/components/workspace-page-shell";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import SimplePage from "@/components/simple-page";
-import WorkspacePageShell from "@/components/workspace-page-shell";
 
 type PageProps = { params: Promise<{ locale: string }> };
 

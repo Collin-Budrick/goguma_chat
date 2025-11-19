@@ -1,26 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-
-import {
-	type TransportHandle,
-	type TransportMessage,
-	emitPeerPresence,
-} from "@/lib/messaging-transport";
 import type {
-	PeerPresenceUpdate,
 	PeerHeartbeatFrame,
+	PeerPresenceUpdate,
 	PeerTransportIncomingFrame,
 } from "@/lib/messaging-schema";
-
-import type { ChatConversation, ChatMessage, TypingEvent } from "./types";
-import { mergeMessages } from "./message-utils";
 import {
-	getConversationStorage,
+	emitPeerPresence,
+	type TransportHandle,
+	type TransportMessage,
+} from "@/lib/messaging-transport";
+import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
+import {
 	type ConversationSnapshot,
 	type ConversationStorage,
+	getConversationStorage,
 } from "./conversation-storage";
-import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
+import { mergeMessages } from "./message-utils";
+import type { ChatConversation, ChatMessage, TypingEvent } from "./types";
+
 const ACK_TIMEOUT_MS = 7_000;
 const HISTORY_TIMEOUT_MS = 10_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -199,7 +198,9 @@ export function usePeerConversationChannel(options: {
 	const rejectAllPending = useCallback((error: Error) => {
 		const rejectMap = <T>(map: PendingMap<T>) => {
 			if (!map.size) return;
-			map.forEach((entry) => entry.reject(error));
+			map.forEach((entry) => {
+				entry.reject(error);
+			});
 		};
 		rejectMap(pendingAcksRef.current);
 		rejectMap(pendingHistoryRef.current);
@@ -218,7 +219,7 @@ export function usePeerConversationChannel(options: {
 					try {
 						listener({
 							type: "conversation",
-							conversation: snapshot.conversation!,
+							conversation: snapshot.conversation,
 						});
 					} catch (error) {
 						console.error("Peer listener failed", error);
@@ -265,7 +266,10 @@ export function usePeerConversationChannel(options: {
 
 			const cache = cacheRef.current;
 			if (cache.has(conversationId)) {
-				return cache.get(conversationId)!;
+				const cached = cache.get(conversationId);
+				if (cached) {
+					return cached;
+				}
 			}
 
 			const placeholder: ConversationSnapshot = { ...fallbackConversation };
@@ -422,7 +426,7 @@ export function usePeerConversationChannel(options: {
 		}
 		const node = document.documentElement;
 		const attr = node?.getAttribute("lang");
-		if (attr && attr.trim()) {
+		if (attr?.trim()) {
 			return attr.trim();
 		}
 		const fallback =
@@ -633,10 +637,10 @@ export function usePeerConversationChannel(options: {
 
 			map.set(key, entry);
 
-                        if (typeof window !== "undefined" && timeoutMs > 0) {
-                                timer = window.setTimeout(() => {
-                                        entry.reject(new Error(TIMEOUT_ERROR_MESSAGE));
-                                }, timeoutMs);
+			if (typeof window !== "undefined" && timeoutMs > 0) {
+				timer = window.setTimeout(() => {
+					entry.reject(new Error(TIMEOUT_ERROR_MESSAGE));
+				}, timeoutMs);
 			}
 
 			return () => {
@@ -873,11 +877,7 @@ export function usePeerConversationChannel(options: {
 		],
 	);
 
-	const {
-		transport: transportOption,
-		onHeartbeatTimeout,
-		directOnly,
-	} = options;
+	const { onHeartbeatTimeout, directOnly } = options;
 
 	const shouldUseHttpEvents = useCallback(() => {
 		if (!directOnly) {
@@ -1162,14 +1162,16 @@ export function usePeerConversationChannel(options: {
 			refreshHttpFallbacks();
 		});
 		return () => unsubscribe();
-	}, [options.transport, refreshHttpFallbacks]);
+	}, [refreshHttpFallbacks]);
 
 	useEffect(() => {
 		const fallbacks = httpFallbackRef.current;
 		const subscribedIds = subscribedConversationIdsRef.current;
 
 		return () => {
-			fallbacks.forEach((cleanup) => cleanup());
+			fallbacks.forEach((cleanup) => {
+				cleanup();
+			});
 			fallbacks.clear();
 			subscribedIds.clear();
 		};
@@ -1307,7 +1309,7 @@ export function usePeerConversationChannel(options: {
 			abortController.abort();
 			unsubscribeState();
 		};
-	}, [onHeartbeatTimeout, transportOption]);
+	}, [onHeartbeatTimeout]);
 
 	const subscribeMessages = useCallback(
 		(conversationId: string, listener: ChannelListener) => {
@@ -1348,22 +1350,22 @@ export function usePeerConversationChannel(options: {
 		[readStored, refreshHttpFallbacks, stopHttpFallback],
 	);
 
-        const sendViaHttp = useCallback(
-                async ({
-                        conversationId,
-                        body,
-                        clientMessageId,
-                }: {
-                        conversationId: string;
-                        body: string;
-                        clientMessageId: string;
-                }): Promise<ChatMessage | null> => {
-                        const transport = transportRef.current;
-                        if (directOnly && transport?.state === "connected") {
-                                return null;
-                        }
-                        try {
-                                const response = await fetch(
+	const sendViaHttp = useCallback(
+		async ({
+			conversationId,
+			body,
+			clientMessageId,
+		}: {
+			conversationId: string;
+			body: string;
+			clientMessageId: string;
+		}): Promise<ChatMessage | null> => {
+			const transport = transportRef.current;
+			if (directOnly && transport?.state === "connected") {
+				return null;
+			}
+			try {
+				const response = await fetch(
 					`/api/conversations/${encodeURIComponent(conversationId)}/messages`,
 					{
 						method: "POST",
@@ -1379,19 +1381,19 @@ export function usePeerConversationChannel(options: {
 				const json = (await response.json()) as {
 					message?: ChatMessage | null;
 				};
-                                handleFrame({
-                                        type: "message:ack",
-                                        conversationId,
-                                        clientMessageId,
-                                        message: json.message ?? undefined,
-                                });
-                                return json.message ?? null;
-                        } catch {
-                                return null;
-                        }
-                },
-                [directOnly, handleFrame, transportRef],
-        );
+				handleFrame({
+					type: "message:ack",
+					conversationId,
+					clientMessageId,
+					message: json.message ?? undefined,
+				});
+				return json.message ?? null;
+			} catch {
+				return null;
+			}
+		},
+		[directOnly, handleFrame],
+	);
 
 	const syncViaHttp = useCallback(
 		async ({ friendId, limit, signal }: SyncHistoryOptions) => {
@@ -1458,33 +1460,33 @@ export function usePeerConversationChannel(options: {
 			return;
 		}
 
-                const entries = outboundQueueRef.current.splice(0);
-                for (const entry of entries) {
-                        let delivered = false;
-                        const transport = transportRef.current;
+		const entries = outboundQueueRef.current.splice(0);
+		for (const entry of entries) {
+			let delivered = false;
+			const transport = transportRef.current;
 
-                        if (transport) {
-                                await transport.ready.catch(() => undefined);
-                                try {
-                                        await transport.send(JSON.stringify(entry.payload));
-                                        delivered = true;
-                                } catch {}
-                        }
+			if (transport) {
+				await transport.ready.catch(() => undefined);
+				try {
+					await transport.send(JSON.stringify(entry.payload));
+					delivered = true;
+				} catch {}
+			}
 
-                        if (!delivered) {
-                                const message = await sendViaHttp(entry.payload);
-                                delivered = Boolean(message);
-                        }
+			if (!delivered) {
+				const message = await sendViaHttp(entry.payload);
+				delivered = Boolean(message);
+			}
 
-                        if (!delivered) {
-                                outboundQueueRef.current.push(entry);
-                        }
-                }
-        }, [sendViaHttp]);
+			if (!delivered) {
+				outboundQueueRef.current.push(entry);
+			}
+		}
+	}, [sendViaHttp]);
 
 	useEffect(() => {
 		void flushOutboundQueue();
-	}, [flushOutboundQueue, options.transport]);
+	}, [flushOutboundQueue]);
 
 	const sendMessage = useCallback(
 		async ({
@@ -1514,28 +1516,28 @@ export function usePeerConversationChannel(options: {
 				clientMessageId,
 			};
 
-                        return new Promise<SendMessageResult>((resolve, reject) => {
-                                registerPending(
-                                        pendingAcksRef.current,
-                                        clientMessageId,
-                                        (message) => resolve({ message }),
-                                        (error) => {
-                                                if (error.message === TIMEOUT_ERROR_MESSAGE) {
-                                                        sendViaHttp(payload)
-                                                                .then((message) => {
-                                                                        if (message) {
-                                                                                resolve({ message });
-                                                                                return;
-                                                                        }
-                                                                        reject(error);
-                                                                })
-                                                                .catch(reject);
-                                                        return;
-                                                }
-                                                reject(error);
-                                        },
-                                        ACK_TIMEOUT_MS,
-                                );
+			return new Promise<SendMessageResult>((resolve, reject) => {
+				registerPending(
+					pendingAcksRef.current,
+					clientMessageId,
+					(message) => resolve({ message }),
+					(error) => {
+						if (error.message === TIMEOUT_ERROR_MESSAGE) {
+							sendViaHttp(payload)
+								.then((message) => {
+									if (message) {
+										resolve({ message });
+										return;
+									}
+									reject(error);
+								})
+								.catch(reject);
+							return;
+						}
+						reject(error);
+					},
+					ACK_TIMEOUT_MS,
+				);
 
 				const attemptSend = async () => {
 					const handle = transportRef.current;
@@ -1554,11 +1556,11 @@ export function usePeerConversationChannel(options: {
 						}
 					}
 
-                                        const deliveredMessage = await sendViaHttp(payload);
-                                        if (!deliveredMessage) {
-                                                outboundQueueRef.current.push({ payload });
-                                        }
-                                };
+					const deliveredMessage = await sendViaHttp(payload);
+					if (!deliveredMessage) {
+						outboundQueueRef.current.push({ payload });
+					}
+				};
 
 				void attemptSend().catch((error) =>
 					rejectPending(
@@ -1601,57 +1603,57 @@ export function usePeerConversationChannel(options: {
 		}
 	}, []);
 
-        const sendPresenceTyping = useCallback(
-                async ({ conversationId, typing }: SendTypingPresenceOptions) => {
-                        if (!conversationId) {
-                                return;
-                        }
+	const sendPresenceTyping = useCallback(
+		async ({ conversationId, typing }: SendTypingPresenceOptions) => {
+			if (!conversationId) {
+				return;
+			}
 
-                        const transport = transportRef.current;
-                        const shouldFallback = !transport || transport.state !== "connected";
+			const transport = transportRef.current;
+			const shouldFallback = !transport || transport.state !== "connected";
 
-                        if (shouldFallback) {
-                                try {
-                                        const response = await fetch("/api/messages/typing", {
-                                                method: "POST",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({
-                                                        conversationId,
-                                                        isTyping: Boolean(typing?.isTyping),
-                                                }),
-                                        });
+			if (shouldFallback) {
+				try {
+					const response = await fetch("/api/messages/typing", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							conversationId,
+							isTyping: Boolean(typing?.isTyping),
+						}),
+					});
 
-                                        if (!response.ok) {
-                                                throw new Error(
-                                                        `HTTP typing presence failed with status ${response.status}`,
-                                                );
-                                        }
-                                } catch (error) {
-                                        console.error(
-                                                "Failed to publish typing presence via HTTP fallback",
-                                                error,
-                                        );
-                                }
-                                return;
-                        }
+					if (!response.ok) {
+						throw new Error(
+							`HTTP typing presence failed with status ${response.status}`,
+						);
+					}
+				} catch (error) {
+					console.error(
+						"Failed to publish typing presence via HTTP fallback",
+						error,
+					);
+				}
+				return;
+			}
 
-                        const payload: PeerPresenceUpdate = {
-                                kind: "typing",
-                                conversationId,
-                                typing,
-                        };
+			const payload: PeerPresenceUpdate = {
+				kind: "typing",
+				conversationId,
+				typing,
+			};
 
-                        try {
-                                await sendPresence(payload);
-                        } catch (error) {
-                                if (isTransportDisconnectedError(error)) {
-                                        return;
-                                }
-                                console.error("Failed to publish typing presence", error);
-                        }
-                },
-                [sendPresence],
-        );
+			try {
+				await sendPresence(payload);
+			} catch (error) {
+				if (isTransportDisconnectedError(error)) {
+					return;
+				}
+				console.error("Failed to publish typing presence", error);
+			}
+		},
+		[sendPresence],
+	);
 
 	const sendPresenceReadReceipt = useCallback(
 		async ({

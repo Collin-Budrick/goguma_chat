@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { type AdapterAccount } from "next-auth/adapters";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -13,6 +12,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { AdapterAccount } from "next-auth/adapters";
 
 export const users = pgTable(
 	"users",

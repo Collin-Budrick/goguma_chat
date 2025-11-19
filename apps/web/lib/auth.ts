@@ -1,16 +1,16 @@
 import {
+	scrypt as nodeScrypt,
 	randomBytes,
 	randomUUID,
 	timingSafeEqual,
-	scrypt as nodeScrypt,
 } from "node:crypto";
-import { eq } from "drizzle-orm";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import NextAuth from "next-auth";
-import type { Session } from "next-auth";
-import type { NextRequest } from "next/server";
-import Credentials from "next-auth/providers/credentials";
 import { promisify } from "node:util";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import type { Session } from "next-auth";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 
 import { db } from "@/db";
 import { authAdapterTables, users } from "@/db/schema";

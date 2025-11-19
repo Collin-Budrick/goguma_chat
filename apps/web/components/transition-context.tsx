@@ -2,10 +2,10 @@
 
 import {
 	createContext,
+	type PropsWithChildren,
 	useContext,
 	useMemo,
 	useState,
-	type PropsWithChildren,
 } from "react";
 
 type TransitionContextValue = {

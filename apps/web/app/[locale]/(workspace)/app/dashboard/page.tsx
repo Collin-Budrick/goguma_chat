@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
 type PageProps = {
 	params: Promise<{ locale: string }>;
@@ -32,9 +32,7 @@ async function DashboardContent({ params }: PageProps) {
 						<h2 className="text-xl font-semibold text-white">
 							{t("metrics.title")}
 						</h2>
-						<p className="text-sm text-white/60">
-							{t("metrics.description")}
-						</p>
+						<p className="text-sm text-white/60">{t("metrics.description")}</p>
 					</header>
 					<div className="grid gap-4 sm:grid-cols-3">
 						{METRIC_KEYS.map((key) => (
@@ -66,9 +64,7 @@ async function DashboardContent({ params }: PageProps) {
 						<h2 className="text-lg font-semibold text-white">
 							{t("queues.title")}
 						</h2>
-						<p className="text-xs text-white/60">
-							{t("queues.description")}
-						</p>
+						<p className="text-xs text-white/60">{t("queues.description")}</p>
 					</header>
 					<ul className="space-y-3 text-sm text-white/70">
 						{QUEUE_KEYS.map((key) => (

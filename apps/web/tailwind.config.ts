@@ -1,5 +1,5 @@
-import type { Config } from "tailwindcss";
 import preset from "@goguma/config/tailwind/base";
+import type { Config } from "tailwindcss";
 
 const config: Config = {
 	content: [

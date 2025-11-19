@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import {
-	subscribeToDockIndicatorEvents,
 	type DockIndicatorEvent,
+	subscribeToDockIndicatorEvents,
 } from "@/lib/server-events";
 
 const encoder = new TextEncoder();

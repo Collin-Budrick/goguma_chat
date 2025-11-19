@@ -1,16 +1,17 @@
 "use client";
 
-import {
-        type FormEvent,
-        useCallback,
-        useEffect,
-        useMemo,
-        useRef,
-        useState,
-} from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+	type FormEvent,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 
 import type { FriendSummary } from "@/components/contacts/types";
 import {
@@ -19,33 +20,32 @@ import {
 	getInitials,
 } from "@/components/contacts/types";
 import { PreferenceToggle } from "@/components/ui/preference-toggle";
-import { cn } from "@/lib/utils";
 import {
-        type DisplaySettings,
-        DEFAULT_DISPLAY_SETTINGS,
-        DISPLAY_SETTINGS_EVENT,
-        loadDisplaySettings,
-        persistDisplaySettings,
-} from "@/lib/display-settings";
-import {
-        DEFAULT_CHAT_LOCAL_SETTINGS,
-        loadChatLocalSettings,
-        persistChatLocalSettings,
-        type ChatLocalSettings,
-} from "@/lib/chat-local-settings";
-import {
-        type ChatHistoryEventDetail,
-        CHAT_HISTORY_EVENT,
-        getConversationClearedAt,
-        persistConversationClearedAt,
+	CHAT_HISTORY_EVENT,
+	type ChatHistoryEventDetail,
+	getConversationClearedAt,
+	persistConversationClearedAt,
 	removeConversationClear,
 } from "@/lib/chat-history";
+import {
+	type ChatLocalSettings,
+	DEFAULT_CHAT_LOCAL_SETTINGS,
+	loadChatLocalSettings,
+	persistChatLocalSettings,
+} from "@/lib/chat-local-settings";
+import {
+	DEFAULT_DISPLAY_SETTINGS,
+	DISPLAY_SETTINGS_EVENT,
+	type DisplaySettings,
+	loadDisplaySettings,
+	persistDisplaySettings,
+} from "@/lib/display-settings";
 import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
-
-import type { ChatConversation, ChatMessage, ChatUserProfile } from "./types";
+import { cn } from "@/lib/utils";
 import { mergeMessages, toDate } from "./message-utils";
-import { usePeerConversationChannel } from "./usePeerConversationChannel";
+import type { ChatConversation, ChatMessage, ChatUserProfile } from "./types";
 import { useMessagingTransportHandle } from "./useMessagingTransportHandle";
+import { usePeerConversationChannel } from "./usePeerConversationChannel";
 
 type ChatThreadProps = {
 	viewerId: string;
@@ -84,15 +84,15 @@ function isOptimisticMessage(message: ChatMessage) {
 }
 
 function isConfirmedMatch(optimistic: ChatMessage, confirmed: ChatMessage) {
-        const optimisticTime = toDate(optimistic.createdAt).getTime();
-        const confirmedTime = toDate(confirmed.createdAt).getTime();
-        const delta = Math.abs(optimisticTime - confirmedTime);
-        return (
-                optimistic.senderId === confirmed.senderId &&
-                optimistic.body === confirmed.body &&
-                delta < CONFIRM_DUPLICATE_WINDOW_MS &&
-                optimisticTime <= confirmedTime + CONFIRM_DUPLICATE_WINDOW_MS
-        );
+	const optimisticTime = toDate(optimistic.createdAt).getTime();
+	const confirmedTime = toDate(confirmed.createdAt).getTime();
+	const delta = Math.abs(optimisticTime - confirmedTime);
+	return (
+		optimistic.senderId === confirmed.senderId &&
+		optimistic.body === confirmed.body &&
+		delta < CONFIRM_DUPLICATE_WINDOW_MS &&
+		optimisticTime <= confirmedTime + CONFIRM_DUPLICATE_WINDOW_MS
+	);
 }
 
 function getMessageKey(message: ChatMessage) {
@@ -146,10 +146,10 @@ function createOptimisticMessage(
 }
 
 function getParticipantProfile(
-        conversation: ChatConversation | null,
-        userId: string,
+	conversation: ChatConversation | null,
+	userId: string,
 ): ChatUserProfile | null {
-        if (!conversation) return null;
+	if (!conversation) return null;
 	return (
 		conversation.participants.find(
 			(participant) => participant.userId === userId,
@@ -158,60 +158,62 @@ function getParticipantProfile(
 }
 
 type TypingIndicatorProps = {
-        text: string;
-        prefersReducedMotion: boolean;
+	text: string;
+	prefersReducedMotion: boolean;
 };
 
 function TypingIndicator({ text, prefersReducedMotion }: TypingIndicatorProps) {
-        return (
-                <motion.div
-                        initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.18, ease: "easeOut" }}
-                        className="mt-4 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-xs text-white/80"
-                >
-                        <span>{text}</span>
-                        <span className="flex gap-1" aria-hidden>
-                                {[0, 1, 2].map((index) => (
-                                        <motion.span
-                                                key={index}
-                                                className="h-2 w-2 rounded-full bg-white/80"
-                                                animate=
-                                                        prefersReducedMotion
-                                                                ? { opacity: 0.8 }
-                                                                : {
-                                                                          opacity: [0.4, 1, 0.4],
-                                                                          scale: [0.9, 1.05, 0.9],
-                                                                  }
-                                                transition=
-                                                        prefersReducedMotion
-                                                                ? undefined
-                                                                : {
-                                                                          duration: 1.1,
-                                                                          repeat: Infinity,
-                                                                          ease: "easeInOut",
-                                                                          delay: index * 0.2,
-                                                                  }
-                                        />
-                                ))}
-                        </span>
-                </motion.div>
-        );
+	return (
+		<motion.div
+			initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+			animate={{ opacity: 1, y: 0 }}
+			exit={{ opacity: 0, y: -4 }}
+			transition={{ duration: 0.18, ease: "easeOut" }}
+			className="mt-4 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 text-xs text-white/80"
+		>
+			<span>{text}</span>
+			<span className="flex gap-1" aria-hidden>
+				{[0, 1, 2].map((index) => (
+					<motion.span
+						key={index}
+						className="h-2 w-2 rounded-full bg-white/80"
+						animate={
+							prefersReducedMotion
+								? { opacity: 0.8 }
+								: {
+										opacity: [0.4, 1, 0.4],
+										scale: [0.9, 1.05, 0.9],
+									}
+						}
+						transition={
+							prefersReducedMotion
+								? undefined
+								: {
+										duration: 1.1,
+										repeat: Infinity,
+										ease: "easeInOut",
+										delay: index * 0.2,
+									}
+						}
+					/>
+				))}
+			</span>
+		</motion.div>
+	);
 }
 
 export default function ChatThread({
-        viewerId,
-        viewerProfile,
-        friend,
+	viewerId,
+	viewerProfile,
+	friend,
 	initialFriendId,
 	initialConversation,
 	initialMessages,
 	initialCursor,
 }: ChatThreadProps) {
-        const t = useTranslations("Chat");
-        const locale = useLocale();
-        const prefersReducedMotion = useReducedMotion();
+	const t = useTranslations("Chat");
+	const locale = useLocale();
+	const prefersReducedMotion = useReducedMotion();
 
 	const friendId = friend?.friendId ?? null;
 	const friendContact = useMemo(
@@ -242,24 +244,25 @@ export default function ChatThread({
 	const [sendError, setSendError] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
 	const [isSending, setIsSending] = useState(false);
-        const [isFetchingMore, setIsFetchingMore] = useState(false);
-        const [typingState, setTypingState] = useState<Record<string, number>>({});
-        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-        const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
-                () => DEFAULT_DISPLAY_SETTINGS,
-        );
-        const [chatLocalSettings, setChatLocalSettings] =
-                useState<ChatLocalSettings>(() => DEFAULT_CHAT_LOCAL_SETTINGS);
-        const [isTransportEnabled, setIsTransportEnabled] = useState(false);
-        const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
-        const [isSyncingHistory, setIsSyncingHistory] = useState(false);
-        const [presenceToast, setPresenceToast] = useState<string | null>(null);
+	const [isFetchingMore, setIsFetchingMore] = useState(false);
+	const [typingState, setTypingState] = useState<Record<string, number>>({});
+	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
+		() => DEFAULT_DISPLAY_SETTINGS,
+	);
+	const [chatLocalSettings, setChatLocalSettings] = useState<ChatLocalSettings>(
+		() => DEFAULT_CHAT_LOCAL_SETTINGS,
+	);
+	const [isTransportEnabled, setIsTransportEnabled] = useState(false);
+	const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
+	const [isSyncingHistory, setIsSyncingHistory] = useState(false);
+	const [presenceToast, setPresenceToast] = useState<string | null>(null);
 
-        const conversationId = conversation?.id ?? null;
-        const { transport } = useMessagingTransportHandle({
-                conversationId,
-                viewerId,
-                enabled: isTransportEnabled,
+	const conversationId = conversation?.id ?? null;
+	const { transport } = useMessagingTransportHandle({
+		conversationId,
+		viewerId,
+		enabled: isTransportEnabled,
 		peerId: friendId,
 	});
 
@@ -328,44 +331,44 @@ export default function ChatThread({
 		}
 	}, []);
 
-        const updateDisplaySettings = useCallback(
-                (updater: (prev: DisplaySettings) => DisplaySettings) => {
-                        setDisplaySettings((prev) => {
-                                const next = updater(prev);
+	const updateDisplaySettings = useCallback(
+		(updater: (prev: DisplaySettings) => DisplaySettings) => {
+			setDisplaySettings((prev) => {
+				const next = updater(prev);
 
-                                if (
-                                        next.magnify === prev.magnify &&
-                                        next.showLabels === prev.showLabels &&
-                                        next.theme === prev.theme
-                                ) {
-                                        return prev;
-                                }
+				if (
+					next.magnify === prev.magnify &&
+					next.showLabels === prev.showLabels &&
+					next.theme === prev.theme
+				) {
+					return prev;
+				}
 
-                                persistDisplaySettings(next);
-                                return next;
-                        });
-                },
-                [],
-        );
+				persistDisplaySettings(next);
+				return next;
+			});
+		},
+		[],
+	);
 
-        const updateChatLocalSettings = useCallback(
-                (updater: (prev: ChatLocalSettings) => ChatLocalSettings) => {
-                        setChatLocalSettings((prev) => {
-                                const next = updater(prev);
+	const updateChatLocalSettings = useCallback(
+		(updater: (prev: ChatLocalSettings) => ChatLocalSettings) => {
+			setChatLocalSettings((prev) => {
+				const next = updater(prev);
 
-                                if (next.showTypingIndicators === prev.showTypingIndicators) {
-                                        return prev;
-                                }
+				if (next.showTypingIndicators === prev.showTypingIndicators) {
+					return prev;
+				}
 
-                                if (conversationId) {
-                                        persistChatLocalSettings(conversationId, next);
-                                }
+				if (conversationId) {
+					persistChatLocalSettings(conversationId, next);
+				}
 
-                                return next;
-                        });
-                },
-                [conversationId],
-        );
+				return next;
+			});
+		},
+		[conversationId],
+	);
 
 	useEffect(() => {
 		return () => {
@@ -390,45 +393,45 @@ export default function ChatThread({
 		}
 	}, [conversation?.id]);
 
-        useEffect(() => {
-                if (typeof window === "undefined") {
-                        return;
-                }
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
 
-                window.dispatchEvent(
-                        new CustomEvent("dock:active-conversation", {
-                                detail: { conversationId: conversation?.id ?? null },
-                        }),
-                );
-        }, [conversation?.id]);
+		window.dispatchEvent(
+			new CustomEvent("dock:active-conversation", {
+				detail: { conversationId: conversation?.id ?? null },
+			}),
+		);
+	}, [conversation?.id]);
 
-        useEffect(() => {
-                if (!conversation?.id) {
-                        setChatLocalSettings(DEFAULT_CHAT_LOCAL_SETTINGS);
-                        return;
-                }
+	useEffect(() => {
+		if (!conversation?.id) {
+			setChatLocalSettings(DEFAULT_CHAT_LOCAL_SETTINGS);
+			return;
+		}
 
-                setChatLocalSettings(loadChatLocalSettings(conversation.id));
-        }, [conversation?.id]);
+		setChatLocalSettings(loadChatLocalSettings(conversation.id));
+	}, [conversation?.id]);
 
-        useEffect(() => {
-                if (typeof window === "undefined") {
-                        return;
-                }
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
 
-                const stored = loadDisplaySettings();
-                setDisplaySettings(stored);
+		const stored = loadDisplaySettings();
+		setDisplaySettings(stored);
 
-                const handler = (event: Event) => {
-                        const detail = (event as CustomEvent<DisplaySettings>).detail;
-                        setDisplaySettings((prev) =>
-                                prev.magnify === detail.magnify &&
-                                prev.showLabels === detail.showLabels &&
-                                prev.theme === detail.theme
-                                        ? prev
-                                        : detail,
-                        );
-                };
+		const handler = (event: Event) => {
+			const detail = (event as CustomEvent<DisplaySettings>).detail;
+			setDisplaySettings((prev) =>
+				prev.magnify === detail.magnify &&
+				prev.showLabels === detail.showLabels &&
+				prev.theme === detail.theme
+					? prev
+					: detail,
+			);
+		};
 
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler as EventListener);
 
@@ -504,7 +507,7 @@ export default function ChatThread({
 
 	useEffect(() => {
 		setIsSettingsOpen(false);
-	}, [friendId]);
+	}, []);
 
 	useEffect(() => {
 		setIsTransportEnabled(Boolean(friendId));
@@ -718,15 +721,15 @@ export default function ChatThread({
 			if (event.type === "message") {
 				const { message, clientMessageId } = event;
 				setMessages((prev) => {
-                                const withoutClient = clientMessageId
-                                        ? prev.filter((item) => item.id !== clientMessageId)
-                                        : prev.filter((item) => {
-                                                        if (!isOptimisticMessage(item)) {
-                                                                return true;
-                                                        }
+					const withoutClient = clientMessageId
+						? prev.filter((item) => item.id !== clientMessageId)
+						: prev.filter((item) => {
+								if (!isOptimisticMessage(item)) {
+									return true;
+								}
 
-                                                        return !isConfirmedMatch(item, message);
-                                                });
+								return !isConfirmedMatch(item, message);
+							});
 					return mergeMessages(withoutClient, [message]);
 				});
 				setConversation((prev) =>
@@ -867,7 +870,7 @@ export default function ChatThread({
 		}
 		const node = messageContainerRef.current;
 		node.scrollTop = node.scrollHeight;
-	}, [conversation?.id, messages.length, isFetchingMore, clearedHistoryAt]);
+	}, [isFetchingMore]);
 
 	useEffect(() => {
 		if (!presenceToast) {
@@ -892,49 +895,54 @@ export default function ChatThread({
 		[conversation, viewerId, viewerProfile],
 	);
 
-        const typingProfiles = useMemo(() => {
-                if (!conversation || !chatLocalSettings.showTypingIndicators) return [];
-                const now = Date.now();
-                return conversation.participants
-                        .map((participant) => participant.user)
-                        .filter(
-                                (profile) =>
-                                        profile.id !== viewerId &&
-                                        typingState[profile.id] &&
-                                        typingState[profile.id] > now,
-                        );
-        }, [conversation, typingState, viewerId, chatLocalSettings.showTypingIndicators]);
+	const typingProfiles = useMemo(() => {
+		if (!conversation || !chatLocalSettings.showTypingIndicators) return [];
+		const now = Date.now();
+		return conversation.participants
+			.map((participant) => participant.user)
+			.filter(
+				(profile) =>
+					profile.id !== viewerId &&
+					typingState[profile.id] &&
+					typingState[profile.id] > now,
+			);
+	}, [
+		conversation,
+		typingState,
+		viewerId,
+		chatLocalSettings.showTypingIndicators,
+	]);
 
-        const typingText = useMemo(() => {
-                if (!typingProfiles.length || !chatLocalSettings.showTypingIndicators) {
-                        return null;
-                }
-                const names = typingProfiles.map((profile) => getContactName(profile));
-                if (names.length === 1) {
-                        return `${names[0]} is typing...`;
-                }
-                if (names.length === 2) {
-                        return `${names[0]} and ${names[1]} are typing...`;
-                }
-                return `${names[0]} and others are typing...`;
-        }, [typingProfiles, chatLocalSettings.showTypingIndicators]);
+	const typingText = useMemo(() => {
+		if (!typingProfiles.length || !chatLocalSettings.showTypingIndicators) {
+			return null;
+		}
+		const names = typingProfiles.map((profile) => getContactName(profile));
+		if (names.length === 1) {
+			return `${names[0]} is typing...`;
+		}
+		if (names.length === 2) {
+			return `${names[0]} and ${names[1]} are typing...`;
+		}
+		return `${names[0]} and others are typing...`;
+	}, [typingProfiles, chatLocalSettings.showTypingIndicators]);
 
-        const messageVariants = useMemo(
-                () => ({
-                        hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 8 },
-                        visible: {
-                                opacity: 1,
-                                y: 0,
-                                transition: { duration: 0.18, ease: "easeOut" },
-                        },
-                        exit: {
-                                opacity: 0,
-                                y: prefersReducedMotion ? 0 : -6,
-                                transition: { duration: 0.12, ease: "easeIn" },
-                        },
-                }),
-                [prefersReducedMotion],
-        );
+	const messageVariants = useMemo(
+		() => ({
+			hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 8 },
+			visible: {
+				opacity: 1,
+				y: 0,
+				transition: { duration: 0.18, ease: "easeOut" },
+			},
+			exit: {
+				opacity: 0,
+				y: prefersReducedMotion ? 0 : -6,
+				transition: { duration: 0.12, ease: "easeIn" },
+			},
+		}),
+		[prefersReducedMotion],
+	);
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -972,40 +980,45 @@ export default function ChatThread({
 		);
 	}, [clearedHistoryCutoff, conversationId, messages, viewerId]);
 
-        const sendTyping = useCallback(
-                (isTyping: boolean) => {
-                        if (!conversationId) {
-                                return;
-                        }
-                        if (!chatLocalSettings.showTypingIndicators && isTyping) {
-                                return;
-                        }
-                        const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
-                        void presence.sendTyping({
-                                conversationId,
-                                typing: {
-                                        userId: viewerId,
-                                        isTyping,
-                                        expiresAt,
-                                },
-                        });
-                },
-                [chatLocalSettings.showTypingIndicators, conversationId, presence, viewerId],
-        );
+	const sendTyping = useCallback(
+		(isTyping: boolean) => {
+			if (!conversationId) {
+				return;
+			}
+			if (!chatLocalSettings.showTypingIndicators && isTyping) {
+				return;
+			}
+			const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
+			void presence.sendTyping({
+				conversationId,
+				typing: {
+					userId: viewerId,
+					isTyping,
+					expiresAt,
+				},
+			});
+		},
+		[
+			chatLocalSettings.showTypingIndicators,
+			conversationId,
+			presence,
+			viewerId,
+		],
+	);
 
-        useEffect(() => {
-                if (chatLocalSettings.showTypingIndicators) {
-                        return;
-                }
+	useEffect(() => {
+		if (chatLocalSettings.showTypingIndicators) {
+			return;
+		}
 
-                typingActiveRef.current = false;
-                if (typingTimeoutRef.current) {
-                        window.clearTimeout(typingTimeoutRef.current);
-                        typingTimeoutRef.current = null;
-                }
+		typingActiveRef.current = false;
+		if (typingTimeoutRef.current) {
+			window.clearTimeout(typingTimeoutRef.current);
+			typingTimeoutRef.current = null;
+		}
 
-                sendTyping(false);
-        }, [chatLocalSettings.showTypingIndicators, sendTyping]);
+		sendTyping(false);
+	}, [chatLocalSettings.showTypingIndicators, sendTyping]);
 
 	const handleDraftChange = useCallback(
 		(value: string) => {
@@ -1182,39 +1195,44 @@ export default function ChatThread({
 		}
 	}, [conversationId, t]);
 
-        const bubblePaddingClasses = displaySettings.magnify
-                ? "px-5 py-4"
-                : "px-4 py-3";
-        const bubbleTextClasses = displaySettings.magnify
-                ? "text-base leading-7"
-                : "text-sm leading-6";
-        const bubbleBaseClasses =
-                "relative w-fit max-w-3xl rounded-full border shadow-sm backdrop-blur transition";
-        const viewerBubbleClasses =
-                displaySettings.theme === "light"
-                        ? "ml-auto self-end border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-200/90 text-emerald-950 shadow-[0_18px_50px_-28px_rgba(16,185,129,0.85)]"
-                        : "ml-auto self-end border-emerald-300/35 bg-gradient-to-br from-emerald-400/18 via-emerald-300/12 to-emerald-200/10 text-emerald-50 shadow-[0_18px_48px_-26px_rgba(16,185,129,0.7)]";
-        const peerBubbleClasses =
-                displaySettings.theme === "light"
-                        ? "self-start border-slate-200/70 bg-gradient-to-br from-white to-slate-50 text-slate-900 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)]"
-                        : "self-start border-white/12 bg-gradient-to-br from-white/12 via-white/8 to-white/5 text-white shadow-[0_18px_50px_-30px_rgba(0,0,0,0.8)]";
-        const viewerMetaClasses =
-                displaySettings.theme === "light" ? "text-emerald-900/70" : "text-emerald-100/70";
-        const peerMetaClasses = displaySettings.theme === "light" ? "text-slate-500" : "text-white/60";
-        const composerContainerClasses = cn(
-                "flex items-end gap-3 rounded-3xl border px-4 py-3 shadow-inner transition focus-within:ring-2",
-                displaySettings.theme === "light"
-                        ? "border-slate-200/80 bg-white/95 text-slate-900 focus-within:border-slate-300 focus-within:ring-slate-200/70"
-                        : "border-white/12 bg-white/5 text-white focus-within:border-white/30 focus-within:ring-white/20",
-        );
-        const composerInputClasses = displaySettings.theme === "light"
-                ? "text-slate-900 placeholder:text-slate-500"
-                : "text-white placeholder:text-white/60";
-        const sendButtonClasses = displaySettings.theme === "light"
-                ? "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-500"
-                : "bg-white text-black hover:bg-white/90 focus-visible:ring-white/60";
-        const toggleTheme: "dark" | "light" =
-                displaySettings.theme === "light" ? "light" : "dark";
+	const bubblePaddingClasses = displaySettings.magnify
+		? "px-5 py-4"
+		: "px-4 py-3";
+	const bubbleTextClasses = displaySettings.magnify
+		? "text-base leading-7"
+		: "text-sm leading-6";
+	const bubbleBaseClasses =
+		"relative w-fit max-w-3xl rounded-full border shadow-sm backdrop-blur transition";
+	const viewerBubbleClasses =
+		displaySettings.theme === "light"
+			? "ml-auto self-end border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-200/90 text-emerald-950 shadow-[0_18px_50px_-28px_rgba(16,185,129,0.85)]"
+			: "ml-auto self-end border-emerald-300/35 bg-gradient-to-br from-emerald-400/18 via-emerald-300/12 to-emerald-200/10 text-emerald-50 shadow-[0_18px_48px_-26px_rgba(16,185,129,0.7)]";
+	const peerBubbleClasses =
+		displaySettings.theme === "light"
+			? "self-start border-slate-200/70 bg-gradient-to-br from-white to-slate-50 text-slate-900 shadow-[0_18px_50px_-30px_rgba(15,23,42,0.45)]"
+			: "self-start border-white/12 bg-gradient-to-br from-white/12 via-white/8 to-white/5 text-white shadow-[0_18px_50px_-30px_rgba(0,0,0,0.8)]";
+	const viewerMetaClasses =
+		displaySettings.theme === "light"
+			? "text-emerald-900/70"
+			: "text-emerald-100/70";
+	const peerMetaClasses =
+		displaySettings.theme === "light" ? "text-slate-500" : "text-white/60";
+	const composerContainerClasses = cn(
+		"flex items-end gap-3 rounded-3xl border px-4 py-3 shadow-inner transition focus-within:ring-2",
+		displaySettings.theme === "light"
+			? "border-slate-200/80 bg-white/95 text-slate-900 focus-within:border-slate-300 focus-within:ring-slate-200/70"
+			: "border-white/12 bg-white/5 text-white focus-within:border-white/30 focus-within:ring-white/20",
+	);
+	const composerInputClasses =
+		displaySettings.theme === "light"
+			? "text-slate-900 placeholder:text-slate-500"
+			: "text-white placeholder:text-white/60";
+	const sendButtonClasses =
+		displaySettings.theme === "light"
+			? "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-500"
+			: "bg-white text-black hover:bg-white/90 focus-visible:ring-white/60";
+	const toggleTheme: "dark" | "light" =
+		displaySettings.theme === "light" ? "light" : "dark";
 	const isClearHistoryDisabled = !conversationId || isSyncingHistory;
 	const isSyncHistoryDisabled =
 		!friendId || isThreadLoading || isSyncingHistory;
@@ -1262,10 +1280,13 @@ export default function ChatThread({
 						<div className="flex flex-1 items-center justify-between gap-4 pl-10">
 							<div className="flex items-center gap-4">
 								{friendContact.image ? (
-									<img
+									<Image
 										src={friendContact.image}
 										alt={getContactName(friendContact)}
 										className="h-12 w-12 rounded-full object-cover"
+										width={48}
+										height={48}
+										unoptimized
 									/>
 								) : (
 									<span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 text-base font-semibold">
@@ -1302,11 +1323,14 @@ export default function ChatThread({
 											? t("thread.settings.close")
 											: t("thread.settings.open")}
 									</span>
-									<img
+									<Image
 										src="/icons/gear.svg"
 										alt=""
 										aria-hidden="true"
 										className="h-4 w-4"
+										width={16}
+										height={16}
+										unoptimized
 									/>
 								</button>
 								{isSettingsOpen ? (
@@ -1326,58 +1350,58 @@ export default function ChatThread({
 													{t("thread.settings.local.description")}
 												</p>
 												<div className="mt-3 flex flex-col gap-2">
-                                                                                                        <PreferenceToggle
-                                                                                                                label={t(
-                                                                                                                        "thread.settings.local.options.magnify.label",
-                                                                                                                )}
-                                                                                                                description={t(
-                                                                                                                        "thread.settings.local.options.magnify.description",
-                                                                                                                )}
-                                                                                                                value={displaySettings.magnify}
-                                                                                                                theme={toggleTheme}
-                                                                                                                onChange={() =>
-                                                                                                                        updateDisplaySettings((prev) => ({
-                                                                                                                                ...prev,
-                                                                                                                                magnify: !prev.magnify,
-                                                                                                                        }))
-                                                                                                                }
-                                                                                                        />
-                                                                                                        <PreferenceToggle
-                                                                                                                label={t(
-                                                                                                                        "thread.settings.local.options.labels.label",
-                                                                                                                )}
-                                                                                                                description={t(
-                                                                                                                        "thread.settings.local.options.labels.description",
-                                                                                                                )}
-                                                                                                                value={displaySettings.showLabels}
-                                                                                                                theme={toggleTheme}
-                                                                                                                onChange={() =>
-                                                                                                                        updateDisplaySettings((prev) => ({
-                                                                                                                                ...prev,
-                                                                                                                                showLabels: !prev.showLabels,
-                                                                                                                        }))
-                                                                                                                }
-                                                                                                        />
-                                                                                                        <PreferenceToggle
-                                                                                                                label={t(
-"thread.settings.local.options.typingIndicators.label",
-                                                                                                                )}
-                                                                                                                description={t(
-"thread.settings.local.options.typingIndicators.description",
-                                                                                                                )}
-                                                                                                                value={chatLocalSettings.showTypingIndicators}
-                                                                                                                theme={toggleTheme}
-                                                                                                                onChange={() =>
-                                                                                                                        updateChatLocalSettings((prev) => ({
-                                                                                                                                ...prev,
-                                                                                                                                showTypingIndicators:
-                                                                                                                                        !prev.showTypingIndicators,
-                                                                                                                        }))
-                                                                                                                }
-                                                                                                        />
-                                                                                                        <PreferenceToggle
-                                                                                                                label={t(
-                                                                                                                        "thread.settings.local.options.theme.label",
+													<PreferenceToggle
+														label={t(
+															"thread.settings.local.options.magnify.label",
+														)}
+														description={t(
+															"thread.settings.local.options.magnify.description",
+														)}
+														value={displaySettings.magnify}
+														theme={toggleTheme}
+														onChange={() =>
+															updateDisplaySettings((prev) => ({
+																...prev,
+																magnify: !prev.magnify,
+															}))
+														}
+													/>
+													<PreferenceToggle
+														label={t(
+															"thread.settings.local.options.labels.label",
+														)}
+														description={t(
+															"thread.settings.local.options.labels.description",
+														)}
+														value={displaySettings.showLabels}
+														theme={toggleTheme}
+														onChange={() =>
+															updateDisplaySettings((prev) => ({
+																...prev,
+																showLabels: !prev.showLabels,
+															}))
+														}
+													/>
+													<PreferenceToggle
+														label={t(
+															"thread.settings.local.options.typingIndicators.label",
+														)}
+														description={t(
+															"thread.settings.local.options.typingIndicators.description",
+														)}
+														value={chatLocalSettings.showTypingIndicators}
+														theme={toggleTheme}
+														onChange={() =>
+															updateChatLocalSettings((prev) => ({
+																...prev,
+																showTypingIndicators:
+																	!prev.showTypingIndicators,
+															}))
+														}
+													/>
+													<PreferenceToggle
+														label={t(
+															"thread.settings.local.options.theme.label",
 														)}
 														description={t(
 															"thread.settings.local.options.theme.description",
@@ -1438,11 +1462,11 @@ export default function ChatThread({
 							</div>
 						</div>
 					</header>
-                                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                                                <div
-                                                        className="chat-thread-scroll flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4 max-h-[60vh]"
-                                                        ref={messageContainerRef}
-                                                >
+					<div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+						<div
+							className="chat-thread-scroll flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4 max-h-[60vh]"
+							ref={messageContainerRef}
+						>
 							{threadError ? (
 								<p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
 									{threadError}
@@ -1471,148 +1495,158 @@ export default function ChatThread({
 											{isFetchingMore ? "Loading..." : "Load older messages"}
 										</button>
 									) : null}
-                                                                        {visibleMessages.length > 0 ? (
-        <motion.ul layout="position" className="space-y-4">
-                <AnimatePresence initial={!prefersReducedMotion}>
-                        {visibleMessages.map((message) => {
-                                const isViewer = message.senderId === viewerId;
-                                const timestamp = formatMessageTime(
-                                        message.createdAt,
-                                        locale,
-                                );
-                                return (
-                                        <motion.li
-                                                layout="position"
-                                                variants={messageVariants}
-                                                initial={prefersReducedMotion ? false : "hidden"}
-                                                animate="visible"
-                                                exit="exit"
-                                                transition={{
-                                                        prefersReducedMotion
-                                                                ? undefined
-                                                                : {
-                                                                          duration: 0.18,
-                                                                          ease: "easeOut",
-                                                                          layout: { duration: 0.2, ease: "easeOut" },
-                                                                  },
-                                                }}
-                                                key={message.id}
-                                                className={cn(
-                                                        "flex",
-                                                        isViewer ? "justify-end" : "justify-start",
-                                                )}
-                                        >
-                                                <div
-                                                        className={cn(
-                                                                bubbleBaseClasses,
-                                                                bubblePaddingClasses,
-                                                                bubbleTextClasses,
-                                                                isViewer
-                                                                        ? viewerBubbleClasses
-                                                                        : peerBubbleClasses,
-                                                        )}
-                                                >
-                                                        {displaySettings.showLabels ? (
-                                                                <div
-                                                                        className={cn(
-                                                                                "mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
-                                                                                isViewer ? viewerMetaClasses : peerMetaClasses,
-                                                                        )}
-                                                                >
-                                                                        <span>
-                                                                                {isViewer
-                                                                                        ? t("thread.me")
-                                                                                        : getContactName(message.sender)}
-                                                                        </span>
-                                                                        <span>{timestamp}</span>
-                                                                </div>
-                                                        ) : (
-                                                                <p className="sr-only">
-                                                                        {isViewer
-                                                                                ? t("thread.me")
-                                                                                : getContactName(message.sender)}{" "}
-                                                                        {timestamp}
-                                                                </p>
-                                                        )}
-                                                        <p>{message.body}</p>
-                                                </div>
-                                        </motion.li>
-                                );
-                        })}
-                </AnimatePresence>
-        </motion.ul>
-) : (
-        <p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
-                {t("thread.empty")}
-        </p>
-                                                                        )}
-                                                                        <AnimatePresence>
-                                                                                {typingText ? (
-                                                                                        <TypingIndicator
-                                                                                                prefersReducedMotion={prefersReducedMotion}
-                                                                                                text={typingText}
-                                                                                        />
-                                                                                ) : null}
-                                                                        </AnimatePresence>
-                                                                </>
-                                                        ) : null}
-                                                </div>
-                                        </div>
-                                        <footer className="border-t border-white/10 px-6 py-4">
-                                                <form
-                                                        className="flex flex-col gap-3"
-                                                        onSubmit={handleComposerSubmit}
-                                                >
-                                                        {sendError ? (
-                                                                <p className="text-xs text-red-300">{sendError}</p>
-                                                        ) : null}
-                                                        <div className={composerContainerClasses}>
-                                                                <textarea
-                                                                        value={draft}
-                                                                        onChange={(event) => handleDraftChange(event.target.value)}
-                                                                        placeholder={t("thread.composer.placeholder")}
-                                                                        rows={3}
-                                                                        disabled={!conversation || isSending}
-                                                                        className={cn(
-                                                                                "peer w-full min-h-[86px] resize-none border-none bg-transparent px-1 text-sm leading-6 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60",
-                                                                                composerInputClasses,
-                                                                        )}
-                                                                />
-                                                                <button
-                                                                        type="submit"
-                                                                        disabled={!conversation || isSending || !draft.trim()}
-                                                                        className={cn(
-                                                                                "ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60",
-                                                                                sendButtonClasses,
-                                                                        )}
-                                                                        aria-label={
-                                                                                isSending
-                                                                                        ? t("thread.composer.sending")
-                                                                                        : t("thread.composer.send")
-                                                                        }
-                                                                >
-                                                                        <span className="sr-only">
-                                                                                {isSending
-                                                                                        ? t("thread.composer.sending")
-                                                                                        : t("thread.composer.send")}
-                                                                        </span>
-                                                                        <svg
-                                                                                aria-hidden
-                                                                                viewBox="0 0 24 24"
-                                                                                className="h-4 w-4"
-                                                                                fill="currentColor"
-                                                                        >
-                                                                                <path d="M3.4 11.2 19.5 4.1c1.2-.5 2.3.6 1.8 1.8l-7.1 16.1c-.6 1.3-2.5 1.1-2.8-.3l-1.1-4.7-4.7-1.1c-1.4-.3-1.6-2.2-.3-2.8Z" />
-                                                                                <path
-                                                                                        d="m10.6 14 5.6-5.6-7.4 4.1z"
-                                                                                        fill="currentColor"
-                                                                                        opacity=".8"
-                                                                                />
-                                                                        </svg>
-                                                                </button>
-                                                        </div>
-                                                </form>
-                                        </footer>
+									{visibleMessages.length > 0 ? (
+										<motion.ul layout="position" className="space-y-4">
+											<AnimatePresence initial={!prefersReducedMotion}>
+												{visibleMessages.map((message) => {
+													const isViewer = message.senderId === viewerId;
+													const timestamp = formatMessageTime(
+														message.createdAt,
+														locale,
+													);
+													return (
+														<motion.li
+															layout="position"
+															variants={messageVariants}
+															initial={prefersReducedMotion ? false : "hidden"}
+															animate="visible"
+															exit="exit"
+															transition={
+																prefersReducedMotion
+																	? undefined
+																	: {
+																			duration: 0.18,
+																			ease: "easeOut",
+																			layout: {
+																				duration: 0.2,
+																				ease: "easeOut",
+																			},
+																		}
+															}
+															key={message.id}
+															className={cn(
+																"flex",
+																isViewer ? "justify-end" : "justify-start",
+															)}
+														>
+															<div
+																className={cn(
+																	bubbleBaseClasses,
+																	bubblePaddingClasses,
+																	bubbleTextClasses,
+																	isViewer
+																		? viewerBubbleClasses
+																		: peerBubbleClasses,
+																)}
+															>
+																{displaySettings.showLabels ? (
+																	<div
+																		className={cn(
+																			"mb-1 flex items-center justify-between text-xs uppercase tracking-[0.3em]",
+																			isViewer
+																				? viewerMetaClasses
+																				: peerMetaClasses,
+																		)}
+																	>
+																		<span>
+																			{isViewer
+																				? t("thread.me")
+																				: getContactName(message.sender)}
+																		</span>
+																		<span>{timestamp}</span>
+																	</div>
+																) : (
+																	<p className="sr-only">
+																		{isViewer
+																			? t("thread.me")
+																			: getContactName(message.sender)}{" "}
+																		{timestamp}
+																	</p>
+																)}
+																<p>{message.body}</p>
+															</div>
+														</motion.li>
+													);
+												})}
+											</AnimatePresence>
+										</motion.ul>
+									) : (
+										<p className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/60">
+											{t("thread.empty")}
+										</p>
+									)}
+									<AnimatePresence>
+										{typingText ? (
+											<TypingIndicator
+												prefersReducedMotion={prefersReducedMotion}
+												text={typingText}
+											/>
+										) : null}
+									</AnimatePresence>
+								</>
+							) : null}
+						</div>
+					</div>
+					<footer className="border-t border-white/10 px-6 py-4">
+						<form
+							className="flex flex-col gap-3"
+							onSubmit={handleComposerSubmit}
+						>
+							{sendError ? (
+								<p className="text-xs text-red-300">{sendError}</p>
+							) : null}
+							<div className={composerContainerClasses}>
+								<textarea
+									value={draft}
+									onChange={(event) => handleDraftChange(event.target.value)}
+									placeholder={t("thread.composer.placeholder")}
+									rows={3}
+									disabled={!conversation || isSending}
+									className={cn(
+										"peer w-full min-h-[86px] resize-none border-none bg-transparent px-1 text-sm leading-6 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+										composerInputClasses,
+									)}
+								/>
+								<button
+									type="submit"
+									disabled={!conversation || isSending || !draft.trim()}
+									className={cn(
+										"ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-60",
+										sendButtonClasses,
+									)}
+									aria-label={
+										isSending
+											? t("thread.composer.sending")
+											: t("thread.composer.send")
+									}
+								>
+									<span className="sr-only">
+										{isSending
+											? t("thread.composer.sending")
+											: t("thread.composer.send")}
+									</span>
+									<svg
+										aria-hidden="true"
+										viewBox="0 0 24 24"
+										className="h-4 w-4"
+										fill="currentColor"
+									>
+										<title>
+											{isSending
+												? t("thread.composer.sending")
+												: t("thread.composer.send")}
+										</title>
+										<path d="M3.4 11.2 19.5 4.1c1.2-.5 2.3.6 1.8 1.8l-7.1 16.1c-.6 1.3-2.5 1.1-2.8-.3l-1.1-4.7-4.7-1.1c-1.4-.3-1.6-2.2-.3-2.8Z" />
+										<path
+											d="m10.6 14 5.6-5.6-7.4 4.1z"
+											fill="currentColor"
+											opacity=".8"
+										/>
+									</svg>
+								</button>
+							</div>
+						</form>
+					</footer>
 				</>
 			) : (
 				<div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center text-white/70">

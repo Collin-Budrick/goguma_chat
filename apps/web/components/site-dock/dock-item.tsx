@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from "react";
 import {
 	AnimatePresence,
+	type MotionValue,
 	motion,
 	useMotionValue,
 	useSpring,
 	useTransform,
-	type MotionValue,
 } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
-import { isLinkItem, type DockNavItem } from "./navigation";
-import { type ContrastTheme } from "./use-dock-contrast";
+import { type DockNavItem, isLinkItem } from "./navigation";
+import type { ContrastTheme } from "./use-dock-contrast";
 
 type SpringConfig = {
 	mass: number;

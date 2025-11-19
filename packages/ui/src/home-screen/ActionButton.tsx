@@ -1,7 +1,6 @@
-import { Pressable, StyleProp, Text, ViewStyle } from "react-native";
-
-import styles from "../home-screen.styles";
+import { Pressable, type StyleProp, Text, type ViewStyle } from "react-native";
 import type { ActionTarget } from "../home-screen.data";
+import styles from "../home-screen.styles";
 
 interface ActionButtonProps {
 	target: ActionTarget;

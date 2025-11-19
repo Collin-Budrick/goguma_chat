@@ -1,5 +1,5 @@
-import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 
 const footerLinks = [
 	{ href: "/privacy", labelKey: "links.privacy" },

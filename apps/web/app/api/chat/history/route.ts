@@ -8,7 +8,7 @@ import { buildConversationId, resolveProfileName } from "../helpers";
 import { createMockHistory, validateDate } from "./utils";
 
 const querySchema = z.object({
-        friendId: z.string().min(1),
+	friendId: z.string().min(1),
 });
 
 export async function GET(request: NextRequest) {
@@ -48,27 +48,27 @@ export async function GET(request: NextRequest) {
 		fallback: "you",
 	});
 
-        const startedAt = validateDate(
-                friend.createdAt instanceof Date
-                        ? friend.createdAt
-                        : new Date(friend.createdAt),
-        );
+	const startedAt = validateDate(
+		friend.createdAt instanceof Date
+			? friend.createdAt
+			: new Date(friend.createdAt),
+	);
 
-        if (!startedAt && friend.createdAt) {
-                return NextResponse.json(
-                        { error: "Invalid friend creation timestamp" },
-                        { status: 500 },
-                );
-        }
+	if (!startedAt && friend.createdAt) {
+		return NextResponse.json(
+			{ error: "Invalid friend creation timestamp" },
+			{ status: 500 },
+		);
+	}
 
-        const messages = createMockHistory({
-                conversationId,
-                friendId,
-                viewerId: session.user.id,
-                friendName,
-                viewerName,
-                startedAt,
-        });
+	const messages = createMockHistory({
+		conversationId,
+		friendId,
+		viewerId: session.user.id,
+		friendName,
+		viewerName,
+		startedAt,
+	});
 
 	const payload: ChatHistory = {
 		conversationId,

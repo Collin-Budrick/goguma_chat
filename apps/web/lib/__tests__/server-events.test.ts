@@ -1,6 +1,5 @@
-import { EventEmitter } from "node:events";
-
 import { expect, it } from "bun:test";
+import { EventEmitter } from "node:events";
 
 import type { SerializedMessage } from "../../db/conversations";
 import { CONVERSATION_EMITTER_GLOBAL_KEY } from "../server-events-globals";

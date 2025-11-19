@@ -566,18 +566,18 @@
 							"label": "Comfortable bubble size",
 							"description": "Add extra padding and larger type to messages."
 						},
-                                                "labels": {
-                                                        "label": "Show message labels",
-                                                        "description": "Display sender names and timestamps above each message."
-                                                },
-                                                "typingIndicators": {
-                                                        "label": "Show typing indicators",
-                                                        "description": "Display when someone is typing in this chat."
-                                                },
-                                                "theme": {
-                                                        "label": "Use light bubbles",
-                                                        "description": "Switch your outgoing messages to a lighter appearance."
-                                                },
+						"labels": {
+							"label": "Show message labels",
+							"description": "Display sender names and timestamps above each message."
+						},
+						"typingIndicators": {
+							"label": "Show typing indicators",
+							"description": "Display when someone is typing in this chat."
+						},
+						"theme": {
+							"label": "Use light bubbles",
+							"description": "Switch your outgoing messages to a lighter appearance."
+						},
 						"syncHistory": {
 							"label": "Sync chat history",
 							"syncing": "Syncing chat…",

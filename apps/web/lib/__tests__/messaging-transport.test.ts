@@ -1,18 +1,17 @@
-import { describe, expect, it, beforeEach, afterEach, mock } from "bun:test";
-
-import {
-	initializeMessagingTransport,
-	createTransportHandle,
-	TransportDependencies,
-	TransportHandle,
-	TransportMessage,
-	TransportState,
-	TransportUnavailableError,
-	createPeerSignalingController,
-	type PeerHandshakeFrame,
-} from "../messaging-transport";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { createPeerCryptoSession } from "../crypto/session";
-import { type MessagingMode } from "../messaging-mode";
+import type { MessagingMode } from "../messaging-mode";
+import {
+	createPeerSignalingController,
+	createTransportHandle,
+	initializeMessagingTransport,
+	type PeerHandshakeFrame,
+	type TransportDependencies,
+	type TransportHandle,
+	type TransportMessage,
+	type TransportState,
+	TransportUnavailableError,
+} from "../messaging-transport";
 
 type ListenerMap = Map<string, Set<(event: Event) => void>>;
 
@@ -33,7 +32,7 @@ class MockBroadcastChannel {
 		if (!MockBroadcastChannel.instances.has(name)) {
 			MockBroadcastChannel.instances.set(name, new Set());
 		}
-		MockBroadcastChannel.instances.get(name)!.add(this);
+		MockBroadcastChannel.instances.get(name)?.add(this);
 	}
 
 	postMessage(data: unknown) {
@@ -88,7 +87,7 @@ class MockEventSource {
 		if (!this.listeners.has(type)) {
 			this.listeners.set(type, new Set());
 		}
-		this.listeners.get(type)!.add(listener);
+		this.listeners.get(type)?.add(listener);
 	}
 
 	removeEventListener(
@@ -117,7 +116,7 @@ const installWindow = () => {
 
 	const addEventListener = (type: string, listener: (event: Event) => void) => {
 		if (!listeners.has(type)) listeners.set(type, new Set());
-		listeners.get(type)!.add(listener);
+		listeners.get(type)?.add(listener);
 	};
 
 	const removeEventListener = (
@@ -130,7 +129,9 @@ const installWindow = () => {
 	const dispatchEvent = (event: Event) => {
 		const handlers = listeners.get(event.type);
 		if (!handlers) return true;
-		handlers.forEach((handler) => handler(event));
+		handlers.forEach((handler) => {
+			handler(event);
+		});
 		return !event.defaultPrevented;
 	};
 
@@ -1972,7 +1973,7 @@ describe("initializeMessagingTransport", () => {
 				if (!this.#listeners.has(type)) {
 					this.#listeners.set(type, new Set());
 				}
-				this.#listeners.get(type)!.add(listener);
+				this.#listeners.get(type)?.add(listener);
 				if (type === "open") {
 					setTimeout(() => listener({ type: "open" } as Event), 0);
 				}
@@ -1987,7 +1988,9 @@ describe("initializeMessagingTransport", () => {
 			close() {
 				this.#listeners
 					.get("close")
-					?.forEach((handler) => handler({ type: "close" } as Event));
+					?.forEach((handler) => {
+						handler({ type: "close" } as Event);
+					});
 			}
 		}
 
@@ -2153,7 +2156,7 @@ describe("initializeMessagingTransport", () => {
 				if (!this.#listeners.has(type)) {
 					this.#listeners.set(type, new Set());
 				}
-				this.#listeners.get(type)!.add(listener);
+				this.#listeners.get(type)?.add(listener);
 				if (type === "open") {
 					setTimeout(() => listener({ type: "open" } as Event), 0);
 				}
@@ -2168,7 +2171,9 @@ describe("initializeMessagingTransport", () => {
 			close() {
 				this.#listeners
 					.get("close")
-					?.forEach((handler) => handler({ type: "close" } as Event));
+					?.forEach((handler) => {
+						handler({ type: "close" } as Event);
+					});
 			}
 		}
 

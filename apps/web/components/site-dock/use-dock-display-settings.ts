@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-
+import type { PreferenceToggleTheme } from "@/components/ui/preference-toggle";
 import {
 	DISPLAY_SETTINGS_EVENT,
+	type DisplaySettings,
 	loadDisplaySettings,
 	persistDisplaySettings,
-	type DisplaySettings,
 } from "@/lib/display-settings";
-import { type PreferenceToggleTheme } from "@/components/ui/preference-toggle";
 
 export function useDockDisplaySettings() {
 	const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() =>
@@ -17,15 +16,15 @@ export function useDockDisplaySettings() {
 		if (typeof window === "undefined") return;
 
 		const handler = (event: Event) => {
-                        const detail = (event as CustomEvent<DisplaySettings>).detail;
-                        setDisplaySettings((prev) => {
-                                if (
-                                        prev.magnify === detail.magnify &&
-                                        prev.showLabels === detail.showLabels &&
-                                        prev.theme === detail.theme
-                                ) {
-                                        return prev;
-                                }
+			const detail = (event as CustomEvent<DisplaySettings>).detail;
+			setDisplaySettings((prev) => {
+				if (
+					prev.magnify === detail.magnify &&
+					prev.showLabels === detail.showLabels &&
+					prev.theme === detail.theme
+				) {
+					return prev;
+				}
 
 				return detail;
 			});

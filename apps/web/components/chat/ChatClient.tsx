@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { FriendSummary } from "@/components/contacts/types";
 import {
@@ -223,10 +224,13 @@ export default function ChatClient({
 											)}
 										>
 											{profile.image ? (
-												<img
+												<Image
 													src={profile.image}
 													alt={getContactName(profile)}
 													className="h-12 w-12 rounded-full object-cover"
+													width={48}
+													height={48}
+													unoptimized
 												/>
 											) : (
 												<span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/30 text-base font-semibold">

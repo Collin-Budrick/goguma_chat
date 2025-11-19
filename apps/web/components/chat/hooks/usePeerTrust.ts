@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
 	getPeerTrustState,
 	markPeerTrusted,
-	subscribePeerTrust,
 	type PeerTrustState,
+	subscribePeerTrust,
 } from "@/lib/crypto/session";
 
 const emptyState: PeerTrustState = {

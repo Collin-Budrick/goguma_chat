@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
 import ContactsClient from "@/components/contacts/ContactsClient";
 import {
-	FRIENDS_CACHE_KEY,
 	type ContactsState,
+	FRIENDS_CACHE_KEY,
 } from "@/components/contacts/types";
 import WorkspacePageShell from "@/components/workspace-page-shell";
 import { getFriendState } from "@/db/friends";

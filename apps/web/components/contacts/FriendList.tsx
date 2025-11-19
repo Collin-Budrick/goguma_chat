@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useLocale } from "next-intl";
 
 import type { FriendSummary } from "./types";
@@ -39,10 +40,13 @@ type ContactAvatarProps = {
 function ContactAvatar({ name, image, initials }: ContactAvatarProps) {
 	if (image) {
 		return (
-			<img
+			<Image
 				src={image}
 				alt={name}
 				className="h-10 w-10 rounded-full border border-white/20 object-cover"
+				width={40}
+				height={40}
+				unoptimized
 			/>
 		);
 	}
@@ -130,7 +134,7 @@ export default function FriendList({
 									{canRemove ? (
 										<button
 											type="button"
-											onClick={() => onRemove && onRemove(friend)}
+											onClick={() => onRemove?.(friend)}
 											disabled={pendingIds?.has(friend.friendshipId)}
 											className="text-xs uppercase tracking-[0.3em] text-white/50 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
 										>

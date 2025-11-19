@@ -42,7 +42,7 @@ export const relativeLuminance = (color: RGBColor) => {
 		const normalized = value / 255;
 		return normalized <= 0.03928
 			? normalized / 12.92
-			: Math.pow((normalized + 0.055) / 1.055, 2.4);
+			: ((normalized + 0.055) / 1.055) ** 2.4;
 	};
 	const r = channel(color.r);
 	const g = channel(color.g);
@@ -102,7 +102,9 @@ export const createContrastSampler = (
 	const DARK_BACKGROUND_THRESHOLD = 0.48;
 
 	const notify = () => {
-		listeners.forEach((listener) => listener());
+		listeners.forEach((listener) => {
+			listener();
+		});
 	};
 
 	const getUnderlayColor = (x: number, y: number): RGBColor | null => {
@@ -211,9 +213,9 @@ export const createContrastSampler = (
 	const attach = () => {
 		if (typeof window === "undefined" || typeof document === "undefined")
 			return;
-		events.forEach((event) =>
-			window.addEventListener(event, schedule, { passive: true }),
-		);
+		events.forEach((event) => {
+			window.addEventListener(event, schedule, { passive: true });
+		});
 		document.addEventListener("scroll", schedule, {
 			passive: true,
 			capture: true,
@@ -224,7 +226,9 @@ export const createContrastSampler = (
 	const detach = () => {
 		if (typeof window === "undefined" || typeof document === "undefined")
 			return;
-		events.forEach((event) => window.removeEventListener(event, schedule));
+		events.forEach((event) => {
+			window.removeEventListener(event, schedule);
+		});
 		document.removeEventListener("scroll", schedule, { capture: true });
 		if (frame !== null) {
 			window.cancelAnimationFrame(frame);

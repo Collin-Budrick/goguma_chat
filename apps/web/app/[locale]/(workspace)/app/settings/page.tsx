@@ -1,17 +1,17 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import { useTransitionDirection } from "@/components/transition-context";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { type Locale, routing } from "@/i18n/routing";
 import {
-	type DisplaySettings,
 	DISPLAY_SETTINGS_EVENT,
+	type DisplaySettings,
 	loadDisplaySettings,
 	persistDisplaySettings,
 } from "@/lib/display-settings";
-import { routing, type Locale } from "@/i18n/routing";
 
 const PREFERENCE_IDS = ["notifications", "aiDrafts", "presence"] as const;
 
@@ -54,15 +54,15 @@ export default function SettingsPage() {
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
-                const handler = (event: Event) => {
-                        const detail = (event as CustomEvent<DisplaySettings>).detail;
-                        setDisplaySettings((prev) =>
-                                prev.magnify === detail.magnify &&
-                                prev.showLabels === detail.showLabels &&
-                                prev.theme === detail.theme
-                                        ? prev
-                                        : detail,
-                        );
+		const handler = (event: Event) => {
+			const detail = (event as CustomEvent<DisplaySettings>).detail;
+			setDisplaySettings((prev) =>
+				prev.magnify === detail.magnify &&
+				prev.showLabels === detail.showLabels &&
+				prev.theme === detail.theme
+					? prev
+					: detail,
+			);
 		};
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler);
 		return () => window.removeEventListener(DISPLAY_SETTINGS_EVENT, handler);

@@ -1,7 +1,6 @@
-import { Pressable, StyleProp, Text, ViewStyle } from "react-native";
-
-import styles from "../home-screen.styles";
+import { Pressable, type StyleProp, Text, type ViewStyle } from "react-native";
 import type { ResourceTarget } from "../home-screen.data";
+import styles from "../home-screen.styles";
 
 type ResourceCardProps = {
 	target: ResourceTarget;

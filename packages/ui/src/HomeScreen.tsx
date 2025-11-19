@@ -1,13 +1,12 @@
 import { Linking, SafeAreaView, ScrollView, Text, View } from "react-native";
-
+import { ActionButton, MessageBubble, ResourceCard } from "./home-screen";
 import {
 	ACTIONS,
 	CHAT_PREVIEW,
 	HIGHLIGHTS,
-	RESOURCES,
 	type LinkTarget,
+	RESOURCES,
 } from "./home-screen.data";
-import { ActionButton, MessageBubble, ResourceCard } from "./home-screen";
 import styles from "./home-screen.styles";
 
 async function openLink(target: LinkTarget) {

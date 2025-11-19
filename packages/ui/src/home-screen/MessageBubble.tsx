@@ -1,7 +1,6 @@
 import { Text, View } from "react-native";
-
-import styles from "../home-screen.styles";
 import type { ChatMessage } from "../home-screen.data";
+import styles from "../home-screen.styles";
 
 type MessageBubbleProps = {
 	message: ChatMessage;

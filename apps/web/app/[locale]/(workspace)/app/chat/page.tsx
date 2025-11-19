@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-
-import ChatPageShell from "@/components/chat/chat-page-shell";
+import { Suspense } from "react";
 import ChatClient from "@/components/chat/ChatClient";
+import ChatPageShell from "@/components/chat/chat-page-shell";
 import { getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
 import {

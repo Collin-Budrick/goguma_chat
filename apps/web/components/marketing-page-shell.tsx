@@ -10,6 +10,13 @@ export default function MarketingPageShell({
 	sections = DEFAULT_SECTIONS,
 	itemsPerSection = DEFAULT_ITEMS,
 }: MarketingPageShellProps) {
+	const sectionsArray = Array.from({ length: sections }, (_, sectionIndex) => ({
+		id: `marketing-shell-section-${sectionIndex}`,
+		items: Array.from({ length: itemsPerSection }, (_, itemIndex) =>
+			`marketing-shell-section-${sectionIndex}-item-${itemIndex}`,
+		),
+	}));
+
 	return (
 		<div className="mx-auto max-w-5xl space-y-6 rounded-3xl border border-white/10 bg-white/[0.02] p-8">
 			<div className="space-y-3">
@@ -18,16 +25,16 @@ export default function MarketingPageShell({
 				<div className="h-4 w-5/6 rounded-full bg-white/[0.08]" />
 			</div>
 			<div className="space-y-4 pt-2">
-				{Array.from({ length: sections }).map((_, sectionIndex) => (
+				{sectionsArray.map((section) => (
 					<div
-						key={`marketing-shell-section-${sectionIndex}`}
+						key={section.id}
 						className="rounded-2xl border border-white/10 bg-black/40 p-4"
 					>
 						<div className="h-5 w-1/3 rounded-full bg-white/[0.08]" />
 						<div className="mt-3 space-y-2">
-							{Array.from({ length: itemsPerSection }).map((__, itemIndex) => (
+							{section.items.map((itemId) => (
 								<div
-									key={`marketing-shell-section-${sectionIndex}-item-${itemIndex}`}
+									key={itemId}
 									className="h-3 w-full rounded-full bg-white/[0.08]"
 								/>
 							))}

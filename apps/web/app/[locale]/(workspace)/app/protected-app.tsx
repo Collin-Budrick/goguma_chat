@@ -1,5 +1,5 @@
-import type { PropsWithChildren } from "react";
 import { redirect } from "next/navigation";
+import type { PropsWithChildren } from "react";
 
 import { auth } from "@/lib/auth";
 
@@ -12,9 +12,7 @@ export default async function ProtectedApp({ children }: PropsWithChildren) {
 
 	return (
 		<div className="mx-auto flex h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col gap-10 px-6 py-16 pb-32 overflow-hidden">
-			<div className="flex flex-1 min-h-0 h-full">
-				{children}
-			</div>
+			<div className="flex flex-1 min-h-0 h-full">{children}</div>
 		</div>
 	);
 }

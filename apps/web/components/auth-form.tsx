@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
+import { type FormEvent, useId, useMemo, useState } from "react";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
 

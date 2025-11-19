@@ -1,6 +1,6 @@
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import React from "react";
 import TestRenderer, { act } from "react-test-renderer";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 import type {
 	PeerSignalingSnapshot,
@@ -63,7 +63,9 @@ const subscribers = new Set<() => void>();
 
 const updateSnapshot = (next: Partial<PeerSignalingSnapshot>) => {
 	snapshot = { ...snapshot, ...next };
-	subscribers.forEach((listener) => listener());
+	subscribers.forEach((listener) => {
+		listener();
+	});
 };
 
 const controller = {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
 	ContactSearchMatch,

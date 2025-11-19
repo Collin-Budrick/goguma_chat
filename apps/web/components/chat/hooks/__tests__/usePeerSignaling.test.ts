@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
-import { deriveShouldInitializeTransport } from "../usePeerSignaling";
 import type { PeerSignalingSnapshot } from "../../../../lib/messaging-transport";
+import { deriveShouldInitializeTransport } from "../usePeerSignaling";
 
 const baseSnapshot: PeerSignalingSnapshot = {
 	role: null,

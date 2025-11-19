@@ -1,5 +1,7 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
+import { useLocale, useTranslations } from "next-intl";
 import {
 	startTransition,
 	useCallback,
@@ -8,30 +10,27 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
+import { FlipWords } from "@/components/ui/flip-words";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { useTransitionDirection } from "./transition-context";
+import type { Locale } from "@/i18n/routing";
 import { DockItem } from "./site-dock/dock-item";
 import {
+	type DockNavItem,
 	isLinkItem,
 	resolveDock,
-	type DockNavItem,
 } from "./site-dock/navigation";
-import { FlipWords } from "@/components/ui/flip-words";
-import { type Locale } from "@/i18n/routing";
 import { PreferencesPopover } from "./site-dock/preferences-popover";
 import { useBodyLightTheme } from "./site-dock/use-body-light-theme";
 import {
-	useDockContrast,
 	type ContrastTheme,
+	useDockContrast,
 } from "./site-dock/use-dock-contrast";
+import { useDockDisplaySettings } from "./site-dock/use-dock-display-settings";
+import { useDockHoverAnimation } from "./site-dock/use-dock-hover";
 import { useDockMounted } from "./site-dock/use-dock-mounted";
 import { useDockScrollState } from "./site-dock/use-dock-scroll-state";
 import { usePreferencePanel } from "./site-dock/use-preference-panel";
-import { useDockDisplaySettings } from "./site-dock/use-dock-display-settings";
-import { useDockHoverAnimation } from "./site-dock/use-dock-hover";
+import { useTransitionDirection } from "./transition-context";
 
 const springConfig = { mass: 0.15, stiffness: 180, damping: 16 };
 
@@ -526,10 +525,7 @@ export default function SiteDock() {
 		? "border-white/50 text-slate-900"
 		: "border-white/15 text-white";
 	const preferencesRef = useRef<HTMLDivElement | null>(null);
-	const closePreferences = useCallback(
-		() => setPreferencesOpen(false),
-		[setPreferencesOpen],
-	);
+	const closePreferences = useCallback(() => setPreferencesOpen(false), []);
 	usePreferencePanel({
 		open: preferencesOpen,
 		pathname,

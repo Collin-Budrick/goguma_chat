@@ -65,7 +65,7 @@ export function getInitials(profile: ContactProfile) {
 	if (first || last) {
 		const initials = [first, last]
 			.filter(Boolean)
-			.map((value) => value!.charAt(0).toUpperCase())
+			.map((value) => value?.charAt(0).toUpperCase())
 			.join("");
 
 		if (initials) {

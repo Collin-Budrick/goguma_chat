@@ -4,7 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { findDirectConversation } from "./conversations";
 import { db } from "./index";
 import {
-	friendRequestStatusEnum,
+	type friendRequestStatusEnum,
 	friendRequests,
 	friendships,
 	users,

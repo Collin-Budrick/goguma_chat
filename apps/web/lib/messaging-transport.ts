@@ -1,9 +1,9 @@
 "use client";
 
 import {
-	type MessagingMode,
-	MESSAGING_MODE_EVENT,
 	loadMessagingMode,
+	MESSAGING_MODE_EVENT,
+	type MessagingMode,
 } from "./messaging-mode";
 import type {
 	PeerHandshakeFrame,
@@ -46,7 +46,9 @@ const createEmitter = <T>() => {
 	const listeners = new Set<Listener<T>>();
 	return {
 		emit(value: T) {
-			listeners.forEach((listener) => listener(value));
+			listeners.forEach((listener) => {
+				listener(value);
+			});
 		},
 		subscribe(listener: Listener<T>) {
 			listeners.add(listener);
@@ -578,11 +580,14 @@ export type TransportDependencies = {
 	deliverPushPayload?: (
 		payload: unknown,
 		options?: TransportConnectOptions,
-	) => Promise<{
-		clientMessageId?: string | null;
-		message?: unknown;
-		error?: string;
-	} | void>;
+	) => Promise<
+		| {
+				clientMessageId?: string | null;
+				message?: unknown;
+				error?: string;
+		  }
+		| undefined
+	>;
 };
 
 export type PeerSignalingRole = "host" | "guest";

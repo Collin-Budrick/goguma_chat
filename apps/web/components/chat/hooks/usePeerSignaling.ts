@@ -10,10 +10,10 @@ import {
 } from "react";
 
 import {
-	peerSignalingController,
 	type PeerSignalingController,
 	type PeerSignalingRole,
 	type PeerSignalingSnapshot,
+	peerSignalingController,
 } from "@/lib/messaging-transport";
 
 const logPeerSignaling = (message: string, meta?: unknown) => {
@@ -90,9 +90,11 @@ const sequenceExpiration = (
 		}
 	}
 
-	return () => {
-		timers.forEach((timer) => window.clearTimeout(timer));
-	};
+		return () => {
+			timers.forEach((timer) => {
+				window.clearTimeout(timer);
+			});
+		};
 };
 
 type PeerSignalingOptions = {
@@ -220,24 +222,11 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 
 	useEffect(() => {
 		resetPublishState();
-	}, [
-		conversationId,
-		enabled,
-		viewerId,
-		resetPublishState,
-		snapshot.sessionId,
-	]);
+	}, [resetPublishState]);
 
 	useEffect(() => {
 		remoteTokensRef.current.clear();
-	}, [
-		conversationId,
-		enabled,
-		snapshot.connected,
-		snapshot.role,
-		snapshot.sessionId,
-		viewerId,
-	]);
+	}, []);
 
 	useEffect(() => {
 		if (snapshot.remoteAnswer) {
@@ -572,7 +561,9 @@ export function usePeerSignaling(options?: PeerSignalingOptions) {
 							baseUrl,
 							count: payload.tokens?.length ?? 0,
 						});
-						payload.tokens?.forEach((token) => handlePayload(token));
+						payload.tokens?.forEach((token) => {
+							handlePayload(token);
+						});
 					}
 				} catch (error) {
 					if (!abortController.signal.aborted) {

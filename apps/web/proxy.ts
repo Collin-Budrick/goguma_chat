@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { JWT } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 import createMiddleware from "next-intl/middleware";
 
-import { routing, type Locale } from "./i18n/routing";
+import { type Locale, routing } from "./i18n/routing";
 
 const PUBLIC_ROUTE_PATTERNS = [
 	/^\/$/,
@@ -97,7 +98,7 @@ export default async function proxy(req: NextRequest) {
 	}
 
 	const { locale, pathname } = getLocaleFromPathname(req.nextUrl.pathname);
-	let token;
+	let token: JWT | null = null;
 	try {
 		token = await getToken({ req, secret: NEXTAUTH_SECRET });
 	} catch (error) {

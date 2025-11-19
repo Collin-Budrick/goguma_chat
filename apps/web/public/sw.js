@@ -61,7 +61,7 @@ const cacheFirst = async (request, cacheName) => {
 
 	try {
 		const response = await fetch(request);
-		if (response && response.ok) {
+		if (response?.ok) {
 			await cache.put(request, response.clone());
 		}
 		return response;
@@ -94,7 +94,7 @@ self.addEventListener("fetch", (event) => {
 
 				try {
 					const networkResponse = await fetch(request);
-					if (networkResponse && networkResponse.ok) {
+					if (networkResponse?.ok) {
 						await cache.put(request, networkResponse.clone());
 					}
 					return networkResponse;

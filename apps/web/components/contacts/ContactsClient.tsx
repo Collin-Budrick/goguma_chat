@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import {
 	useCallback,
 	useEffect,
@@ -8,11 +9,9 @@ import {
 	useState,
 	useTransition,
 } from "react";
-import { useLocale, useTranslations } from "next-intl";
-
+import ContactSearch from "./ContactSearch";
 import FriendList from "./FriendList";
 import FriendRequestList from "./FriendRequestList";
-import ContactSearch from "./ContactSearch";
 import type {
 	ContactSearchMatch,
 	ContactsState,
@@ -143,15 +142,15 @@ function normalizeState(
 	value: Partial<ContactsState> | null | undefined,
 ): ContactsState {
 	const friends = Array.isArray(value?.friends)
-		? value!.friends.map((friend) => normalizeFriend(friend))
+		? value?.friends.map((friend) => normalizeFriend(friend))
 		: [];
 
 	const incoming = Array.isArray(value?.incoming)
-		? value!.incoming.map((request) => normalizeRequest(request))
+		? value?.incoming.map((request) => normalizeRequest(request))
 		: [];
 
 	const outgoing = Array.isArray(value?.outgoing)
-		? value!.outgoing.map((request) => normalizeRequest(request))
+		? value?.outgoing.map((request) => normalizeRequest(request))
 		: [];
 
 	return {

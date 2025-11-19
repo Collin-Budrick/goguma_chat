@@ -5,6 +5,7 @@ import {
 	CONVERSATION_EMITTER_GLOBAL_KEY,
 	INDICATOR_EMITTER_GLOBAL_KEY,
 } from "./server-events-globals";
+
 type TypingPayload = {
 	userId: string;
 	isTyping: boolean;

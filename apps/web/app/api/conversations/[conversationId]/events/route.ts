@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { ensureConversationParticipant } from "@/db/conversations";
 import { auth } from "@/lib/auth";
 import {
-	subscribeToConversationEvents,
 	type ConversationEvent,
+	subscribeToConversationEvents,
 } from "@/lib/server-events";
 
 const encoder = new TextEncoder();
@@ -35,7 +35,7 @@ export async function GET(
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-        const { conversationId } = await params;
+	const { conversationId } = await params;
 
 	try {
 		await ensureConversationParticipant(conversationId, session.user.id);
@@ -44,63 +44,62 @@ export async function GET(
 		return NextResponse.json({ error: message }, { status: 403 });
 	}
 
-        const stream = new TransformStream();
-        const writer = stream.writable.getWriter();
+	const stream = new TransformStream();
+	const writer = stream.writable.getWriter();
 
-        let keepAlive: ReturnType<typeof setInterval>;
-        let cleanupCalled = false;
-        let unsubscribe: () => void = () => {};
+	let cleanupCalled = false;
+	let unsubscribe: () => void = () => {};
 
-        const ignoreAbortError = (error: unknown) => {
-                if (error instanceof Error && error.name === "AbortError") {
-                        return;
-                }
+	const ignoreAbortError = (error: unknown) => {
+		if (error instanceof Error && error.name === "AbortError") {
+			return;
+		}
 
-                console.error(error);
-        };
+		console.error(error);
+	};
 
-        const cleanup = () => {
-                if (cleanupCalled) return;
-                cleanupCalled = true;
+	const cleanup = () => {
+		if (cleanupCalled) return;
+		cleanupCalled = true;
 
-                clearInterval(keepAlive);
-                unsubscribe();
+		clearInterval(keepAlive);
+		unsubscribe();
 
-                writer.close().catch(ignoreAbortError);
-                writer.abort?.().catch(ignoreAbortError);
-        };
+		writer.close().catch(ignoreAbortError);
+		writer.abort?.().catch(ignoreAbortError);
+	};
 
-        keepAlive = setInterval(() => {
-                if (request.signal.aborted) {
-                        cleanup();
-                        return;
-                }
+	const keepAlive = setInterval(() => {
+		if (request.signal.aborted) {
+			cleanup();
+			return;
+		}
 
-                writer.write(encoder.encode("event: ping\ndata: {}\n\n")).catch(() => {
-                        cleanup();
-                });
-        }, HEARTBEAT_INTERVAL);
+		writer.write(encoder.encode("event: ping\ndata: {}\n\n")).catch(() => {
+			cleanup();
+		});
+	}, HEARTBEAT_INTERVAL);
 
-        unsubscribe = subscribeToConversationEvents(conversationId, (event) => {
-                if (request.signal.aborted) {
-                        cleanup();
-                        return;
-                }
+	unsubscribe = subscribeToConversationEvents(conversationId, (event) => {
+		if (request.signal.aborted) {
+			cleanup();
+			return;
+		}
 
-                const payload = formatEvent(event);
-                if (!payload) return;
-                writer.write(encoder.encode(payload)).catch(() => {
-                        cleanup();
-                });
-        });
+		const payload = formatEvent(event);
+		if (!payload) return;
+		writer.write(encoder.encode(payload)).catch(() => {
+			cleanup();
+		});
+	});
 
-        request.signal.addEventListener("abort", cleanup);
+	request.signal.addEventListener("abort", cleanup);
 
-        if (!request.signal.aborted) {
-                writer.write(encoder.encode("event: ready\ndata: {}\n\n")).catch(() => {
-                        cleanup();
-                });
-        }
+	if (!request.signal.aborted) {
+		writer.write(encoder.encode("event: ready\ndata: {}\n\n")).catch(() => {
+			cleanup();
+		});
+	}
 
 	return new Response(stream.readable, {
 		headers: {

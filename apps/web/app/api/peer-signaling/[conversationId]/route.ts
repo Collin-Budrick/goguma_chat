@@ -47,10 +47,14 @@ const logPeerSignalingServer = (
 };
 
 const getStore = (conversationId: string): TokenStore => {
-	if (!stores.has(conversationId)) {
-		stores.set(conversationId, { tokens: [], subscribers: new Map() });
+	const store = stores.get(conversationId);
+	if (store) {
+		return store;
 	}
-	return stores.get(conversationId)!;
+
+	const next = { tokens: [], subscribers: new Map<string, TokenSubscriber>() };
+	stores.set(conversationId, next);
+	return next;
 };
 
 const pruneExpiredTokens = (conversationId: string) => {

@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
-import TestRenderer, { act } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-
+import { useEffect } from "react";
+import TestRenderer, { act } from "react-test-renderer";
+import type { MessagingMode } from "@/lib/messaging-mode";
 import {
 	initializeMessagingTransport,
 	peerSignalingController,
@@ -10,9 +10,8 @@ import {
 	type TransportMessage,
 	type TransportState,
 } from "@/lib/messaging-transport";
-import type { MessagingMode } from "@/lib/messaging-mode";
-import { usePeerConversationChannel } from "../usePeerConversationChannel";
 import type { ChatMessage } from "../types";
+import { usePeerConversationChannel } from "../usePeerConversationChannel";
 
 const conversationId = "conversation-test";
 const viewerProfile = {
@@ -109,13 +108,15 @@ const installDomShim = () => {
 	const windowMock = {
 		addEventListener: (type: string, listener: EventListener) => {
 			if (!listeners.has(type)) listeners.set(type, new Set());
-			listeners.get(type)!.add(listener);
+			listeners.get(type)?.add(listener);
 		},
 		removeEventListener: (type: string, listener: EventListener) => {
 			listeners.get(type)?.delete(listener);
 		},
 		dispatchEvent: (event: Event) => {
-			listeners.get(event.type)?.forEach((listener) => listener(event));
+			listeners.get(event.type)?.forEach((listener) => {
+				listener(event);
+			});
 			return true;
 		},
 		setTimeout: globalThis.setTimeout.bind(globalThis),
@@ -270,13 +271,17 @@ class SimpleTransportHandle implements TransportHandle {
 	async connect() {
 		if (this.state === "connected") return;
 		this.state = "connected";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async disconnect() {
 		if (this.state === "closed") return;
 		this.state = "closed";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async send(payload: TransportMessage) {
@@ -323,9 +328,9 @@ class SimpleTransportHandle implements TransportHandle {
 					},
 				},
 			} as const;
-			this.messageListeners.forEach((listener) =>
-				listener(JSON.stringify(ackFrame)),
-			);
+			this.messageListeners.forEach((listener) => {
+				listener(JSON.stringify(ackFrame));
+			});
 		}
 	}
 
@@ -372,13 +377,17 @@ class DeferredReadyTransport implements TransportHandle {
 	async connect() {
 		if (this.state === "connected") return;
 		this.state = "connected";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async disconnect() {
 		if (this.state === "closed") return;
 		this.state = "closed";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async send(payload: TransportMessage) {
@@ -416,13 +425,17 @@ class ImmediateAckTransport implements TransportHandle {
 	async connect() {
 		if (this.state === "connected") return;
 		this.state = "connected";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async disconnect() {
 		if (this.state === "closed") return;
 		this.state = "closed";
-		this.stateListeners.forEach((listener) => listener(this.state));
+		this.stateListeners.forEach((listener) => {
+			listener(this.state);
+		});
 	}
 
 	async send(payload: TransportMessage) {
@@ -462,9 +475,9 @@ class ImmediateAckTransport implements TransportHandle {
 						},
 					},
 				} as const;
-				this.messageListeners.forEach((listener) =>
-					listener(JSON.stringify(ackFrame)),
-				);
+				this.messageListeners.forEach((listener) => {
+					listener(JSON.stringify(ackFrame));
+				});
 			}
 		} catch {
 			// ignore malformed payloads

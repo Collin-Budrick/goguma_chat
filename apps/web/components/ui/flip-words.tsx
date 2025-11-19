@@ -1,13 +1,7 @@
 "use client";
 
-import React, {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -27,7 +21,7 @@ export function FlipWords({
 	onCycleComplete,
 }: FlipWordsProps) {
 	const sanitizedWords = useMemo(
-		() => words.filter((word) => Boolean(word && word.length)),
+		() => words.filter((word) => Boolean(word?.length)),
 		[words],
 	);
 
@@ -53,7 +47,7 @@ export function FlipWords({
 
 	useEffect(() => {
 		completionNotifiedRef.current = false;
-	}, [sanitizedWords, loop]);
+	}, []);
 
 	useEffect(() => {
 		if (sanitizedWords.length <= 1) return;
@@ -111,6 +105,7 @@ export function FlipWords({
 				>
 					{currentWord.split(" ").map((word, wordIndex) => (
 						<motion.span
+							// biome-ignore noArrayIndexKey
 							key={`${word}-${wordIndex}`}
 							initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
 							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -121,6 +116,7 @@ export function FlipWords({
 							className="inline-block whitespace-nowrap"
 						>
 							{word.split("").map((letter, letterIndex) => (
+								// biome-ignore noArrayIndexKey
 								<motion.span
 									key={`${word}-${letterIndex}`}
 									initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}

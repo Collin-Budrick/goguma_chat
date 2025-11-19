@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useLocale } from "next-intl";
 
 import type { FriendRequestSummary } from "./types";
@@ -42,10 +43,13 @@ function ContactAvatar({
 }) {
 	if (image) {
 		return (
-			<img
+			<Image
 				src={image}
 				alt={name}
 				className="h-9 w-9 rounded-full border border-white/20 object-cover"
+				width={36}
+				height={36}
+				unoptimized
 			/>
 		);
 	}

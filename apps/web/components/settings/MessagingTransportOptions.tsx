@@ -1,6 +1,6 @@
 "use client";
 
-import { type MessagingMode } from "@/lib/messaging-mode";
+import type { MessagingMode } from "@/lib/messaging-mode";
 import { cn } from "@/lib/utils";
 
 export type MessagingTransportOption = {

@@ -1,10 +1,10 @@
-import { type MouseEvent, useCallback, useEffect, useMemo } from "react";
 import {
 	type MotionValue,
 	type SpringOptions,
 	useMotionValue,
 	useSpring,
 } from "framer-motion";
+import { type MouseEvent, useCallback, useEffect, useMemo } from "react";
 
 export interface DockHoverAnimationOptions {
 	panelHeight: number;
