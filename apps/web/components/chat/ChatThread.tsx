@@ -20,17 +20,23 @@ import {
 import { PreferenceToggle } from "@/components/ui/preference-toggle";
 import { cn } from "@/lib/utils";
 import {
-	type DisplaySettings,
-	DEFAULT_DISPLAY_SETTINGS,
-	DISPLAY_SETTINGS_EVENT,
-	loadDisplaySettings,
-	persistDisplaySettings,
+        type DisplaySettings,
+        DEFAULT_DISPLAY_SETTINGS,
+        DISPLAY_SETTINGS_EVENT,
+        loadDisplaySettings,
+        persistDisplaySettings,
 } from "@/lib/display-settings";
 import {
-	type ChatHistoryEventDetail,
-	CHAT_HISTORY_EVENT,
-	getConversationClearedAt,
-	persistConversationClearedAt,
+        DEFAULT_CHAT_LOCAL_SETTINGS,
+        loadChatLocalSettings,
+        persistChatLocalSettings,
+        type ChatLocalSettings,
+} from "@/lib/chat-local-settings";
+import {
+        type ChatHistoryEventDetail,
+        CHAT_HISTORY_EVENT,
+        getConversationClearedAt,
+        persistConversationClearedAt,
 	removeConversationClear,
 } from "@/lib/chat-history";
 import { postServiceWorkerMessage } from "@/lib/service-worker-messaging";
@@ -191,22 +197,24 @@ export default function ChatThread({
 	const [sendError, setSendError] = useState<string | null>(null);
 	const [draft, setDraft] = useState("");
 	const [isSending, setIsSending] = useState(false);
-	const [isFetchingMore, setIsFetchingMore] = useState(false);
-	const [typingState, setTypingState] = useState<Record<string, number>>({});
-	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-	const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
-		() => DEFAULT_DISPLAY_SETTINGS,
-	);
-	const [isTransportEnabled, setIsTransportEnabled] = useState(false);
-	const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
-	const [isSyncingHistory, setIsSyncingHistory] = useState(false);
-	const [presenceToast, setPresenceToast] = useState<string | null>(null);
+        const [isFetchingMore, setIsFetchingMore] = useState(false);
+        const [typingState, setTypingState] = useState<Record<string, number>>({});
+        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+        const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
+                () => DEFAULT_DISPLAY_SETTINGS,
+        );
+        const [chatLocalSettings, setChatLocalSettings] =
+                useState<ChatLocalSettings>(() => DEFAULT_CHAT_LOCAL_SETTINGS);
+        const [isTransportEnabled, setIsTransportEnabled] = useState(false);
+        const [clearedHistoryAt, setClearedHistoryAt] = useState<string | null>(null);
+        const [isSyncingHistory, setIsSyncingHistory] = useState(false);
+        const [presenceToast, setPresenceToast] = useState<string | null>(null);
 
-	const conversationId = conversation?.id ?? null;
-	const { transport } = useMessagingTransportHandle({
-		conversationId,
-		viewerId,
-		enabled: isTransportEnabled,
+        const conversationId = conversation?.id ?? null;
+        const { transport } = useMessagingTransportHandle({
+                conversationId,
+                viewerId,
+                enabled: isTransportEnabled,
 		peerId: friendId,
 	});
 
@@ -275,26 +283,44 @@ export default function ChatThread({
 		}
 	}, []);
 
-	const updateDisplaySettings = useCallback(
-		(updater: (prev: DisplaySettings) => DisplaySettings) => {
-			setDisplaySettings((prev) => {
+        const updateDisplaySettings = useCallback(
+                (updater: (prev: DisplaySettings) => DisplaySettings) => {
+                        setDisplaySettings((prev) => {
                                 const next = updater(prev);
 
                                 if (
                                         next.magnify === prev.magnify &&
                                         next.showLabels === prev.showLabels &&
-                                        next.showTypingIndicators === prev.showTypingIndicators &&
                                         next.theme === prev.theme
                                 ) {
                                         return prev;
                                 }
 
-				persistDisplaySettings(next);
-				return next;
-			});
-		},
-		[],
-	);
+                                persistDisplaySettings(next);
+                                return next;
+                        });
+                },
+                [],
+        );
+
+        const updateChatLocalSettings = useCallback(
+                (updater: (prev: ChatLocalSettings) => ChatLocalSettings) => {
+                        setChatLocalSettings((prev) => {
+                                const next = updater(prev);
+
+                                if (next.showTypingIndicators === prev.showTypingIndicators) {
+                                        return prev;
+                                }
+
+                                if (conversationId) {
+                                        persistChatLocalSettings(conversationId, next);
+                                }
+
+                                return next;
+                        });
+                },
+                [conversationId],
+        );
 
 	useEffect(() => {
 		return () => {
@@ -319,37 +345,45 @@ export default function ChatThread({
 		}
 	}, [conversation?.id]);
 
-	useEffect(() => {
-		if (typeof window === "undefined") {
-			return;
-		}
+        useEffect(() => {
+                if (typeof window === "undefined") {
+                        return;
+                }
 
-		window.dispatchEvent(
-			new CustomEvent("dock:active-conversation", {
-				detail: { conversationId: conversation?.id ?? null },
-			}),
-		);
-	}, [conversation?.id]);
+                window.dispatchEvent(
+                        new CustomEvent("dock:active-conversation", {
+                                detail: { conversationId: conversation?.id ?? null },
+                        }),
+                );
+        }, [conversation?.id]);
 
-	useEffect(() => {
-		if (typeof window === "undefined") {
-			return;
-		}
+        useEffect(() => {
+                if (!conversation?.id) {
+                        setChatLocalSettings(DEFAULT_CHAT_LOCAL_SETTINGS);
+                        return;
+                }
 
-		const stored = loadDisplaySettings();
-		setDisplaySettings(stored);
+                setChatLocalSettings(loadChatLocalSettings(conversation.id));
+        }, [conversation?.id]);
 
-		const handler = (event: Event) => {
-			const detail = (event as CustomEvent<DisplaySettings>).detail;
+        useEffect(() => {
+                if (typeof window === "undefined") {
+                        return;
+                }
+
+                const stored = loadDisplaySettings();
+                setDisplaySettings(stored);
+
+                const handler = (event: Event) => {
+                        const detail = (event as CustomEvent<DisplaySettings>).detail;
                         setDisplaySettings((prev) =>
                                 prev.magnify === detail.magnify &&
                                 prev.showLabels === detail.showLabels &&
-                                prev.showTypingIndicators === detail.showTypingIndicators &&
                                 prev.theme === detail.theme
                                         ? prev
                                         : detail,
                         );
-		};
+                };
 
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler as EventListener);
 
@@ -815,31 +849,31 @@ export default function ChatThread({
 
         const typingProfiles = useMemo(() => {
                 if (!conversation) return [];
-                if (!displaySettings.showTypingIndicators) return [];
+                if (!chatLocalSettings.showTypingIndicators) return [];
                 const now = Date.now();
                 return conversation.participants
                         .map((participant) => participant.user)
-			.filter(
-				(profile) =>
-					profile.id !== viewerId &&
+                        .filter(
+                                (profile) =>
+                                        profile.id !== viewerId &&
                                         typingState[profile.id] &&
                                         typingState[profile.id] > now,
                         );
-        }, [conversation, displaySettings.showTypingIndicators, typingState, viewerId]);
+        }, [chatLocalSettings.showTypingIndicators, conversation, typingState, viewerId]);
 
         const typingText = useMemo(() => {
-                if (!typingProfiles.length || !displaySettings.showTypingIndicators) {
+                if (!typingProfiles.length || !chatLocalSettings.showTypingIndicators) {
                         return null;
                 }
                 const names = typingProfiles.map((profile) => getContactName(profile));
-		if (names.length === 1) {
-			return `${names[0]} is typing...`;
-		}
-		if (names.length === 2) {
-			return `${names[0]} and ${names[1]} are typing...`;
-		}
+                if (names.length === 1) {
+                        return `${names[0]} is typing...`;
+                }
+                if (names.length === 2) {
+                        return `${names[0]} and ${names[1]} are typing...`;
+                }
                 return `${names[0]} and others are typing...`;
-        }, [displaySettings.showTypingIndicators, typingProfiles]);
+        }, [chatLocalSettings.showTypingIndicators, typingProfiles]);
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -1229,15 +1263,15 @@ export default function ChatThread({
                                                                                                         />
                                                                                                         <PreferenceToggle
                                                                                                                 label={t(
-                                                                                                                        "thread.settings.local.options.typingIndicators.label",
+"thread.settings.local.options.typingIndicators.label",
                                                                                                                 )}
                                                                                                                 description={t(
-                                                                                                                        "thread.settings.local.options.typingIndicators.description",
+"thread.settings.local.options.typingIndicators.description",
                                                                                                                 )}
-                                                                                                                value={displaySettings.showTypingIndicators}
+                                                                                                                value={chatLocalSettings.showTypingIndicators}
                                                                                                                 theme={toggleTheme}
                                                                                                                 onChange={() =>
-                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                        updateChatLocalSettings((prev) => ({
                                                                                                                                 ...prev,
                                                                                                                                 showTypingIndicators:
                                                                                                                                         !prev.showTypingIndicators,
