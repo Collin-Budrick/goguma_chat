@@ -367,6 +367,20 @@ export default function ChatThread({
         }, [conversation?.id]);
 
         useEffect(() => {
+                if (chatLocalSettings.showTypingIndicators) {
+                        return;
+                }
+
+                typingActiveRef.current = false;
+                if (typingTimeoutRef.current) {
+                        window.clearTimeout(typingTimeoutRef.current);
+                        typingTimeoutRef.current = null;
+                }
+
+                sendTyping(false);
+        }, [chatLocalSettings.showTypingIndicators, sendTyping]);
+
+        useEffect(() => {
                 if (typeof window === "undefined") {
                         return;
                 }
@@ -849,7 +863,6 @@ export default function ChatThread({
 
         const typingProfiles = useMemo(() => {
                 if (!conversation) return [];
-                if (!chatLocalSettings.showTypingIndicators) return [];
                 const now = Date.now();
                 return conversation.participants
                         .map((participant) => participant.user)
@@ -859,10 +872,10 @@ export default function ChatThread({
                                         typingState[profile.id] &&
                                         typingState[profile.id] > now,
                         );
-        }, [chatLocalSettings.showTypingIndicators, conversation, typingState, viewerId]);
+        }, [conversation, typingState, viewerId]);
 
         const typingText = useMemo(() => {
-                if (!typingProfiles.length || !chatLocalSettings.showTypingIndicators) {
+                if (!typingProfiles.length) {
                         return null;
                 }
                 const names = typingProfiles.map((profile) => getContactName(profile));
@@ -873,7 +886,7 @@ export default function ChatThread({
                         return `${names[0]} and ${names[1]} are typing...`;
                 }
                 return `${names[0]} and others are typing...`;
-        }, [chatLocalSettings.showTypingIndicators, typingProfiles]);
+        }, [typingProfiles]);
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -911,23 +924,26 @@ export default function ChatThread({
 		);
 	}, [clearedHistoryCutoff, conversationId, messages, viewerId]);
 
-	const sendTyping = useCallback(
-		(isTyping: boolean) => {
-			if (!conversationId) {
-				return;
-			}
-			const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
-			void presence.sendTyping({
-				conversationId,
-				typing: {
-					userId: viewerId,
-					isTyping,
-					expiresAt,
-				},
-			});
-		},
-		[conversationId, presence, viewerId],
-	);
+        const sendTyping = useCallback(
+                (isTyping: boolean) => {
+                        if (!conversationId) {
+                                return;
+                        }
+                        if (!chatLocalSettings.showTypingIndicators && isTyping) {
+                                return;
+                        }
+                        const expiresAt = new Date(Date.now() + TYPING_DEBOUNCE_MS).toISOString();
+                        void presence.sendTyping({
+                                conversationId,
+                                typing: {
+                                        userId: viewerId,
+                                        isTyping,
+                                        expiresAt,
+                                },
+                        });
+                },
+                [chatLocalSettings.showTypingIndicators, conversationId, presence, viewerId],
+        );
 
 	const handleDraftChange = useCallback(
 		(value: string) => {
