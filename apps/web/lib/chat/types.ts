@@ -12,8 +12,9 @@ export type ChatHistory = {
 };
 
 export type SendMessageRequest = {
-	friendId: string;
-	content: string;
+        friendId: string;
+        content: string;
+        nonce?: string;
 };
 
 export type SendMessageResponse = {
