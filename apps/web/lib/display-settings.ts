@@ -3,18 +3,20 @@
 export type DisplayTheme = "dark" | "light";
 
 export type DisplaySettings = {
-	magnify: boolean;
-	showLabels: boolean;
-	theme: DisplayTheme;
+        magnify: boolean;
+        showLabels: boolean;
+        showTypingIndicators: boolean;
+        theme: DisplayTheme;
 };
 
 const STORAGE_KEY = "site-dock-display";
 export const DISPLAY_SETTINGS_EVENT = "site-dock-display-change";
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
-	magnify: true,
-	showLabels: true,
-	theme: "dark",
+        magnify: true,
+        showLabels: true,
+        showTypingIndicators: true,
+        theme: "dark",
 };
 
 const isLightTheme = (value: unknown): value is DisplayTheme =>

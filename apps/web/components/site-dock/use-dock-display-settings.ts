@@ -18,14 +18,15 @@ export function useDockDisplaySettings() {
 
 		const handler = (event: Event) => {
 			const detail = (event as CustomEvent<DisplaySettings>).detail;
-			setDisplaySettings((prev) => {
-				if (
-					prev.magnify === detail.magnify &&
-					prev.showLabels === detail.showLabels &&
-					prev.theme === detail.theme
-				) {
-					return prev;
-				}
+                        setDisplaySettings((prev) => {
+                                if (
+                                        prev.magnify === detail.magnify &&
+                                        prev.showLabels === detail.showLabels &&
+                                        prev.showTypingIndicators === detail.showTypingIndicators &&
+                                        prev.theme === detail.theme
+                                ) {
+                                        return prev;
+                                }
 
 				return detail;
 			});

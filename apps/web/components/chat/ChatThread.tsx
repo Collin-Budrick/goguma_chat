@@ -278,15 +278,16 @@ export default function ChatThread({
 	const updateDisplaySettings = useCallback(
 		(updater: (prev: DisplaySettings) => DisplaySettings) => {
 			setDisplaySettings((prev) => {
-				const next = updater(prev);
+                                const next = updater(prev);
 
-				if (
-					next.magnify === prev.magnify &&
-					next.showLabels === prev.showLabels &&
-					next.theme === prev.theme
-				) {
-					return prev;
-				}
+                                if (
+                                        next.magnify === prev.magnify &&
+                                        next.showLabels === prev.showLabels &&
+                                        next.showTypingIndicators === prev.showTypingIndicators &&
+                                        next.theme === prev.theme
+                                ) {
+                                        return prev;
+                                }
 
 				persistDisplaySettings(next);
 				return next;
@@ -340,13 +341,14 @@ export default function ChatThread({
 
 		const handler = (event: Event) => {
 			const detail = (event as CustomEvent<DisplaySettings>).detail;
-			setDisplaySettings((prev) =>
-				prev.magnify === detail.magnify &&
-				prev.showLabels === detail.showLabels &&
-				prev.theme === detail.theme
-					? prev
-					: detail,
-			);
+                        setDisplaySettings((prev) =>
+                                prev.magnify === detail.magnify &&
+                                prev.showLabels === detail.showLabels &&
+                                prev.showTypingIndicators === detail.showTypingIndicators &&
+                                prev.theme === detail.theme
+                                        ? prev
+                                        : detail,
+                        );
 		};
 
 		window.addEventListener(DISPLAY_SETTINGS_EVENT, handler as EventListener);
@@ -811,32 +813,33 @@ export default function ChatThread({
 		[conversation, viewerId, viewerProfile],
 	);
 
-	const typingProfiles = useMemo(() => {
-		if (!conversation) return [];
-		const now = Date.now();
-		return conversation.participants
-			.map((participant) => participant.user)
+        const typingProfiles = useMemo(() => {
+                if (!conversation) return [];
+                if (!displaySettings.showTypingIndicators) return [];
+                const now = Date.now();
+                return conversation.participants
+                        .map((participant) => participant.user)
 			.filter(
 				(profile) =>
 					profile.id !== viewerId &&
-					typingState[profile.id] &&
-					typingState[profile.id] > now,
-			);
-	}, [conversation, typingState, viewerId]);
+                                        typingState[profile.id] &&
+                                        typingState[profile.id] > now,
+                        );
+        }, [conversation, displaySettings.showTypingIndicators, typingState, viewerId]);
 
-	const typingText = useMemo(() => {
-		if (!typingProfiles.length) {
-			return null;
-		}
-		const names = typingProfiles.map((profile) => getContactName(profile));
+        const typingText = useMemo(() => {
+                if (!typingProfiles.length || !displaySettings.showTypingIndicators) {
+                        return null;
+                }
+                const names = typingProfiles.map((profile) => getContactName(profile));
 		if (names.length === 1) {
 			return `${names[0]} is typing...`;
 		}
 		if (names.length === 2) {
 			return `${names[0]} and ${names[1]} are typing...`;
 		}
-		return `${names[0]} and others are typing...`;
-	}, [typingProfiles]);
+                return `${names[0]} and others are typing...`;
+        }, [displaySettings.showTypingIndicators, typingProfiles]);
 
 	const clearedHistoryCutoff = clearedHistoryAt
 		? toDate(clearedHistoryAt).getTime()
@@ -1192,41 +1195,58 @@ export default function ChatThread({
 													{t("thread.settings.local.description")}
 												</p>
 												<div className="mt-3 flex flex-col gap-2">
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.magnify.label",
-														)}
-														description={t(
-															"thread.settings.local.options.magnify.description",
-														)}
-														value={displaySettings.magnify}
-														theme={toggleTheme}
-														onChange={() =>
-															updateDisplaySettings((prev) => ({
-																...prev,
-																magnify: !prev.magnify,
-															}))
-														}
-													/>
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.labels.label",
-														)}
-														description={t(
-															"thread.settings.local.options.labels.description",
-														)}
-														value={displaySettings.showLabels}
-														theme={toggleTheme}
-														onChange={() =>
-															updateDisplaySettings((prev) => ({
-																...prev,
-																showLabels: !prev.showLabels,
-															}))
-														}
-													/>
-													<PreferenceToggle
-														label={t(
-															"thread.settings.local.options.theme.label",
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.magnify.label",
+                                                                                                                )}
+                                                                                                                description={t(
+                                                                                                                        "thread.settings.local.options.magnify.description",
+                                                                                                                )}
+                                                                                                                value={displaySettings.magnify}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                magnify: !prev.magnify,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.labels.label",
+                                                                                                                )}
+                                                                                                                description={t(
+                                                                                                                        "thread.settings.local.options.labels.description",
+                                                                                                                )}
+                                                                                                                value={displaySettings.showLabels}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                showLabels: !prev.showLabels,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.typingIndicators.label",
+                                                                                                                )}
+                                                                                                                description={t(
+                                                                                                                        "thread.settings.local.options.typingIndicators.description",
+                                                                                                                )}
+                                                                                                                value={displaySettings.showTypingIndicators}
+                                                                                                                theme={toggleTheme}
+                                                                                                                onChange={() =>
+                                                                                                                        updateDisplaySettings((prev) => ({
+                                                                                                                                ...prev,
+                                                                                                                                showTypingIndicators:
+                                                                                                                                        !prev.showTypingIndicators,
+                                                                                                                        }))
+                                                                                                                }
+                                                                                                        />
+                                                                                                        <PreferenceToggle
+                                                                                                                label={t(
+                                                                                                                        "thread.settings.local.options.theme.label",
 														)}
 														description={t(
 															"thread.settings.local.options.theme.description",
