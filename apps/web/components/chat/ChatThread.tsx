@@ -1287,11 +1287,11 @@ export default function ChatThread({
 							</div>
 						</div>
 					</header>
-					<div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-						<div
-							className="flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4 max-h-[60vh]"
-							ref={messageContainerRef}
-						>
+                                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                                                <div
+                                                        className="chat-thread-scroll flex-1 min-h-0 flex flex-col justify-end overflow-y-auto px-6 py-4 max-h-[60vh]"
+                                                        ref={messageContainerRef}
+                                                >
 							{threadError ? (
 								<p className="mb-4 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
 									{threadError}
