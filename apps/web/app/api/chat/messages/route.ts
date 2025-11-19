@@ -6,78 +6,80 @@ import { getFriendState } from "@/db/friends";
 import { auth } from "@/lib/auth";
 import type { ChatMessage, SendMessageResponse } from "@/lib/chat/types";
 import {
-	buildConversationId,
-	createAutoReply,
-	resolveProfileName,
+        buildConversationId,
+        createAutoReply,
+        resolveProfileName,
 } from "../helpers";
 
-const bodySchema = z.object({
-	friendId: z.string().min(1),
-	content: z.string().min(1),
-	mode: z.string().optional(),
-});
+const bodySchema = z
+        .object({
+                friendId: z.string().min(1),
+                content: z.string().min(1),
+        })
+        .strict();
 
 export async function POST(request: NextRequest) {
-	const session = await auth();
+        const session = await auth();
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+        if (!session?.user?.id) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
-	let json: unknown;
-	try {
-		json = await request.json();
-	} catch {
-		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-	}
+        let json: unknown;
+        try {
+                json = await request.json();
+        } catch {
+                return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+        }
 
-	const parsed = bodySchema.safeParse(json);
-	if (!parsed.success) {
-		return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-	}
+        const parsed = bodySchema.safeParse(json);
+        if (!parsed.success) {
+                const message = parsed.error.issues[0]?.message ?? "Invalid request";
+                return NextResponse.json({ error: message }, { status: 400 });
+        }
 
-	const { friendId, content } = parsed.data;
-	const state = await getFriendState(session.user.id);
-	const friend = state.friends.find((entry) => entry.friendId === friendId);
+        const { friendId, content } = parsed.data;
+        const state = await getFriendState(session.user.id);
+        const friend = state.friends.find((entry) => entry.friendId === friendId);
 
-	if (!friend) {
-		return NextResponse.json({ error: "Not found" }, { status: 404 });
-	}
+        if (!friend) {
+                return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
 
-	const conversationId = buildConversationId(session.user.id, friendId);
-	const sentAt = new Date();
-	const viewerMessage: ChatMessage = {
-		id: `${conversationId}:${randomUUID()}`,
-		authorId: session.user.id,
-		body: content.trim(),
-		sentAt: sentAt.toISOString(),
-	};
+        const conversationId = buildConversationId(session.user.id, friendId);
+        const sentAt = new Date();
+        const viewerMessage: ChatMessage = {
+                id: `${conversationId}:${randomUUID()}`,
+                authorId: session.user.id,
+                body: content.trim(),
+                sentAt: sentAt.toISOString(),
+        };
 
-	const friendName = resolveProfileName({
-		firstName: friend.firstName,
-		lastName: friend.lastName,
-		email: friend.email,
-		fallback: friendId,
-	});
-	const viewerName = resolveProfileName({
-		firstName: session.user.firstName,
-		lastName: session.user.lastName,
-		email: session.user.email ?? null,
-		fallback: "friend",
-	});
+        const friendName = resolveProfileName({
+                firstName: friend.firstName,
+                lastName: friend.lastName,
+                email: friend.email,
+                fallback: friendId,
+        });
+        const viewerName = resolveProfileName({
+                firstName: session.user.firstName,
+                lastName: session.user.lastName,
+                email: session.user.email ?? null,
+                fallback: "friend",
+        });
 
-	const reply: ChatMessage = {
-		id: `${conversationId}:${randomUUID()}`,
-		authorId: friendId,
-		body: createAutoReply(viewerName, friendName, content),
-		sentAt: new Date(sentAt.getTime() + 1000 * 5).toISOString(),
-	};
+        const reply: ChatMessage = {
+                id: `${conversationId}:${randomUUID()}`,
+                authorId: friendId,
+                body: createAutoReply(viewerName, friendName, content),
+                sentAt: new Date(sentAt.getTime() + 1000 * 5).toISOString(),
+        };
 
-	const payload: SendMessageResponse = {
-		conversationId,
-		message: viewerMessage,
-		replies: [reply],
-	};
+        const payload: SendMessageResponse = {
+                conversationId,
+                message: viewerMessage,
+                replies: [reply],
+        };
 
-	return NextResponse.json(payload);
+        return NextResponse.json(payload);
 }
